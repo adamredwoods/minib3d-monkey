@@ -44,7 +44,7 @@ Class Game Extends App
 	
 	Method OnCreate()
 		
-		SetRender(New Opengl11)
+		SetRender(New OpenglES11)
 		SetUpdateRate 30
 		
 
