@@ -3,18 +3,12 @@ Import tentity
 Class TPivot Extends TEntity
 
 	Method New()
-	
-		If LOG_NEW
-			DebugLog "New TPivot"
-		Endif
+
 	
 	End Method
 	
 	Method Delete()
-	
-		If LOG_DEL
-			DebugLog "Del TPivot"
-		Endif
+
 	
 	End Method
 

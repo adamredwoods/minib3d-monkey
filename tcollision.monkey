@@ -33,18 +33,12 @@ Class TCollisionPair
 	Field response=0
 	
 	Method New()
-	
-		If LOG_NEW
-			DebugLog "New TCollisionPair"
-		Endif
+
 	
 	End 
 	
 	Method Delete()
-	
-		If LOG_DEL
-			DebugLog "Del TCollisionPair"
-		Endif
+
 	
 	End 
 

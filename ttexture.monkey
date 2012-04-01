@@ -33,17 +33,11 @@ Class TTexture
 
 	Method New()
 	
-		If LOG_NEW
-			DebugLog "New TTexture"
-		Endif
 	
 	End 
 	
 	Method Delete()
-	
-		If LOG_DEL
-			DebugLog "Del TTexture"
-		Endif
+
 	
 	End 
 	

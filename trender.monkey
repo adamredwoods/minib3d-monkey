@@ -1169,3 +1169,14 @@ Class RenderAlphaList Extends List<TMesh>
 End
 
 
+Class SurfaceAlphaList Extends List<TSurface>
+	
+	Method Compare( left:TSurface,right:TSurface)
+		''---- how do we compare surface alphas in the correct order to draw? leave to user to order?
+		
+		'If left.alpha_order < right.alpha_order Return -1
+		'Return left.alpha_order > right.alpha_order
+	End
+	
+End
+

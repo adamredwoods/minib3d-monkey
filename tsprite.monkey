@@ -302,7 +302,12 @@ Class TBatchSpriteMesh Extends TMesh
 	End
 	
 	Method Update(cam:TCamera)
-
+		
+		'' wipe out rotation matrix
+		mat.grid[0][0] = 1.0; mat.grid[0][1] = 0.0; mat.grid[0][2] = 0.0
+		mat.grid[1][0] = 0.0; mat.grid[1][1] = 1.0; mat.grid[1][2] = 0.0
+		mat.grid[2][0] = 0.0; mat.grid[2][1] = 0.0; mat.grid[2][2] = 1.0
+		
 		TBatchSprite.min_x=999999999.0
 		TBatchSprite.max_x=-999999999.0
 		TBatchSprite.min_y=999999999.0
@@ -414,7 +419,7 @@ Class TBatchSprite Extends TSprite
 				
 		''
 		''add a parent to the entire batch mesh
-		''
+		''-- position only
 		Function BatchSpriteParent(id:Int=0, ent:TEntity,glob:Int=True)
 			
 			If id = 0 Then id = total_batch
@@ -557,7 +562,7 @@ Class TBatchSprite Extends TSprite
 
 			If view_mode<>2
 				
-				'' add in mainsprite position offset------------------------may also need to adjust for parent roation, scale
+				'' add in mainsprite position offset
 				
 				Local x#=mat.grid[3][0] - mainsprite[batch_id].mat.grid[3][0]
 				Local y#=mat.grid[3][1] - mainsprite[batch_id].mat.grid[3][1]
