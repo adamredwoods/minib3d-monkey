@@ -19,6 +19,7 @@ Class TRender
 	
 	Global width:Int,height:Int,mode:Int,depth:Int,rate:Int
 	
+	Global wireframe:Bool=False ''draw meshes as lines or filled
 
 	Private
 	
@@ -28,7 +29,7 @@ Class TRender
 	
 	Public
 	
-	Field wireframe:Bool=False ''draw meshes as lines or filled
+	
 	
 	Method Reset:Void() Abstract ''reset for each camera
 	
@@ -299,7 +300,7 @@ End
 ''----------------------------------------------------
 
 
-Class Opengl11 Extends TRender
+Class OpenglES11 Extends TRender
 	
 	
 	''used for optimizing the fixed-pipeline render routine

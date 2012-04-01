@@ -1,5 +1,4 @@
 Import minib3d
-Import opengl.gles11
 Import monkeyutility
 
 Class TSurface
@@ -601,13 +600,13 @@ Class TSurface
 	
 	Method UpdateVBO() ''--depricated
 		
-		Opengl11.render.UpdateVBO(Self)
+		OpenglES11.render.UpdateVBO(Self)
 		
 	End 
 	
 	Method FreeVBO() ''--depricated
 		
-		Opengl11.render.FreeVBO(Self)
+		OpenglES11.render.FreeVBO(Self)
 	
 	End 
 	

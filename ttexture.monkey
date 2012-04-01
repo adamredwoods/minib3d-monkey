@@ -195,7 +195,7 @@ Class TTexture
 		
 		'If flags&128 Then Return LoadCubeMapTexture(file,flags,tex)
 		
-		Opengl11(TRender.render).ClearGLErrors()
+		OpenglES11(TRender.render).ClearGLErrors()
 
 
 		' check to see if pixmap contain alpha layer, set alpha_present to true if so (do this before converting)

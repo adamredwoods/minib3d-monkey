@@ -96,18 +96,12 @@ End
 Class TCollisionImpact
 
 	Method New()
-	
-		If LOG_NEW
-			DebugLog "New TCollisionImpact"
-		Endif
+
 	
 	End 
 	
 	Method Delete()
 	
-		If LOG_DEL
-			DebugLog "Del TCollisionImpact"
-		Endif
 	
 	End 
 
