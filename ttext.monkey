@@ -71,7 +71,7 @@ Class TText Extends TSprite
 		
 		tex.is_font = True
 		tex.flags=4
-		tex.SetBlend(1)
+		tex.TextureBlend(2)
 		tex.NoSmooth() ''can be set by user
 		
 		tt.EntityTexture(tex)
