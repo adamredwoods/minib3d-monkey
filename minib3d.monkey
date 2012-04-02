@@ -70,9 +70,3 @@ Import tpixmap
 Import functions
 
 
-
-Const USE_MAX2D=True	' true to enable max2d/minib3d integration
-Const USE_GL20 = False 	' future use for opengl 2.0 support
-Const USE_VBO=True	' true to use vbos if supported by hardware
-Const VBO_MIN_TRIS=10	' if USE_VBO=True and vbos are supported by hardware, then surface must also have this minimum no. of tris before vbo is used for surface (vbos work best with surfaces with high amount of tris)
-

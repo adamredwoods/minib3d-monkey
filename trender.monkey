@@ -1,11 +1,18 @@
 Import minib3d
 
+'flags
+Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
+Const DISABLE_VBO=2	' true to use vbos if supported by hardware
+Const USE_GL20 = 4 	' future use for opengl 2.0 support
 
-Function SetRender(r:TRender)
+Const VBO_MIN_TRIS=10	' if USE_VBO=True and vbos are supported by hardware, then surface must also have this minimum no. of tris before vbo is used for surface (vbos work best with surfaces with high amount of tris)
+
+
+Function SetRender(r:TRender, flags:Int=0)
 
 	TRender.render = r
 	
-	TRender.render.Graphics3DInit()
+	TRender.render.GraphicsInit(flags)
 	
 End
 
@@ -33,7 +40,7 @@ Class TRender
 	
 	Method Reset:Void() Abstract ''reset for each camera
 	
-	Method GraphicsInit:Int() Abstract
+	Method GraphicsInit:Int(flags:Int=0) Abstract
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null) Abstract
 	
@@ -975,7 +982,7 @@ Class OpenglES11 Extends TRender
 	End
 	
 	
-	Method GraphicsInit:Int()
+	Method GraphicsInit:Int(flags:Int=0)
 
 		TTexture.TextureFilter("",8+1) ''default texture settings: mipmap
 
@@ -986,11 +993,11 @@ Class OpenglES11 Extends TRender
 		width = DeviceWidth()
 		height = DeviceHeight()
 		
-		If USE_VBO=True
+		If Not (flags & DISABLE_VBO)
 			vbo_enabled=True 'THardwareInfo.VBOSupport
 		Endif
 
-		If USE_MAX2D=True
+		If Not (flags & DISABLE_MAX2D )
 
 			' save the Max2D settings for later - by Oddball
 			glMatrixMode GL_MODELVIEW
