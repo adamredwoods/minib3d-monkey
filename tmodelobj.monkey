@@ -301,6 +301,7 @@ Class TModelObj
 			
 			fdata[s] = New TFaceData
 			Local D2:String[] = CustomSplit( data1[i], "/" ) 
+			
 			'If DEBUG Then DebugLog " "+D2[0] +"/ "+D2[1]+"/ "+D2[2]
 			
 			fdata[s].vi = Int(D2[0])
@@ -431,11 +432,16 @@ Class TModelObj
 			
 			If tag[0..7] = "map_kd " And is_brush
 			
-				MatLib[CMI].texture = LoadTexture(Line[7..].Trim() ) 
+				Local texfile:String[] = Line[7..].Trim().Split("\") ''blender fix
+				If texfile.Length()<2 Then texfile = Line[7..].Trim().Split("/") ''blender fix
+
+				texfile[0] = texfile[texfile.Length()-1] ''get rid of any prior folders (blender fix)
+				
+				MatLib[CMI].texture = LoadTexture(texfile[0] ) 
 				If MatLib[CMI].texture.TextureHeight() > 1
 				
 					MatLib[CMI].brush.BrushTexture( MatLib[CMI].texture) 
-					If DEBUG Then  DebugLog("MatTexture : " + Line[7..].Trim() ) 
+					If DEBUG Then  DebugLog("MatTexture : " + texfile[0] ) 
 					
 				Else
 					If DEBUG Then Print "**TModelObj: texture file not found"
