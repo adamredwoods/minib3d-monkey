@@ -159,8 +159,6 @@ Class TPick
 	Global vec_radius:Vector =New Vector(0.0,0.0,0.0)
 	Global col_info:CollisionInfo=New CollisionInfo(vec_a,vec_b,vec_radius)
 
-	Global line:Line=New Line
-
 	Global vec_i:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_j:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_k:Vector =New Vector(0.0,0.0,0.0)
@@ -175,8 +173,7 @@ Class TPick
 		picked_ent=Null
 		picked_time=1.0
 	
-		line.Update(ax,ay,az,bx-ax,by-ay,bz-az)
-		'line.Update(ax,ay,az,bx,by,bz)
+		Local line:Line = New Line(ax,ay,az,bx-ax,by-ay,bz-az)
 		
 		Local col_obj:CollisionObject = New CollisionObject()
 		
@@ -202,11 +199,19 @@ Class TPick
 				col_info.Update(ent.radius_x,ent.box_x,ent.box_y,ent.box_z,ent.box_x+ent.box_w,ent.box_y+ent.box_h,ent.box_z+ent.box_d)
 			Endif
 		
-			Local mesh_col:MeshCollider=Null
+			Local mesh_col:MeshCollider
 			Local mesh:TMesh = TMesh(ent)
 			If mesh<>Null	
 				mesh_col = mesh.col_tree.CreateMeshTree(mesh) ' create collision tree for mesh if necessary
 			Endif
+		
+			'' t_tform for testing
+			'mesh_col.t_tform = New TransformMat(ent.mat, New Vector(ent.mat.grid[3][0],ent.mat.grid[3][1],ent.mat.grid[3][2]) )
+		
+			''to allow collision rays to inverse scale quickly
+			mesh_col.gsx = mesh.gsx
+			mesh_col.gsy = mesh.gsy
+			mesh_col.gsz = mesh.gsz
 		
 			pick = col_info.Pick(line, radius, col_obj, tform, mesh_col, ent.pick_mode)
 			

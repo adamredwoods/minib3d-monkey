@@ -43,11 +43,11 @@ Class TTexture
 	
 	Method FreeTexture()
 		
-		glDeleteTextures(1,tex.gltex[0])
+		glDeleteTextures(1,gltex)
 		tex_link.Remove()
 		pixmap=New TPixmap
-		cube_pixmap=Null
-		gltex=Null
+		cube_pixmap=New TPixmap[7]
+		gltex[0]=0
 	
 	End 
 	

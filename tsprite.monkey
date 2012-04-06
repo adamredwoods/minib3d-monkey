@@ -271,7 +271,7 @@ Class TBatchSpriteMesh Extends TMesh
 		Local mesh:TBatchSpriteMesh = New TBatchSpriteMesh
 		
 		mesh.AddParent(parent_ent)
-		entity_list.EntityListAdd(mesh)
+		mesh.entity_link = entity_list.EntityListAdd(mesh)
 
 		' update matrix
 		If mesh.parent<>Null

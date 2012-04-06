@@ -186,7 +186,9 @@ Class CollisionInfo
 		radii = radii2.Copy()
 		radius = radii.x
 		
-		planes[0] = New Plane(New Vector(0.0,0.0,0.0),0); planes[1] = New Plane(New Vector(0.0,0.0,0.0),0); planes[2] = New Plane(New Vector(0.0,0.0,0.0),0)
+		planes[0] = New Plane(New Vector(0.0,0.0,0.0),0)
+		planes[1] = New Plane(New Vector(0.0,0.0,0.0),0)
+		planes[2] = New Plane(New Vector(0.0,0.0,0.0),0)
 		
 		y_scale=1.0
 		inv_y_scale=1.0
@@ -250,17 +252,17 @@ Class CollisionInfo
 	End
 	
 
-	Method CollisionDetect:Int(coll:CollisionObject,dst_tform:TransformMat,mesh_col:MeshCollider,methd:Int)
+	Method CollisionDetect:Int(coll:CollisionObject,tf:TransformMat,mesh_col:MeshCollider,methd:Int)
 	
 		Local hit:Int=0
 
 		If( y_scale=1.0 )
-			If( HitTest(Self.coll_line,radius,dst_tform,mesh_col, methd,coll,Self ) )
+			If( HitTest(Self.coll_line,radius,tf,mesh_col, methd,coll,Self ) )
 			
 				hit=True
 	
 			Endif	
-		Elseif( HitTest(Self.coll_line,radius,Self.y_tform.Multiply(dst_tform),mesh_col,methd,coll,Self ) )
+		Elseif( HitTest(Self.coll_line,radius,Self.y_tform.Multiply(tf),mesh_col,methd,coll,Self ) )
 			
 				hit=True
 							
@@ -490,12 +492,16 @@ Class CollisionInfo
 								Endif
 					
 					
-								Local mesh_col:MeshCollider=Null
+								Local mesh_col:MeshCollider
 								Local mesh:TMesh = TMesh(ent2)
 								If mesh<>Null	
 									mesh_col = mesh.col_tree.CreateMeshTree(mesh) ' create collision tree for mesh if necessary
 								Endif
-			
+								
+								''to allow collision rays to inverse scale quickly
+								mesh_col.gsx = mesh.gsx
+								mesh_col.gsy = mesh.gsy
+								mesh_col.gsz = mesh.gsz
 			
 								hit = col_info.CollisionDetect(coll_obj, tform, mesh_col, col_pair.col_method)
 								
@@ -724,6 +730,7 @@ Class CollisionObject
 	
 		''move plane out
 		p.d -= radius
+
 		Local t:Float=p.T_Intersect( line )
 		If( t>time ) Return False
 
@@ -734,6 +741,7 @@ Class CollisionObject
 	
 		''intersects triangle?
 		Local i:Vector =line.Multiply(t)
+
 		If( p0.Distance(i)>=0 And p1.Distance(i)>=0 And p2.Distance(i)>=0 )
 			Return Update( line,t,p.n )
 		Endif
@@ -802,7 +810,64 @@ Class CollisionObject
 		
 		Return hit
 	End
+	
+	
+	Method RayTriangle:Int(li:Line, v0:Vector, v1:Vector, v2:Vector)
+	
+		Local u:Vector, v:Vector, n:Vector             '' triangle vectors
+		Local dir:Vector, w0:Vector, w:Vector          '' ray vectors
+		Local r#, a#, b#             '' params To calc ray-plane intersect
+		
+		'' get triangle edge vectors And plane normal
+		u = v1.Subtract(v0)
+		v = v2.Subtract(v0)
+		n = v.Cross(u)'.Normalize         '' cross product
+		If (n.x=0 And n.y=0 And n.z=0) Then Return 0
+		
+		dir = li.d.Subtract(li.o)             '' ray direction vector
 
+		a = -li.o.Subtract(v0).Dot(n) 
+		b = dir.Dot(n) 
+		If (b < 0.00001)     '' ray is parallel To triangle plane or points away from ray
+		    If (a = 0) Then Return 1 '(return li.o) ''ray lies in triangle plane
+		    Return 0             '' ray disjoint from plane
+		Endif
+		
+		'' get intersect point of ray with triangle plane
+		r = a/b
+		If (r < 0.0) Then Return 0     '' ray goes away from triangle
+
+		'' For a segment, also test If (r > 1.0) then no intersect
+		
+		'*I = R.P0 + r * dir           '' intersect point of ray And plane
+		Local i:Vector = li.o.Add( New Vector(dir.x*r, dir.y*r, dir.z*r) )	
+	
+		'' is I inside T?
+		Local uu#, uv#, vv#, wu#, wv#, D#
+		uu = u.Dot(u)
+		uv = u.Dot(v)
+		vv = v.Dot(v)
+		w = i.Subtract(v0)
+		wu = w.Dot(u)
+		wv = w.Dot(v)
+		D = uv * uv - uu * vv
+		
+		'' get And test parametric coords
+		Local s#, t#
+		s = (uv * wv - vv * wu) / D
+		If (s < 0.0 Or s > 1.0) Then Return 0       '' I is outside T
+		
+		
+		t = (uv * wu - uu * wv) / D
+		If (t < 0.0 Or (s + t) > 1.0) Then Return 0 '' I is outside T
+		
+		normal = n.Normalize()
+		
+		Return 1 'Update( li, r, n.Normalize() )
+		                 
+	End
+	
+	
 End
 
 

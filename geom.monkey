@@ -92,7 +92,8 @@ Class Plane
 
 
 	Method T_Intersect:Float( q:Line)
-		Return -Distance(q.o)/n.Dot(q.d)
+		'Return -Distance(q.o)/n.Dot(q.d)
+		Return -(n.Dot(q.o) + d)/n.Dot(q.d)
 	End
 
 
@@ -278,13 +279,13 @@ Class TransformMat
 		Return New TransformMat( m, v)
 	End
 	
-	Method Inverse:TransformMat( ) ''' this may be wrong, but you probably could use Transpose()
+	Method Inverse:TransformMat( ) ''' this may be wrong, but you probably could use Transpose() unless need scale removed
 		Local t:TransformMat = Copy()
 		''assuming the -m is a FULL inverse, but we are only using 3x3
 		t.m.grid[3][0] = t.v.x
 		t.m.grid[3][1] = t.v.y
 		t.m.grid[3][2] = t.v.z
-		t.m.Inverse4()
+		t.m = t.m.Inverse4() ''full inverse
 		t.v.x = t.m.grid[3][0]
 		t.v.y = t.m.grid[3][1]
 		t.v.z = t.m.grid[3][2]

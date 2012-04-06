@@ -114,14 +114,11 @@ Class TEntity
 			
 		' free self from parent's child_list
 		If parent<>Null
-			'For ent=Eachin parent.child_list
-				'If ent=Self Then parent_link.Remove()
-			'Next
 			parent_link.Remove()
 		Endif
 		
 		parent=Null
-		mat=Null
+		mat=New Matrix
 		brush=Null
 	
 		' free children entities
@@ -130,6 +127,7 @@ Class TEntity
 			ent=Null
 		Next	
 		
+		child_list.Clear()
 	End 
 
 	' Entity movement
@@ -190,7 +188,7 @@ Class TEntity
 		If gsz<>1.0 Then mz = mz/gsz
 		
 		''rotate the direction
-		pos = loc_mat.TransformPoint(mx,my,mz,0.0) ''0 creates an offset, not a point	
+		pos = mat.TransformPoint(mx,my,mz,0.0) ''0 creates an offset, not a point	
 		
 		px=px+pos[0]
 		py=py+pos[1]
@@ -425,36 +423,36 @@ Class TEntity
 		Local t:Float = 1.0 - c
 		''  axis is normalised, include scaling
 		
-		Local new_mat:Matrix = New Matrix
-		new_mat.grid[0][0] = (c + axis.x*axis.x*t) *Self.sx
-		new_mat.grid[1][1] = (c + axis.y*axis.y*t) *Self.sy
-		new_mat.grid[2][2] = (c + axis.z*axis.z*t) *Self.sz
+		'Local new_mat:Matrix = New Matrix
+		temp_mat.grid[0][0] = (c + axis.x*axis.x*t) *Self.sx
+		temp_mat.grid[1][1] = (c + axis.y*axis.y*t) *Self.sy
+		temp_mat.grid[2][2] = (c + axis.z*axis.z*t) *Self.sz
 				
 		Local tmp1:Float = axis.x*axis.y*t
 		Local tmp2:Float = axis.z*s
-		new_mat.grid[1][0] = (tmp1 + tmp2) *Self.sy
-		new_mat.grid[0][1] = (tmp1 - tmp2) *Self.sx
+		temp_mat.grid[1][0] = (tmp1 + tmp2) *Self.sy
+		temp_mat.grid[0][1] = (tmp1 - tmp2) *Self.sx
 		
 		tmp1 = axis.x*axis.z*t
 		tmp2 = axis.y*s
-		new_mat.grid[2][0] = (tmp1 - tmp2) *Self.sz
-		new_mat.grid[0][2] = (tmp1 + tmp2) *Self.sx
+		temp_mat.grid[2][0] = (tmp1 - tmp2) *Self.sz
+		temp_mat.grid[0][2] = (tmp1 + tmp2) *Self.sx
 		
 		tmp1 = axis.y*axis.z*t
 		tmp2 = axis.x*s
-		new_mat.grid[2][1] = (tmp1 + tmp2) *Self.sz
-		new_mat.grid[1][2] = (tmp1 - tmp2) *Self.sy
+		temp_mat.grid[2][1] = (tmp1 + tmp2) *Self.sz
+		temp_mat.grid[1][2] = (tmp1 - tmp2) *Self.sy
 		
-		new_mat.grid[3][0] = Self.px
-		new_mat.grid[3][1] = Self.py
-		new_mat.grid[3][2] = Self.pz
-		new_mat.grid[3][3] = 1.0
+		temp_mat.grid[3][0] = Self.px
+		temp_mat.grid[3][1] = Self.py
+		temp_mat.grid[3][2] = Self.pz
+		temp_mat.grid[3][3] = 1.0
 		
 		If parent<>Null
 			mat.Overwrite(parent.mat)
-			mat.Multiply(new_mat)
+			mat.Multiply(temp_mat)
 		Else
-			mat.Overwrite(new_mat )
+			mat.Overwrite(temp_mat )
 		Endif
 		
 		rx = mat.GetPitch()
@@ -1096,43 +1094,46 @@ Class TEntity
 	End 
 	
 	Function TFormPoint(x#,y#,z#,src_ent:TEntity,dest_ent:TEntity)
-	
-		Local mat:Matrix=global_mat.Copy() '***global***
+		''this routine could be optimized to help TCamera.EntityInFrustum()
+		
+		'Local mat:Matrix=global_mat.Copy() '***global***
+		temp_mat.Overwrite(global_mat)
 	
 		If src_ent<>Null
 
-			mat.Overwrite(src_ent.mat)
-			mat.Translate(x,y,-z)
+			temp_mat.Overwrite(src_ent.mat)
+			temp_mat.Translate(x,y,-z)
 			
-			x=mat.grid[3][0]
-			y=mat.grid[3][1]
-			z=-mat.grid[3][2]
+			x=temp_mat.grid[3][0]
+			y=temp_mat.grid[3][1]
+			z=-temp_mat.grid[3][2]
 		
 		Endif
 
 		If dest_ent<>Null
 
-			mat.LoadIdentity()
+			temp_mat.LoadIdentity()
 		
 			Local ent:TEntity=dest_ent
 			
 			Repeat
 	
-				mat.Scale(1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
-				mat.RotateRoll(-ent.rz)
-				mat.RotatePitch(-ent.rx)
-				mat.RotateYaw(-ent.ry)
-				mat.Translate(-ent.px,-ent.py,-ent.pz)																																																																																																																																																																																																																																																																																																																																									
+				'temp_mat.Scale(1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
+				'temp_mat.RotateRoll(-ent.rz)
+				'temp_mat.RotatePitch(-ent.rx)
+				'temp_mat.RotateYaw(-ent.ry)
+				temp_mat.FastRotateScale(-ent.rz,-ent.rx,-ent.ry,1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
+				temp_mat.Translate(-ent.px,-ent.py,-ent.pz)																																																																																																																																																																																																																																																																																																																																									
 
 				ent=ent.parent
 			
 			Until ent=Null
 		
-			mat.Translate(x,y,-z)
+			temp_mat.Translate(x,y,-z)
 			
-			x=mat.grid[3][0]
-			y=mat.grid[3][1]
-			z=-mat.grid[3][2]
+			x=temp_mat.grid[3][0]
+			y=temp_mat.grid[3][1]
+			z=-temp_mat.grid[3][2]
 			
 		Endif
 		
@@ -1144,52 +1145,53 @@ Class TEntity
 
 	Function TFormVector(x#,y#,z#,src_ent:TEntity,dest_ent:TEntity)
 	
-		Local mat:Matrix=global_mat.Copy() '***global***
-	
+		'Local mat:Matrix=global_mat.Copy() '***global***
+		temp_mat.Overwrite(global_mat)
+		
 		If src_ent<>Null
 
-			mat.Overwrite(src_ent.mat)
+			temp_mat.Overwrite(src_ent.mat)
 			
-			mat.grid[3][0]=0
-			mat.grid[3][1]=0
-			mat.grid[3][2]=0
-			mat.grid[3][3]=1
-			mat.grid[0][3]=0
-			mat.grid[1][3]=0
-			mat.grid[2][3]=0
+			temp_mat.grid[3][0]=0
+			temp_mat.grid[3][1]=0
+			temp_mat.grid[3][2]=0
+			temp_mat.grid[3][3]=1
+			temp_mat.grid[0][3]=0
+			temp_mat.grid[1][3]=0
+			temp_mat.grid[2][3]=0
 				
-			mat.Translate(x,y,-z)
+			temp_mat.Translate(x,y,-z)
 	
-			x=mat.grid[3][0]
-			y=mat.grid[3][1]
-			z=-mat.grid[3][2]
+			x=temp_mat.grid[3][0]
+			y=temp_mat.grid[3][1]
+			z=-temp_mat.grid[3][2]
 		
 		Endif
 
 		If dest_ent<>Null
 
-			mat.LoadIdentity()
+			temp_mat.LoadIdentity()
 			'mat.Translate(x#,y#,z#)
 		
 			Local ent:TEntity=dest_ent
 			
 			Repeat
 	
-				mat.Scale(1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
-				mat.RotateRoll(-ent.rz)
-				mat.RotatePitch(-ent.rx)
-				mat.RotateYaw(-ent.ry)
+				temp_mat.Scale(1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
+				temp_mat.RotateRoll(-ent.rz)
+				temp_mat.RotatePitch(-ent.rx)
+				temp_mat.RotateYaw(-ent.ry)
 				'mat.Translate(-ent.px,-ent.py,-ent.pz)																																																																																																																																																																																																																																																																																																																																									
 
 				ent=ent.parent
 			
 			Until ent=Null
 		
-			mat.Translate(x,y,-z)
+			temp_mat.Translate(x,y,-z)
 			
-			x=mat.grid[3][0]
-			y=mat.grid[3][1]
-			z=-mat.grid[3][2]
+			x=temp_mat.grid[3][0]
+			y=temp_mat.grid[3][1]
+			z=-temp_mat.grid[3][2]
 			
 		Endif
 		
@@ -1745,9 +1747,8 @@ Class TEntity
  	Public
 	
 	Function UpdateChildren(ent_p:TEntity, type:Int=0)
-	
+		
 		For Local ent_c:TEntity=Eachin ent_p.child_list
-
 			
 			'ent_c.mat.Overwrite(ent_p.mat)
 			If Not type
@@ -1768,9 +1769,9 @@ Class TEntity
 			Endif
 				
 			UpdateChildren(ent_c,type)
-			
+					
 		Next
-	
+
 	End 
 
 

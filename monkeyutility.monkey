@@ -177,6 +177,14 @@ Class Base64
 	Field size:Int=0
 	Global realsize:Int=0
 	
+	Global i2f:DataBuffer
+	
+	Method New()
+		
+		i2f = DataBuffer.Create(4)
+		
+	End
+	
 	Method Free()
 	
 		data = Null
@@ -313,19 +321,34 @@ Class Base64
 	
 	Method ReadInt:Int()
 		pos += 4
-		Return data.PeekInt(pos-4)
+		i2f.PokeByte(0,data.PeekByte(pos-4))
+		i2f.PokeByte(1,data.PeekByte(pos-3))
+		i2f.PokeByte(2,data.PeekByte(pos-2))
+		i2f.PokeByte(3,data.PeekByte(pos-1))
+		Return i2f.PeekInt(0)
+		'Return data.PeekInt(pos-4)
 	End
 	
 	Method ReadFloat:Float()
 		pos += 4
-		Return data.PeekFloat(pos-4)
+		i2f.PokeByte(0,data.PeekByte(pos-4))
+		i2f.PokeByte(1,data.PeekByte(pos-3))
+		i2f.PokeByte(2,data.PeekByte(pos-2))
+		i2f.PokeByte(3,data.PeekByte(pos-1))
+		Return i2f.PeekFloat(0)
+		'Return data.PeekFloat(pos-4)
 	End
 	
 	Method ReadTag:String()
 		''readtag does not increment position
 		If pos>size Then Return ""
 		
-		Local d:Int = data.PeekInt(pos)
+		i2f.PokeByte(0,data.PeekByte(pos))
+		i2f.PokeByte(1,data.PeekByte(pos+1))
+		i2f.PokeByte(2,data.PeekByte(pos+2))
+		i2f.PokeByte(3,data.PeekByte(pos+3))
+		Local d:Int = i2f.PeekInt(0)
+		'Local d:Int = data.PeekInt(pos)
 
 		Return (String.FromChar((d  ) & $00ff)+String.FromChar((d Shr 8 )& $00ff)+
 			String.FromChar((d Shr 16 )& $00ff)+String.FromChar((d Shr 24)& $00ff) )

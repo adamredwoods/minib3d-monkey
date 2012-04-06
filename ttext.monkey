@@ -7,7 +7,8 @@ Import tsurface
 
 
 Class TText Extends TSprite
-
+	
+	Const ALIGN_CENTER:Int = 1
 	
 	Field cam:TCamera
 	Field mode:Bool = True ''true = 2d, false = 3d
@@ -20,6 +21,8 @@ Class TText Extends TSprite
 	Field pixel_ratio:Float
 	Field padding:Int
 	Field char_rows:Int
+	
+	Field align:Int = 0
 	
 	Global mask_color:Int = $ffffff
 	
@@ -59,14 +62,14 @@ Class TText Extends TSprite
 		Endif
 		
 		TTexture.ResizeNoSmooth() ''dont smooth on resize
-		TTexture.ClearTextureFilters() ''no mip map
+		'TTexture.ClearTextureFilters() ''no mip map
 		
 		Local pixmap:TPixmap = TPixmap.LoadPixmap( tt.font_file)
 		
 		pixmap.MaskPixmap(tt.mask_color & $0000ff, (tt.mask_color & $00ff00) Shr 8 , (tt.mask_color & $ff0000) Shr 16) 
 		Local tex:TTexture = TTexture.LoadTexture(pixmap,4)
 
-		TTexture.RestoreTextureFilters()
+		'TTexture.RestoreTextureFilters()
 		TTexture.ResizeSmooth()
 		
 		tex.is_font = True
@@ -74,6 +77,7 @@ Class TText Extends TSprite
 		tex.TextureBlend(2)
 		tex.NoSmooth() ''can be set by user
 		
+		tt.surf = tt.CreateSurface()
 		tt.EntityTexture(tex)
 		tt.char_rows = Ceil( (c_pixels*num_chars+(num_chars*(pad*2) )) /Float(tex.TextureWidth(True)) )
 
@@ -100,7 +104,7 @@ Class TText Extends TSprite
 	End
 	
 	
-	Method AddChar(char:Int, num:Int, x:Float=0.0, y:Float=0.0)
+	Method AddChar(char:Int, num:Int, x:Float=0.0, y:Float=0.0, offset:Float=0.0)
 		
 		Local uv:Float = (char - 32.0) * char_uvwidth + (char - 32.0) * padding
 		Local uv2:Float = 0.99
@@ -109,7 +113,7 @@ Class TText Extends TSprite
 		If uv < 0 Then uv = 0; uv2 = 0.001
 		
 		
-		Local kern:Float = 0.3 * x
+		Local kern:Float = 0.3 * x + offset
 		
 		surf.AddVertex( 0+x-kern, 0+y,0, uv, uv2)
 		surf.AddVertex( 0+x-kern, 1+y,0, uv, 0.02)
@@ -130,7 +134,7 @@ Class TText Extends TSprite
 		If uv < 0 Then uv = 0; uv2 = 0.001
 		
 		
-		Local kern:Float = 0.3 * x
+		Local kern:Float = 0.3 * x 
 
 		Local v:Int = num*4
 		surf.VertexTexCoords(v+0,uv,uv2)
@@ -150,7 +154,7 @@ Class TText Extends TSprite
 		brush.fx = brush.fx &(~64) ''enable depth testing
 	End
 	
-	Method SetText(str$,x:Float, y:Float, z:Float = 0.0)
+	Method SetText(str$,x:Float, y:Float, z:Float = 0.0, align:Int=0)
 		
 		Local resurf:Int = 0
 		
@@ -178,6 +182,11 @@ Class TText Extends TSprite
 		old_text = str
 		
 		Local nl:Float = 0.0, xx:Int =0, total:Int=0
+		
+		''alignment
+		Local offset:Float = 0
+		If align = 1 Then offset = str.Length()*0.5 ''(0.5 times kern(0.3))
+		
 		For Local i:= 0 To str.Length()-1
 	
 			If str[i] = 13 Or str[i] = 10
@@ -186,7 +195,7 @@ Class TText Extends TSprite
 				Continue
 			Endif
 			
-			If resurf Then AddChar( str[i], total, 1.0+xx, nl) Else AdjustChar( str[i], total, 1.0+xx, nl)
+			If resurf Then AddChar( str[i], total, 1.0+xx, nl, offset) Else AdjustChar( str[i], total, 1.0+xx, nl)
 			xx += 1
 			total +=1
 		Next
@@ -203,6 +212,13 @@ Class TText Extends TSprite
 		
 	End
 	
+	Method ScaleText(s_x#, s_y#, s_z#=1.0)
+	
+		scale_x=s_x
+		scale_y=s_y
+	
+	End 
+	
 	Function Pow2Size:Int( n )
 		Local t:Int=1
 		While t<n
@@ -212,7 +228,11 @@ Class TText Extends TSprite
 	End 
 	
 	Method NoSmooth()
-		If surf Then surf.brush.tex[0].NoSmooth()
+		If brush Then brush.tex[0].NoSmooth()
+	End
+	
+	Method Smooth()
+		If brush Then brush.tex[0].Smooth()
 	End
 	
 	Method ReloadTexture()

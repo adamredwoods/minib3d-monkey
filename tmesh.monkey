@@ -230,14 +230,14 @@ Class TMesh Extends TEntity
 	End 
 	
 	Method FreeEntity()
-		
-		Super.FreeEntity() 
-		
+
 		''dont clear surf_list or will clear all entities
 		
 		anim_surf = New TSurface[0]
 		
 		bones = New TBone[0]
+		
+		Super.FreeEntity() 
 		
 	End 
 	
@@ -248,7 +248,7 @@ Class TMesh Extends TEntity
 		mesh.classname="Mesh"
 	
 		mesh.AddParent(parent_ent)
-		entity_list.EntityListAdd(mesh)
+		mesh.entity_link = entity_list.EntityListAdd(mesh)
 
 		' update matrix
 		If mesh.parent<>Null
@@ -273,7 +273,7 @@ Class TMesh Extends TEntity
 		mesh.classname="Model"
 
 		mesh.AddParent(parent_ent)
-		entity_list.EntityListAdd(mesh)
+		mesh.entity_link = entity_list.EntityListAdd(mesh)
 
 		' update matrix
 		If mesh.parent<>Null

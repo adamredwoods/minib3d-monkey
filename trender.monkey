@@ -57,11 +57,11 @@ Class TRender
 				ent=Null
 			Next
 			
-			ClearCollisions
+			ClearCollisions()
 			
-			ClearList(TPick.ent_list)
+			TPick.ent_list.Clear()
 			TPick.picked_ent=Null
-			TPick.picked_surface=Null
+			TPick.picked_surface=0
 			
 		Endif
 		

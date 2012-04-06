@@ -10,7 +10,9 @@ Import minib3d
 '' - need to move createtreemesh() routine to somewhere we can init it in OnCreate() rather than during click time
 
 Class TColTree
-
+	
+	Const ONETHIRD:Float = 1.0/3.0
+	
 	Field reset_col_tree=False
 	Field c_col_tree:MeshCollider ''variable name or class name is misleading
 	
@@ -27,8 +29,7 @@ Class TColTree
 	' creates a collision tree for a mesh if necessary
 	Method CreateMeshTree:MeshCollider(mesh:TMesh)
 	
-		Const ONETHIRD:Float = 1.0/3.0
-		
+
 		' if reset_col_tree flag is true clear tree
 		If reset_col_tree=True
 
@@ -40,7 +41,6 @@ Class TColTree
 		Endif
 
 		If c_col_tree=Null
-
 			Local total_verts_count:Int=0
 			Local vindex:Int=0
 			Local triindex:Int =0
@@ -48,8 +48,7 @@ Class TColTree
 			''get total tris and verts so we don't need to resize
 			Local total_tris:Int=0, total_verts:Int=0
 			
-			For Local s=1 To mesh.CountSurfaces()
-				Local surf:TSurface=mesh.GetSurface(s)
+			For Local surf:TSurface =Eachin mesh.surf_list
 				total_tris +=surf.no_tris
 				total_verts +=surf.no_verts
 				
@@ -58,17 +57,16 @@ Class TColTree
 	
 			c_col_tree =  New MeshCollider(total_verts, total_tris) ''mesh_coll
 			
-			
 			''combine all surfaces and vertex into one array
-			
-			For Local s=1 To mesh.CountSurfaces()
-			
-				Local surf:TSurface=mesh.GetSurface(s)
+			Local s:Int=0
+			For Local surf:TSurface = Eachin mesh.surf_list
 				
-				Local no_tris=surf.no_tris
-				Local no_verts=surf.no_verts
+				s+=1
+				
+				Local no_tris:Int =surf.no_tris
+				Local no_verts:Int =surf.no_verts
 										
-				If no_tris<>0 And no_verts<>0
+				If no_tris<>0
 					
 					'do vert coords first
 					For Local i:=0 To no_verts-1
@@ -95,8 +93,12 @@ Class TColTree
 					
 						''Add to MeshCollider
 						c_col_tree.tri_surface[triindex] = s
-						c_col_tree.tri_centres[triindex] = c_col_tree.tri_verts[v0].Add(c_col_tree.tri_verts[v1]).Add(c_col_tree.tri_verts[v2])
-						c_col_tree.tri_centres[triindex] = c_col_tree.tri_centres[triindex].Multiply(ONETHIRD)
+						c_col_tree.tri_centres[triindex].x = c_col_tree.tri_verts[v0].x+c_col_tree.tri_verts[v1].x+c_col_tree.tri_verts[v2].x
+						c_col_tree.tri_centres[triindex].y = c_col_tree.tri_verts[v0].y+c_col_tree.tri_verts[v1].y+c_col_tree.tri_verts[v2].y
+						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_verts[v0].z+c_col_tree.tri_verts[v1].z+c_col_tree.tri_verts[v2].z
+						c_col_tree.tri_centres[triindex].x = c_col_tree.tri_centres[triindex].x*ONETHIRD
+						c_col_tree.tri_centres[triindex].y = c_col_tree.tri_centres[triindex].y*ONETHIRD
+						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_centres[triindex].z*ONETHIRD
 						
 						c_col_tree.tris[triindex]=i
 						
@@ -169,7 +171,15 @@ Class MeshCollider
 	Field tree:Node ''was global
 	Field leaf_list:List<Node> = New List<Node> ''was global
 	
+	''to allow the ray to inverse entity scale
+	Field gsx#, gsy#, gsz#
 	
+	Global t_tform:TransformMat ''for testing
+	
+	Private
+
+	
+	Public
 	
 	''creates list of triangle, vertices, and triangle centers, and creates tree node	
 	Method New(no_verts:Int, no_tris:Int)
@@ -354,26 +364,34 @@ Class MeshCollider
 		Endif
 		
 		'' create local box
-		Local local_box:Box = New Box( li )
+		Local local_box:Box = New Box(li) 'New Box( li.o, li.d ) 'New Box(li)
 		local_box.Expand(radius)
 
 		Local t:TransformMat = tf.Copy()
+		't.m.Transpose() ''the orig c++ code uses different type of matrix
+		'local_box = t.Transpose().Multiply(local_box) 'transpose = fastinverse
+		'Box local_box=-t * box; ''was a full Inverse(), but opted on Transpose() since only using 3x3	<-- WRONG needs full inverse
+		
 		t.m.Transpose() ''the orig c++ code uses different type of matrix
-		local_box = t.Transpose().Multiply(local_box)
-		'Box local_box=-t * box; ''was a full Inverse(), but opted on Transpose() since only using 3x3	
+		t.m.Scale( 0.5/gsx, 0.5/gsy, 0.5/gsz )
+		t = t.Transpose()
+		local_box = t.Multiply(local_box)
+
+		Local line2:Line = New Line(li.o, li.d)
+		line2 = t.Multiply(line2)
 	
-		Return Collide(local_box, li,radius,t,coll,tree)
+		Return Collide(local_box, line2, radius, t, coll, tree)
 		
 	End
 
 
 
 	Method Collide:Int( line_box:Box, line:Line, radius:Float, tform:TransformMat, curr_coll:CollisionObject, node:Node)
-		
+	
 		If (Not line_box.Overlaps(node.box)) Then Return 0
-		
+
 		Local hit:Int = 0
-		
+
 		If (node.triangles.Length() <1)
 			
 			If( node.left ) Then hit = hit | Collide( line_box,line,radius,tform,curr_coll,node.left )
@@ -383,6 +401,7 @@ Class MeshCollider
 			
 		Endif
 
+	
 		For Local k:Int = 0 To node.triangles.Length()-1
 		
 			Local tri:Int = node.triangles[k]*3
@@ -396,15 +415,16 @@ Class MeshCollider
 			
 			If (Not tri_box.Overlaps(line_box)) Then Continue
 
-			'tform.m.Transpose() ''the orig c++ code uses different type of matrix
-			
-			If( Not curr_coll.TriangleCollide( line,radius,tform.Multiply(v0),tform.Multiply(v1),tform.Multiply(v2) ) ) Then Continue
+			'tform.m.Transpose() ''the orig c++ code uses different type of matrix		
+			'If( Not curr_coll.TriangleCollide( line,radius,tform.Multiply(v0),tform.Multiply(v1),tform.Multiply(v2) ) ) Then Continue
 
+			If Not curr_coll.RayTriangle( line, v0,v1,v2 ) Then Continue
+			
 			curr_coll.surface=tri_surface[ node.triangles[k] ]
 			curr_coll.index= node.triangles[k]
 										
 			hit = 1
-			'Exit '' exit early for hit ok?
+			'Exit '' exit early for hit ok? or check all triangles
 			
 		Next
 		
@@ -412,7 +432,7 @@ Class MeshCollider
 	
 	End
 	
-
+	''Triangle-Triangle intersect
 	Method Intersects:Bool( c:MeshCollider, t:Transform)
 
 		Local a:Vector[][] = New Vector[MAX_COLL_TRIS][3]
@@ -453,6 +473,10 @@ Class MeshCollider
 		
 	End
 
+
+	
+	
+	
 End				
 
 

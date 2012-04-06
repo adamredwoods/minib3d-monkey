@@ -3,11 +3,16 @@ Import minib3d
 '' - obj does not need to be triangles, can handle polys
 '' large polys (>4) may be triangulated poorly though...
 '' - combines reused surfaces
+'' - if vertexcache has different tex or norm index, then create a new vertex (ie. vertex with multiple tex or normal coords)
 Class TModelObj
 
-	Const DEBUG:Int = 1
+#If CONFIG="debug"
+	Const DEBUG:Int =1
+#else
+	Const DEBUG:Int =0
+#Endif
 	
-	Const MAXVERTS:Int = 2000
+	Const MAXVERTS:Int = 2000 ''should auto-increment as needed
 	
 	Field pos:Int=0
 	Field data:String
@@ -173,11 +178,13 @@ Class TModelObj
 						
 						surface = currMtl.meshSurface
 						
+						If Not currMtl.cache Then currMtl.cache = New VertCache(16)
 						
-						If currMtl.realvertindex.Length() < VC+1
+						While currMtl.cache.size < VC+1	
 							'' increase vertex index cache
-							currMtl.realvertindex = currMtl.realvertindex.Resize(VC+1)
-						Endif
+							currMtl.cache = New VertCache(currMtl.cache.size+16) ''wipes out old
+							
+						Wend
 						
 					Endif
 				Endif
@@ -206,23 +213,63 @@ Class TModelObj
 								Local v0:Int = V[0].vi
 								Local v1:Int = V[i2-1].vi
 								Local v2:Int = V[i2].vi
-							
-								''can't use 0, so offset
-								If Not currMtl.realvertindex[v0]
-									currMtl.realvertindex[v0] = 1+ surface.AddVertex( vertexP[v0].x , vertexP[v0].y ,-vertexP[v0].z)
+								Local t:Int =0
+										
+								t = currMtl.cache.CheckVert(v0, V[0].ti, V[0].ni)
+
+								If t=0
+								
+									v0 = surface.AddVertex( vertexP[v0].x , vertexP[v0].y ,-vertexP[v0].z)
+									'' v0+1 for real index, can't use 0
+									currMtl.cache.SetCache( V[0].vi, v0+1, V[0].ti, V[0].ni)
+									
+								Elseif t=-1
+								
+									'' different vt and vn, if so, create new vertex, **update cache
+									v0 = surface.AddVertex( vertexP[v0].x , vertexP[v0].y ,-vertexP[v0].z)
+									currMtl.cache.SetCache( V[0].vi, v0+1, V[0].ti, V[0].ni)
+								Else
+									''offset base 0
+									v0 = t-1
+										
 								Endif
-								If Not currMtl.realvertindex[v1]
-									currMtl.realvertindex[v1] = 1+ surface.AddVertex( vertexP[v1].x , vertexP[v1].y ,-vertexP[v1].z)
+								
+								t = currMtl.cache.CheckVert(v1, V[i2-1].ti, V[i2-1].ni)
+								If t=0
+								
+									v1 = surface.AddVertex( vertexP[v1].x , vertexP[v1].y ,-vertexP[v1].z)
+									'' v0+1 for real index, can't use 0
+									currMtl.cache.SetCache( V[i2-1].vi, v1+1, V[i2-1].ti, V[i2-1].ni)
+									
+								Elseif t=-1
+								
+									'' different vt and vn, if so, create new vertex, **update cache
+									v1 = surface.AddVertex( vertexP[v1].x , vertexP[v1].y ,-vertexP[v1].z)
+									currMtl.cache.SetCache( V[i2-1].vi, v1+1, V[i2-1].ti, V[i2-1].ni)
+								Else
+									''offset base 0
+									v1 = t-1
+										
 								Endif
-								If Not currMtl.realvertindex[v2]
-									currMtl.realvertindex[v2] = 1+ surface.AddVertex( vertexP[v2].x , vertexP[v2].y ,-vertexP[v2].z)
+								
+								t = currMtl.cache.CheckVert(v2, V[i2].ti, V[i2].ni)
+								If t=0
+								
+									v2 = surface.AddVertex( vertexP[v2].x , vertexP[v2].y ,-vertexP[v2].z)
+									'' v0+1 for real index, can't use 0
+									currMtl.cache.SetCache( V[i2].vi, v2+1, V[i2].ti, V[i2].ni)
+									
+								Elseif t=-1
+								
+									'' different vt and vn, if so, create new vertex, **update cache
+									v2 = surface.AddVertex( vertexP[v2].x , vertexP[v2].y ,-vertexP[v2].z)
+									currMtl.cache.SetCache( V[i2].vi, v2+1, V[i2].ti, V[i2].ni)
+								Else
+									''offset base 0
+									v2 = t-1
+										
 								Endif
 						
-								''offset
-								v0 = currMtl.realvertindex[v0]-1
-								v1 = currMtl.realvertindex[v1]-1
-								v2 = currMtl.realvertindex[v2]-1
-	
 
 								If vertexN[1] <> Null And V[0].ni <> 0
 									surface.VertexNormal  v0 , vertexN[V[0].ni].nx , vertexN[V[0].ni].ny , vertexN[V[0].ni].nz
@@ -231,9 +278,9 @@ Class TModelObj
 								Endif
 								
 								If vertexT[1] <> Null And V[0].ti <> 0
-									surface.VertexTexCoords  v0 , vertexT[V[0].ti].u ,1- vertexT[V[0].ti].v
-									surface.VertexTexCoords  v1 , vertexT[V[i2-1].ti].u ,1- vertexT[V[i2-1].ti].v
-									surface.VertexTexCoords  v2 , vertexT[V[i2].ti].u , 1 - vertexT[V[i2].ti].v
+									surface.VertexTexCoords  v0 , vertexT[V[0].ti].u , 1-vertexT[V[0].ti].v
+									surface.VertexTexCoords  v1 , vertexT[V[i2-1].ti].u , 1-vertexT[V[i2-1].ti].v
+									surface.VertexTexCoords  v2 , vertexT[V[i2].ti].u , 1-vertexT[V[i2].ti].v
 		 						Endif
 									
 								surface.AddTriangle  v0, v2, v1  
@@ -278,7 +325,6 @@ Class TModelObj
 		''clean up buffers
 		For Local surfx:TSurface = Eachin mesh.surf_list
 			surfx.CropSurfaceBuffers()
-			'If mesh.anim_surf[surfx.surf_id] Then mesh.anim_surf[surfx.surf_id].CropSurfaceBuffers()
 		Next
 		
 		mesh.UpdateNormals()
@@ -457,33 +503,11 @@ End
 
 	
 Class TFaceData
-	'Field T:Int[3]
+
 	Field vi:Int
 	Field ti:Int
 	Field ni:Int
 	Field its:Int
-	
-	#rem
-	Method GetValues:String(data:String)
-	
-		'Print Data
-		Local f:Int[3]
-		For Local i:Int = 0 To 2
-			'Print "Before : " + Data
-			Local fl:Int = data.Find("/")
-			If i < 2 Then
-				T[i] = Int(data[..fl])-1
-				data = data[fl+1..]
-			Else
-				T[i] = Int(data[..data.Find(" ")])-1
-			Endif
-			'Print "After : " + data
-		Next
-		'Print data		
-		Return data[data.Find(" ")..]	
-		
-	End Method
-	#end
 	
 End 
 
@@ -573,9 +597,46 @@ Class TObjMtl
 	Field texture:TTexture
 
 	Field meshSurface:TSurface
-	Field realvertindex:Int[1]
+	
+	Field cache:VertCache
 	
 End
 	
- 
+Class VertCache
+	
+	Field size:Int =1
+	Field realvertindex:Int[1] ''cache vert address when created
+	Field texusedindex:Int[1] ''cache vert to tex coord index
+	Field normusedindex:Int[1] ''cache vert to normal index used
+	
+	Method New( i:Int )
+		realvertindex = New Int[i]
+		texusedindex = New Int[i]
+		normusedindex = New Int[i]
+		size = i
+	End
+	
+	'' CheckVert(vert index, texture index, norm index)
+	Method CheckVert:Int( i:Int, ti:Int, ni:Int)
+		
+		If Not realvertindex[i] Then Return 0
+
+		''-- check for similar vertex, different vt and vn, if so, create new vertex
+
+		If (texusedindex[i] <> ti And ti<>0) Return -1
+		If (normusedindex[i] <> ni And ni<>0) Return -1	
+		
+		''else return real vertex index
+		Return realvertindex[i]
+		
+	End
+	
+	Method SetCache(i:Int, reali:Int, ti:Int=0, ni:Int=0)
+		''set real vert index
+		realvertindex[i] = reali
+		texusedindex[i] = ti
+		normusedindex[i] = ni
+	End
+	
+End
 

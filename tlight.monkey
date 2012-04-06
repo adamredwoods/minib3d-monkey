@@ -117,13 +117,13 @@ Class TLight Extends TEntity
 
 	Method FreeEntity()
 	
-		Super.FreeEntity() 
-		
-		light_link.Remove()
-		
 		If no_lights>0 Then no_lights=no_lights-1
 		
 		glDisable(gl_light[no_lights])
+		
+		light_link.Remove()
+			
+		Super.FreeEntity()
 		
 	End 
 	
@@ -155,8 +155,9 @@ Class TLight Extends TEntity
 		Endif
 	
 		light.light_link = light_list.AddLast(light)
-		light.AddParent(parent_ent)
-		entity_list.EntityListAdd(light)
+		light.entity_link = entity_list.EntityListAdd(light) ''for collisions
+		If parent_ent Then light.AddParent(parent_ent)
+		
 
 		' update matrix
 		If light.parent<>Null
