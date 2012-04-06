@@ -1,6 +1,8 @@
 minib3d+monkey
 
-v0.10
+v0.11 - fixes: faster TPick; ClearWorld(); TText added centering align; OBJ loader for multiple coordinates;
+        Base64 Loader fix for ARM data alignment (works on iPhone, iPad)
+v0.10 - first release
 
 original minib3d (c) Simon Harrison
 monkey version (c) Adam Piette
