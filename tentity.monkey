@@ -119,7 +119,7 @@ Class TEntity
 		
 		parent=Null
 		mat=New Matrix
-		brush=Null
+		brush=New TBrush
 	
 		' free children entities
 		For Local ent:TEntity =Eachin child_list
