@@ -1,5 +1,6 @@
 Import minib3d
 
+
 'flags
 Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
@@ -49,14 +50,19 @@ Class TRender
 	
 	
 	Function ClearWorld(entities=True,brushes=True,textures=True)
-	
+		
+		render_list.Clear()
+		render_alpha_list.Clear()
+		
 		If entities
-			
+		
 			For Local ent:TEntity=Eachin TEntity.entity_list
+
 				ent.FreeEntity()
 				ent=Null
 			Next
 			
+			'TEntity.entity_list.Clear()
 			ClearCollisions()
 			
 			TPick.ent_list.Clear()
@@ -184,7 +190,7 @@ Class TRender
 	
 	
 	
-	Function RenderWorld:Void()
+	Function  RenderWorld:Void()
 	
 		If Not TCamera.cam_list Then Return
 		
@@ -975,6 +981,8 @@ Class OpenglES11 Extends TRender
 		
 		Next	''end alpha loop
 		
+		temp_list = Null
+		
 		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
 		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
 	
@@ -1170,8 +1178,8 @@ Class RenderAlphaList Extends List<TMesh>
 	
 	''draw furthest (highest alpha_order) first, so sort from great to least
 	Method Compare( left:TMesh,right:TMesh )
-		If left.alpha_order < right.alpha_order Return -1
-		Return left.alpha_order > right.alpha_order
+		If left.alpha_order > right.alpha_order Return -1 ''double check, i flipped these
+		Return left.alpha_order < right.alpha_order
 	End
 	
 End
