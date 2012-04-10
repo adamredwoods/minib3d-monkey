@@ -625,21 +625,21 @@ Class TCamera Extends TEntity
 		proj_mat.FromArray(proj)
 		
 		'point -> model matrix -> proj matrix
-		temp = mod_mat.Translate4(x, y, z, 1.0)
-		temp = proj_mat.Translate4(temp[0], temp[1], temp[2], temp[3])
+		mod_mat.Translate4(x, y, z, 1.0)
+		proj_mat.Translate4(mod_mat.grid[3][0], mod_mat.grid[3][1], mod_mat.grid[3][2], mod_mat.grid[3][3])
 		
 		' normalize
-		If (temp[3] = 0.0) Then Return New Vector(0.0,0.0,0.0)
+		If (proj_mat.grid[3][3] = 0.0) Then Return New Vector(0.0,0.0,0.0)
 		
-		temp[0] = temp[0] /temp[3]
-		temp[1] = temp[1] /temp[3]
-		temp[2] = temp[2] /temp[3]
+		temp[0] = proj_mat.grid[3][0] /proj_mat.grid[3][3]
+		temp[1] = proj_mat.grid[3][1] /proj_mat.grid[3][3]
+		temp[2] = proj_mat.grid[3][2] /proj_mat.grid[3][3]
 		
 		' screen coordinates
 		pos.x = viewport[0] + (1.0 + temp[0]) * viewport[2] *0.5
 		pos.y = -viewport[1] - (1.0 + temp[1]) * viewport[3] *0.5 + viewport[3]
 		' z depth
-		pos.z = (1 + temp[2]) *0.5
+		pos.z = (1.0 + temp[2]) *0.5
 		
 		Return pos
 	
