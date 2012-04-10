@@ -156,7 +156,7 @@ Class MeshCollider
 	
 	Public
 	
-	Const MAX_COLL_TRIS:Int =16
+	Const MAX_COLL_TRIS:Int =8 '16
 	
 	''main mesh info
 	Field tri_count:Int
@@ -173,6 +173,10 @@ Class MeshCollider
 	
 	''to allow the ray to inverse entity scale
 	Field gsx#, gsy#, gsz#
+	
+	
+	''fast ray-box test
+	Field r_invx#, r_invy#, r_invz#, r_sign:Int[3]
 	
 	Global t_tform:TransformMat ''for testing
 	
@@ -380,15 +384,27 @@ Class MeshCollider
 		Local line2:Line = New Line(li.o, li.d)
 		line2 = t.Multiply(line2)
 	
+		''setup ray for ray-box
+		Local ln:Float = line2.Length()
+		Local dir:Vector = New Vector( (line2.o.x-line2.d.x)/ln,(line2.o.y-line2.d.y)/ln,(line2.o.z-line2.d.z)/ln )
+		r_invx = 1.0/dir.x; r_invy = 1.0/dir.y; r_invz = 1.0/dir.z
+		
+		r_sign[0] = (r_invx < 0)
+		r_sign[1] = (r_invy < 0)
+		r_sign[2] = (r_invz < 0)
+		
 		Return Collide(local_box, line2, radius, t, coll, tree)
 		
 	End
 
 
-
+	''-- iterative
 	Method Collide:Int( line_box:Box, line:Line, radius:Float, tform:TransformMat, curr_coll:CollisionObject, node:Node)
-	
-		If (Not line_box.Overlaps(node.box)) Then Return 0
+		
+		''fast ray-box
+		If (Not RayBoxTest(line,node.box)) Then Return 0
+		
+		'If (Not line_box.Overlaps(node.box)) Then Return 0
 
 		Local hit:Int = 0
 
@@ -474,7 +490,37 @@ Class MeshCollider
 	End
 
 
-	
+
+	Method RayBoxTest(li:Line,box:Box)
+		
+		Local tmin#, tmax#, tymin#, tymax#, tzmin#, tzmax#
+		Local bounds:Vector[2]
+		
+		bounds[0] = box.a
+		bounds[1] = box.b
+
+		tmin = (bounds[r_sign[0]].x - li.o.x) * r_invx
+		tmax = (bounds[1-r_sign[0]].x - li.o.x) * r_invx
+		tymin = (bounds[r_sign[1]].y - li.o.y) * r_invy
+		tymax = (bounds[1-r_sign[1]].y - li.o.y) * r_invy
+		
+		If ( (tmin > tymax) Or (tymin > tmax) ) Return False
+		If (tymin > tmin) tmin = tymin
+		If (tymax < tmax) tmax = tymax
+		
+		tzmin = (bounds[r_sign[2]].z - li.o.z) * r_invz
+		tzmax = (bounds[1-r_sign[2]].z - li.o.z) * r_invz
+		
+		If ( (tmin > tzmax) Or (tzmin > tmax) ) Return False
+		If (tzmin > tmin) tmin = tzmin
+		If (tzmax < tmax) tmax = tzmax
+		
+		Return True '( (tmin < 999999) And (tmax > -999999) )
+			
+	End
+
+
+
 	
 	
 End				
