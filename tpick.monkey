@@ -172,16 +172,34 @@ Class TPick
 
 		picked_ent=Null
 		picked_time=1.0
-	
-		Local line:Line = New Line(ax,ay,az,bx-ax,by-ay,bz-az)
+		Local pick:Int =False
 		
 		Local col_obj:CollisionObject = New CollisionObject()
 		
-		Local pick:Int =False
+		Local line:Line = New Line(ax,ay,az,bx-ax,by-ay,bz-az)
+		Local ray:Vector = New Vector((line.d.x-ax),(line.d.y-ay),(line.d.z-az)).Normalize()	
+		Local cen:Vector = New Vector(0,0,0)
+		
 		
 		For Local ent:TEntity=Eachin ent_list
 		
 			If ent.pick_mode=0 Or ent.Hidden()=True Then Continue
+			
+			''early sphere rejection
+			If TMesh(ent)
+				''only do this for meshes with cull_radius
+				Local rad:Float
+				If ent.cull_radius <0 Then rad = -ent.cull_radius*ent.cull_radius + radius Else rad = radius+ent.cull_radius
+
+				'' rad * largest entity global scale
+				rad = rad*Max(Max(ent.gsx,ent.gsy),ent.gsz)
+				If rad<0 Then rad=-rad
+	
+				cen.Update(ent.mat.grid[3][0] - ax, ent.mat.grid[3][1] - ay,-ent.mat.grid[3][2] - az)
+
+				If Not col_obj.RaySphereTest(ray,cen, rad) Then Continue
+
+			Endif
 			
 			''			
 			vec_i.Update(ent.mat.grid[0][0],ent.mat.grid[1][0],-ent.mat.grid[2][0]) '++-
@@ -218,7 +236,7 @@ Class TPick
 			
 			If pick
 				picked_ent=ent
-				Exit ''do we need to run through the list?
+				Exit ''do we need to run through the list? yes for multiple objects, but we don't have that capability yet
 			Endif
 			
 		Next

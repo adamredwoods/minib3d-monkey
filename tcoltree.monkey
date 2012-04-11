@@ -41,6 +41,7 @@ Class TColTree
 		Endif
 
 		If c_col_tree=Null
+		
 			Local total_verts_count:Int=0
 			Local vindex:Int=0
 			Local triindex:Int =0
@@ -148,6 +149,7 @@ Class Node
 	Field triangles:Int[]
 	Field left:Node
 	Field right:Node
+	Field level:Int ''debugging
 	
 End
 
@@ -156,7 +158,7 @@ Class MeshCollider
 	
 	Public
 	
-	Const MAX_COLL_TRIS:Int =8 '16
+	Const MAX_COLL_TRIS:Int =64'8'16
 	
 	''main mesh info
 	Field tri_count:Int
@@ -237,6 +239,7 @@ Class MeshCollider
 
 	''recursive
 	'' tris = the first vindex for the tri (NOT the tri index)
+	''-- this method overlaps because we're testing centers, so some vertexes will be shared.
 	Method CreateNode:Node( tris:Int[] )
 		
 		If( tris.Length() <=MAX_COLL_TRIS ) Return CreateLeaf( tris )
@@ -259,6 +262,8 @@ Class MeshCollider
 		
 		Local axis_map:PairList<AxisPair> = New PairList<AxisPair>
 		Local num:Int = tris.Length()
+		Local num_left:Int = num*0.5
+		Local num_right:Int = num - num_left
 		
 		For k = 0 To num-1
 		
@@ -280,28 +285,23 @@ Class MeshCollider
 		
 		''left node
 		Local index:Int=0
-		Local newtris:Int[(num*0.5)+0.5] ''half and round up
+		Local newtris:Int[num_left+1] ''half and round up
+		Local newtris2:Int[num_right+1]
+		Local leftset:Int=1
 		
 		For Local ap:AxisPair = Eachin axis_map
 			
-			newtris[index] = ap.value
-			index +=1
-			If index>= Int(num*0.5) Then Exit
-		Next
-		
-		c.left = CreateNode( newtris )
-		
-		''right node
-		index=0
-		Local newtris2:Int[(num*0.5)+1.0]
-		
-		For Local ap:AxisPair = Eachin axis_map.Backwards()
+			If leftset
+				newtris[index] = ap.value	
+				If index= num_left Then leftset =0; index=0 Else index +=1		
+			Else
+				newtris2[index] = ap.value
+				index +=1
+			Endif
 			
-			newtris2[index] = ap.value
-			index +=1
-			If index>= Int(num*0.5+1.0 ) Then Exit
 		Next
 		
+		c.left = CreateNode( newtris )		
 		c.right = CreateNode( newtris2 )
 		
 		Return c
@@ -440,7 +440,7 @@ Class MeshCollider
 			curr_coll.index= node.triangles[k]
 										
 			hit = 1
-			'Exit '' exit early for hit ok? or check all triangles
+			Exit '' exit early for hit ok? or check all triangles
 			
 		Next
 		
@@ -512,8 +512,8 @@ Class MeshCollider
 		tzmax = (bounds[1-r_sign[2]].z - li.o.z) * r_invz
 		
 		If ( (tmin > tzmax) Or (tzmin > tmax) ) Return False
-		If (tzmin > tmin) tmin = tzmin
-		If (tzmax < tmax) tmax = tzmax
+		'If (tzmin > tmin) tmin = tzmin
+		'If (tzmax < tmax) tmax = tzmax
 		
 		Return True '( (tmin < 999999) And (tmax > -999999) )
 			

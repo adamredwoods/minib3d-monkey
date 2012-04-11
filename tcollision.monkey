@@ -868,6 +868,19 @@ Class CollisionObject
 	End
 	
 	
+	Method RaySphereTest:Int(ray:Vector, center:Vector, radius:Float)
+		'' -- ray must be normalized
+		'' -- center is relative to ray origin
+		
+		'Local l:Float = ray.Dot(center)
+		Local l:Float = (ray.x*center.x + ray.y*center.y + ray.z*center.z)
+		'Local c:Float = center.Dot(center)
+		Local r:Float= l*l - (center.x*center.x + center.y*center.y + center.z*center.z) + radius*radius
+			
+		Return 1-(r<0)
+	
+	End
+
 End
 
 
