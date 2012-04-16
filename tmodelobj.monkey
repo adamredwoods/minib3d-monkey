@@ -40,8 +40,10 @@ Class TModelObj
 		Wend
 		
 		pos += 1 ''get past the newline
-		''check for cr+lf
-		If (data[pos] = 10 Or data[pos] = 13) Then pos +=1
+		If pos < data.Length()
+			''check for cr+lf
+			If (data[pos] = 10 Or data[pos] = 13) Then pos +=1
+		Endif
 		
 		Return stack.Join("")
 	End
@@ -134,7 +136,8 @@ Class TModelObj
 				Endif 
 				
 				If tag[0..2] = "s " Then
-					snumber = Int(Line[2..])
+					Local tt:String = Line[2..].ToLower()
+					If tt<>"off" Then snumber = Int(Line[2..])
 					''s = smoothing groups, not supprted
 				Endif
 				
