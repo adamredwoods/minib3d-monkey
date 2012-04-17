@@ -180,6 +180,7 @@ Class TSurface
 	''-- a method to shorten the memory buffers use to optimal size after mesh has been created
 	''
 	Method CropSurfaceBuffers()
+	
 		If no_verts<1 And no_tris<1 Then Return
 		
 		vert_coords= CopyFloatBuffer(vert_coords, FloatBuffer.Create(no_verts*3) )
@@ -188,6 +189,9 @@ Class TSurface
 		vert_norm= CopyFloatBuffer(vert_norm, FloatBuffer.Create(no_verts*3) )
 		vert_col= CopyFloatBuffer(vert_col, FloatBuffer.Create(no_verts*4) )
 		tris=CopyShortBuffer(tris, ShortBuffer.Create(no_tris*3) )
+		
+		vert_array_size = no_verts
+		tri_array_size = no_tris
 		
 	End
 	
@@ -198,16 +202,15 @@ Class TSurface
 		
 		no_verts=no_verts+1
 
-		' resize arrays/databuffers
-		
+		' resize arrays/databuffers	
 		If no_verts>=vert_array_size
-		
+
 			Repeat
-				vert_array_size=vert_array_size +256
+				vert_array_size=vert_array_size +255
 			Until vert_array_size>no_verts
 			
 			Local vas=vert_array_size
-		
+	
 			vert_coords= CopyFloatBuffer(vert_coords, FloatBuffer.Create(vas*3) )
 			vert_tex_coords0= CopyFloatBuffer(vert_tex_coords0, FloatBuffer.Create(vas*2) )
 			vert_tex_coords1= CopyFloatBuffer(vert_tex_coords1, FloatBuffer.Create(vas*2) )
@@ -215,7 +218,7 @@ Class TSurface
 			vert_col= CopyFloatBuffer(vert_col, FloatBuffer.Create(vas*4) )
 		
 		Endif
-		
+
 		Local n2:Int = no_verts*2
 		Local n3:Int = no_verts*3
 		Local n4:Int = no_verts*4
@@ -287,13 +290,13 @@ Class TSurface
 	End 
 	
 
-	Method CountVertices()
+	Method CountVertices:Int()
 	
 		Return no_verts
 	
 	End 
 	
-	Method CountTriangles()
+	Method CountTriangles:Int()
 	
 		Return no_tris
 	
@@ -447,7 +450,7 @@ Class TSurface
 	
 	Method VertexW#(vid,coord_set=0)
 	
-		Return 0
+		Return 0.0
 
 	End 
 	
@@ -485,17 +488,17 @@ Class TSurface
 
 			Local tri_no:Int =(t+1)*3
 
-			Local v0:Int=tris.Peek(tri_no-3)
-			Local v1:Int=tris.Peek(tri_no-2)
-			Local v2:Int=tris.Peek(tri_no-1)
+			Local v0:Int=tris.Peek(tri_no-3)*3
+			Local v1:Int=tris.Peek(tri_no-2)*3
+			Local v2:Int=tris.Peek(tri_no-1)*3
 	
-			Local ax#=vert_coords.Peek(v1*3+0)-vert_coords.Peek(v0*3+0)
-			Local ay#=vert_coords.Peek(v1*3+1)-vert_coords.Peek(v0*3+1)
-			Local az#=vert_coords.Peek(v1*3+2)-vert_coords.Peek(v0*3+2)
+			Local ax#=vert_coords.Peek(v1+0)-vert_coords.Peek(v0+0)
+			Local ay#=vert_coords.Peek(v1+1)-vert_coords.Peek(v0+1)
+			Local az#=vert_coords.Peek(v1+2)-vert_coords.Peek(v0+2)
 	
-			Local bx#=vert_coords.Peek(v2*3+0)-vert_coords.Peek(v1*3+0)
-			Local by#=vert_coords.Peek(v2*3+1)-vert_coords.Peek(v1*3+1)
-			Local bz#=vert_coords.Peek(v2*3+2)-vert_coords.Peek(v1*3+2)
+			Local bx#=vert_coords.Peek(v2+0)-vert_coords.Peek(v1+0)
+			Local by#=vert_coords.Peek(v2+1)-vert_coords.Peek(v1+1)
+			Local bz#=vert_coords.Peek(v2+2)-vert_coords.Peek(v1+2)
 	
 			Local nx#=(ay*bz)-(az*by) '' surf.TriangleNX#(t)
 			Local ny#=(az*bx)-(ax*bz) '' surf.TriangleNX#(t)
@@ -506,9 +509,9 @@ Class TSurface
 			
 			For Local c:=0 To 2
 	
-				Local v:Int = TriangleVertex(t,c)
+				Local v:Int = TriangleVertex(t,c)*3
 				
-				vx = New Vector( vert_coords.Peek(v*3+0), vert_coords.Peek(v*3+1), vert_coords.Peek(v*3+2))
+				vx = New Vector( vert_coords.Peek(v+0), vert_coords.Peek(v+1), vert_coords.Peek(v+2))
 				
 				vnorm = norm_map.Get(vx)
 				If Not vnorm
@@ -733,11 +736,11 @@ Class TSurface
 		Local total:Int =0, vx#, vy#, vz#
 		Local dup:Bool, same:Int
 
-		For Local v:=0 To no_verts-1
+		For Local v:=0 To (no_verts-1)*3 Step 3
 
-			vx = vert_coords.Peek(v*3+0)
-			vy = vert_coords.Peek(v*3+1)
-			vz = -vert_coords.Peek(v*3+2)
+			vx = vert_coords.Peek(v+0)
+			vy = vert_coords.Peek(v+1)
+			vz = -vert_coords.Peek(v+2)
 
 			dup = False
 			
@@ -745,9 +748,9 @@ Class TSurface
 				
 				If Abs(vx - va[j].x) < diff And Abs(vy - va[j].y) < diff And Abs(vz - va[j].z) < diff 
 						
-					vert_coords.Poke( v*3+0, va[j].x)
-					vert_coords.Poke( v*3+1, va[j].y)
-					vert_coords.Poke( v*3+2,-va[j].z)
+					vert_coords.Poke( v+0, va[j].x)
+					vert_coords.Poke( v+1, va[j].y)
+					vert_coords.Poke( v+2,-va[j].z)
 					dup = True
 					same += 1
 		

@@ -4,7 +4,11 @@ Import minib3d
 
 Class TModelB3D
 	
+#If CONFIG="debug"
 	Const DEBUGMODEL:Int =1
+#else
+	Const DEBUGMODEL:Int =0
+#Endif
 	
 	Function LoadAnimB3D:TMesh(f_name$,parent_ent_ext:TEntity=Null)
 	
@@ -494,8 +498,8 @@ Class TModelB3D
 	
 				Case "VRTS"
 				
-					If v_mesh<>Null Then v_mesh=Null
-					If v_surf<>Null Then v_surf=Null
+					'If v_mesh<>Null Then v_mesh=Null
+					'If v_surf<>Null Then v_surf=Null
 						
 					v_mesh=New TMesh
 					v_surf=v_mesh.CreateSurface()
@@ -551,7 +555,7 @@ Class TModelB3D
 					tr_brush_id=file.ReadInt()
 	
 					' don't create new surface if tris chunk has same brush as chunk immediately before it
-					If prev_tag<>"TRIS" Or tr_brush_id<>old_tr_brush_id
+					If (prev_tag<>"TRIS" Or tr_brush_id<>old_tr_brush_id)
 					
 						' no further tri data for this surf - trim verts
 						If prev_tag="TRIS" Then TrimVerts(surf)
@@ -564,8 +568,7 @@ Class TModelB3D
 						surf.vert_norm=CopyFloatBuffer(v_surf.vert_norm,  FloatBuffer.Create(surf.no_verts*3))
 						surf.vert_tex_coords0=CopyFloatBuffer(v_surf.vert_tex_coords0, FloatBuffer.Create(surf.no_verts*2))
 						surf.vert_tex_coords1=CopyFloatBuffer(v_surf.vert_tex_coords1, FloatBuffer.Create(surf.no_verts*2))
-						
-	
+					
 					Endif
 	
 					tr_sz=12
@@ -793,7 +796,7 @@ Class TModelB3D
 				
 					If new_tag<>"KEYS"
 					
-						TEntity.entity_list.EntityListAdd(bo_bone)
+						bo_bone.entity_link = TEntity.entity_list.EntityListAdd(bo_bone)
 						mesh.bones=mesh.bones.Resize(bo_no_bones)
 						mesh.bones[bo_no_bones-1]=bo_bone
 						last_ent=bo_bone
@@ -859,7 +862,7 @@ Class TModelB3D
 					
 						If bo_bone<>Null ' check if bo_bone exists - it won't for non-boned, keyframe anims
 					
-							TEntity.entity_list.EntityListAdd(bo_bone)
+							bo_bone.entity_link = TEntity.entity_list.EntityListAdd(bo_bone)
 							mesh.bones=mesh.bones.Resize(bo_no_bones)
 							mesh.bones[bo_no_bones-1]=bo_bone
 							last_ent=bo_bone

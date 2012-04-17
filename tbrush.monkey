@@ -143,6 +143,7 @@ Class TBrush
 	Function CompareBrushes(brush1:TBrush,brush2:TBrush)
 	
 		' returns true if specified brush1 has same properties as brush2
+		' return true for both null
 
 		If brush1=Null And brush2<>Null Then Return False
 		If brush1<>Null And brush2=Null Then Return False
@@ -166,7 +167,7 @@ Class TBrush
 				Endif
 			Next
 		Endif
-		
+	
 		Return True
 	
 	End 

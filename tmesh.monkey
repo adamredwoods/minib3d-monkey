@@ -232,6 +232,7 @@ Class TMesh Extends TEntity
 	Method FreeEntity()
 
 		''dont clear surf_list or will clear all entities
+		'Print "free mesh "+classname		
 		
 		anim_surf = New TSurface[0]
 		
@@ -264,11 +265,12 @@ Class TMesh Extends TEntity
 	
 	Function LoadMesh:TMesh(file$,parent_ent:TEntity=Null)
 	
-		Local mesh:TEntity=LoadAnimMesh(file)
+		Local xmesh:TMesh=LoadAnimMesh(file)
+		Local mesh:TMesh = New TMesh
 		'' -- decided not to do this, I need a test B3D file to see how to handle this.
-		'ent.HideEntity()
-		'Local mesh:TMesh=TMesh(ent).CollapseAnimMesh()
-		'ent.FreeEntity()
+		xmesh.HideEntity()
+		CollapseChildren(xmesh,mesh) 'CollapseAnimMesh()
+		xmesh.FreeEntity()
 		
 		mesh.classname="Model"
 
@@ -849,73 +851,34 @@ Class TMesh Extends TEntity
 	
 	End 
 	
+	''AddMesh()
+	'' -- add self mesh to mesh2
+	''
 	Method AddMesh(mesh2:TMesh)
-	
-		For Local s1:Int=1 To CountSurfaces()
+		
+		If Not mesh2 Then Return
+		
+		For Local surf1:TSurface=Eachin surf_list
 			
-			Local surf1:TSurface=GetSurface(s1)
+			'Local surf1:TSurface= Self.GetSurface(s1)
 
 			' if surface is empty, don't add it
-			If surf1.CountVertices()=0 And surf1.CountTriangles()=0 Continue
+			If surf1.CountVertices()=0 And surf1.CountTriangles()=0 Then Continue
 				
-			Local new_surf=True
+			Local new_surf:Bool=True
+			Local tri_offset:Int = 0
+			Local surf:TSurface = Null
+			Local stest:TSurface
 			
-			For Local s2=1 To mesh2.CountSurfaces()	
-			
-				Local surf2:TSurface=mesh2.GetSurface(s2)
-				
-				Local no_verts2=surf2.CountVertices()
-	
+			For stest= Eachin mesh2.surf_list '1 To mesh2.CountSurfaces()	
+
 				' if brushes properties are the same, add surf1 verts and tris to surf2
-				If (TBrush.CompareBrushes(surf1.brush,surf2.brush)=True)
-					'If skipSurfMerge Then Exit
-					' add vertices
-				
-					For Local v=0 To surf1.CountVertices()-1
-		
-						Local vx#=surf1.VertexX(v)
-						Local vy#=surf1.VertexY(v)
-						Local vz#=surf1.VertexZ(v)
-						Local vr#=surf1.VertexRed(v)
-						Local vg#=surf1.VertexGreen(v)
-						Local vb#=surf1.VertexBlue(v)
-						Local va#=surf1.VertexAlpha(v)
-						Local vnx#=surf1.VertexNX(v)
-						Local vny#=surf1.VertexNY(v)
-						Local vnz#=surf1.VertexNZ(v)
-						Local vu0#=surf1.VertexU(v,0)
-						Local vv0#=surf1.VertexV(v,0)
-						Local vw0#=surf1.VertexW(v,0)
-						Local vu1#=surf1.VertexU(v,1)
-						Local vv1#=surf1.VertexV(v,1)
-						Local vw1#=surf1.VertexW(v,1)
-						
-						Local v2=surf2.AddVertex(vx,vy,vz)
-						surf2.VertexColor(v2,vr,vg,vb,va)
-						surf2.VertexNormal(v2,vnx,vny,vnz)
-						surf2.VertexTexCoords(v2,vu0,vv0,vw0,0)
-						surf2.VertexTexCoords(v2,vu1,vv1,vw1,1)
-
-					Next
-		
-					' add triangles
-				
-					For Local t=0 To surf1.CountTriangles()-1
-		
-						Local v0=surf1.TriangleVertex(t,0)+no_verts2
-						Local v1=surf1.TriangleVertex(t,1)+no_verts2
-						Local v2=surf1.TriangleVertex(t,2)+no_verts2
-						
-						surf2.AddTriangle(v0,v1,v2)
-
-					Next
+				If (TBrush.CompareBrushes(surf1.brush,stest.brush)=True)
 					
-					surf2.CropSurfaceBuffers()
-					
-					' mesh shape has changed - update reset flags
-					surf2.reset_vbo=-1 ' (-1 = all)
-	
+					tri_offset = stest.CountVertices()
 					new_surf=False
+					surf = stest
+					
 					Exit
 			
 				Endif
@@ -924,65 +887,69 @@ Class TMesh Extends TEntity
 			
 			' add new surface
 			
+			
 			If new_surf=True
 			
-				Local surf:TSurface=mesh2.CreateSurface()
+				surf=mesh2.CreateSurface()
 				
-				' add vertices
-				
-				For Local v=0 To surf1.CountVertices()-1
-	
-					Local vx#=surf1.VertexX(v)
-					Local vy#=surf1.VertexY(v)
-					Local vz#=surf1.VertexZ(v)
-					Local vr#=surf1.VertexRed(v)
-					Local vg#=surf1.VertexGreen(v)
-					Local vb#=surf1.VertexBlue(v)
-					Local va#=surf1.VertexAlpha(v)
-					Local vnx#=surf1.VertexNX(v)
-					Local vny#=surf1.VertexNY(v)
-					Local vnz#=surf1.VertexNZ(v)
-					Local vu0#=surf1.VertexU(v,0)
-					Local vv0#=surf1.VertexV(v,0)
-					Local vw0#=surf1.VertexW(v,0)
-					Local vu1#=surf1.VertexU(v,1)
-					Local vv1#=surf1.VertexV(v,1)
-					Local vw1#=surf1.VertexW(v,1)
-									
-					Local v2=surf.AddVertex(vx,vy,vz)
-					surf.VertexColor(v2,vr,vg,vb,va)
-					surf.VertexNormal(v2,vnx,vny,vnz)
-					surf.VertexTexCoords(v2,vu0,vv0,vw0,0)
-					surf.VertexTexCoords(v2,vu1,vv1,vw1,1)
-
-				Next
-	
-				' add triangles
+			Endif	
 			
-				For Local t=0 To surf1.CountTriangles()-1
-	
-					Local v0=surf1.TriangleVertex(t,0)
-					Local v1=surf1.TriangleVertex(t,1)
-					Local v2=surf1.TriangleVertex(t,2)
-					
-					surf.AddTriangle(v0,v1,v2)
+			
+			' add vertices
+			Local s1v:Int = surf1.CountVertices()		
+			For Local v:Int=0 To s1v-1
 
-				Next
-				
-				surf.CropSurfaceBuffers()
-				
-				' copy brush
-				
-				If surf1.brush<>Null
-				
-					surf.brush=surf1.brush.Copy()
+				Local vx#=surf1.VertexX(v)
+				Local vy#=surf1.VertexY(v)
+				Local vz#=surf1.VertexZ(v)
+				Local vr#=surf1.VertexRed(v)
+				Local vg#=surf1.VertexGreen(v)
+				Local vb#=surf1.VertexBlue(v)
+				Local va#=surf1.VertexAlpha(v)
+				Local vnx#=surf1.VertexNX(v)
+				Local vny#=surf1.VertexNY(v)
+				Local vnz#=surf1.VertexNZ(v)
+				Local vu0#=surf1.VertexU(v,0)
+				Local vv0#=surf1.VertexV(v,0)
+				Local vw0#=surf1.VertexW(v,0)
+				Local vu1#=surf1.VertexU(v,1)
+				Local vv1#=surf1.VertexV(v,1)
+				Local vw1#=surf1.VertexW(v,1)
 					
-				Endif
+				Local v2:Int = surf.AddVertex(vx,vy,vz)
+				surf.VertexColor(v2,vr,vg,vb,va)
+				surf.VertexNormal(v2,vnx,vny,vnz)
+				surf.VertexTexCoords(v2,vu0,vv0,vw0,0)
+				surf.VertexTexCoords(v2,vu1,vv1,vw1,1)
+
+			Next
+	
+			' add triangles
+	
+			For Local t=0 To surf1.CountTriangles()-1
+
+				Local v0=surf1.TriangleVertex(t,0) + tri_offset
+				Local v1=surf1.TriangleVertex(t,1) + tri_offset
+				Local v2=surf1.TriangleVertex(t,2) + tri_offset
 				
-				' mesh shape has changed - update reset flags
-				surf.reset_vbo=-1 ' (-1 = all)
+				surf.AddTriangle(v0,v1,v2)
+
+			Next
+			
+			surf.CropSurfaceBuffers()
+			
+			' copy brush
+			
+			If surf1.brush<>Null
+			
+				surf.brush=surf1.brush.Copy()
 				
 			Endif
+			
+			' mesh shape has changed - update reset flags
+			surf.reset_vbo=-1 ' (-1 = all)
+				
+			'Endif
 							
 		Next
 		
@@ -1351,7 +1318,7 @@ Class TMesh Extends TEntity
 	End 
 	
 	Method GetSurface:TSurface(surf_no_get:Int)
-	
+		
 		Local surf_no=0
 	
 		For Local surf:TSurface=Eachin surf_list
@@ -1474,11 +1441,13 @@ Class TMesh Extends TEntity
 	End 
 
 	' used by LoadMesh
-	Method TransformMesh(mat:TMatrix)
+	Method TransformMesh(mat:Matrix)
 
 		For Local s=1 To no_surfs
 	
 			Local surf:TSurface=GetSurface(s)
+			
+			If Not surf Then Continue
 				
 			For Local v=0 To surf.no_verts-1
 		
@@ -1604,10 +1573,10 @@ Class TMesh Extends TEntity
 						cull_radius=depth
 					Endif
 				Endif
+
 				cull_radius=cull_radius * 0.5
 				Local crs#=cull_radius*cull_radius
-				cull_radius=Sqrt(crs+crs+crs)
-				
+				cull_radius=Sqrt(crs+crs)'+crs)
 				
 			Endif
 			
