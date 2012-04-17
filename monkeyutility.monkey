@@ -119,12 +119,13 @@ End
 
 ''copies limited area of a buffer
 '' begin, end, are in byte offsets
-Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer, begin:Int, bend:Int )
+Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer, begin:Int=0, bend:Int=0 )
 	'Const SIZE:Int = 4
 	If src = Null Then Return dest
 	
+	If begin=0 And bend=0 Then bend = src.Size()-1
 	If dest.Size()-1 < bend Then bend = dest.Size()-1
-	
+
 	For Local i:= begin To bend
 		dest.Poke(i-begin,src.Peek(i))	
 	Next
@@ -134,11 +135,12 @@ End
 
 Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer )
 	'Const SIZE:Int = 4
+
 	If src = Null Or src.buf = Null Then Return dest
 	
 	Local size:Int = src.Size()
 	If dest.Size() < size Then size = dest.Size()
-	
+
 	For Local i:= 0 To size-1
 		dest.Poke(i,src.Peek(i))	
 	Next
@@ -277,15 +279,20 @@ Class Base64
 		Local buf:DataBuffer = DataBuffer.Create(length)
 		Local bb:Int[4]
 		
-		While p<m_length
+		While p<m_length-1
 		
+			bb = [0,0,0,0]
+			
+			''handle text breakups
 			For Local j:Int=0 To 3
 				
-				''handle text breakups
+				If (p+j) >= m_length Then Exit
 				
 				bb[j] = mime[p+j]
 				While (bb[j]<33)
-					If p< m_length Then p+=1 Else Exit
+					p+=1 
+					If p>= m_length Then Exit
+
 					bb[j] = mime[p+j]
 				Wend
 				If bb[j] > 255 Then bb[j] =0 ''handle odd memory errors
