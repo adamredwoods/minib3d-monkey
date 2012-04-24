@@ -1,5 +1,6 @@
 minib3d+monkey
-v0.12 - (in progress): fixed Gluproject, alpha sorting
+v0.13 - (in progress): TPick, TCollisions accuracy and speed increase
+v0.12 - fixed Gluproject, alpha sorting; fixed OBJ loader, B3D Loader; Base64 Android; LoadMesh fixes
 v0.11 - fixes: faster TPick; ClearWorld(); TText added centering align; OBJ loader for multiple coordinates;
         Base64 Loader fix for ARM data alignment (works on iPhone, iPad)
 v0.10 - first release
