@@ -266,10 +266,10 @@ Class TMesh Extends TEntity
 	Function LoadMesh:TMesh(file$,parent_ent:TEntity=Null)
 	
 		Local xmesh:TMesh=LoadAnimMesh(file)
-		Local mesh:TMesh = New TMesh
-		'' -- decided not to do this, I need a test B3D file to see how to handle this.
+		Local mesh:TMesh = CreateMesh()
+		''
 		xmesh.HideEntity()
-		CollapseChildren(xmesh,mesh) 'CollapseAnimMesh()
+		mesh = xmesh.CollapseAnimMesh(mesh)
 		xmesh.FreeEntity()
 		
 		mesh.classname="Model"
@@ -472,6 +472,8 @@ Class TMesh Extends TEntity
 
 		surf.CropSurfaceBuffers()
 		
+		mesh.classname = "MeshCube"
+		
 		Return mesh
 	
 	End 
@@ -606,6 +608,8 @@ Class TMesh Extends TEntity
 			
 		' mesh state has changed - update reset flags
 		thissurf.reset_vbo = thissurf.reset_vbo|4
+		
+		thissphere.classname = "MeshSphere"
 		
 		Return thissphere 
 
@@ -752,8 +756,10 @@ Class TMesh Extends TEntity
 		Next
 		
 		thissurf.CropSurfaceBuffers()
-		
+	
 		thiscylinder.UpdateNormals()
+		thiscylinder.classname = "MeshCylinder"
+		
 		Return thiscylinder 
 		
 	End 
@@ -827,7 +833,7 @@ Class TMesh Extends TEntity
 			thissurf.AddTriangle(bl,top,br)
 			
 			If solid=True
-				thissidesurf.AddTriangle(newbs,bs1,bs0)
+				thissidesurf.AddTriangle(newbs,bs1,bs0)'AddTriangle(newbs,bs1,bs0)
 			
 				If i<(segments-1)
 					bs1=newbs
@@ -839,6 +845,7 @@ Class TMesh Extends TEntity
 		thissidesurf.CropSurfaceBuffers()
 		
 		thiscone.UpdateNormals()
+		thiscone.classname = "MeshCone"
 		Return thiscone
 		
 	End 
@@ -1403,15 +1410,15 @@ Class TMesh Extends TEntity
 	 ' used by LoadMesh
 	Method CollapseAnimMesh:TMesh(mesh:TMesh=Null)
 	
-		If mesh=Null Then mesh=New TMesh
+		If mesh=Null Then mesh=CreateMesh()
 		
 		If TMesh(Self)<>Null
 			'Local new_mesh:TMesh=New TMesh 'TMesh(ent).CopyMesh() ' don't use copymesh, uses CreateMesh and adds to entity list
 			'TMesh(Self).AddMesh(new_mesh)
 			'new_mesh.TransformMesh(Self.mat)
 			'new_mesh.AddMesh(mesh)
-			TransformMesh(Self.mat)
-			AddMesh(mesh)
+			Self.TransformMesh(Self.mat)
+			Self.AddMesh(mesh)
 		Endif
 		
 		mesh=CollapseChildren(Self,mesh)
@@ -1434,6 +1441,7 @@ Class TMesh Extends TEntity
 				TMesh(ent).AddMesh(mesh)
 			Endif
 			mesh=CollapseChildren(ent,mesh)
+			
 		Next
 		
 		Return mesh

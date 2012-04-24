@@ -38,12 +38,13 @@ Class TRender
 	Public
 	
 	
+	Method GetVersion:String() Abstract ''returns version of graphics platform being used
 	
 	Method Reset:Void() Abstract ''reset for each camera
 	
-	Method GraphicsInit:Int(flags:Int=0) Abstract
+	Method GraphicsInit:Int(flags:Int=0) Abstract ''init during SetRender()
 	
-	Method Render:Void(ent:TEntity, cam:TCamera = Null) Abstract
+	Method Render:Void(ent:TEntity, cam:TCamera = Null) Abstract ''render per mesh
 	
 	
 	''-------------------------------------------------------
@@ -55,9 +56,9 @@ Class TRender
 		render_alpha_list.Clear()
 		
 		If entities
-		
+Print TEntity.entity_list.Count()			
 			For Local ent:TEntity=Eachin TEntity.entity_list
-
+Print ent.classname
 				ent.FreeEntity()
 				ent=Null
 			Next
@@ -192,7 +193,7 @@ Class TRender
 	
 	Function  RenderWorld:Void()
 	
-		If Not TCamera.cam_list Then Return
+		If Not TCamera.cam_list Or render = Null Then Return
 		
 		For Local cam:TCamera=Eachin TCamera.cam_list
 
@@ -329,6 +330,13 @@ Class OpenglES11 Extends TRender
 	
 	
 	Method New()
+		
+	End
+	
+	
+	Method GetVersion:String()
+		
+		Return glGetString(GL_VERSION)
 		
 	End
 	
@@ -991,6 +999,10 @@ Class OpenglES11 Extends TRender
 	
 	
 	Method GraphicsInit:Int(flags:Int=0)
+		
+#If CONFIG="debug"		
+		Print "**OPENGL VERSION:"+GetVersion()
+#Endif
 
 		TTexture.TextureFilter("",8+1) ''default texture settings: mipmap
 

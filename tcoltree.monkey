@@ -8,6 +8,7 @@ Import minib3d
 '' - changed TreeCheck to CreateMeshTree() to reflect what its actually doing
 ''
 '' - need to move createtreemesh() routine to somewhere we can init it in OnCreate() rather than during click time
+'' - (limit of 65000 tris because of meshcollider packing)
 
 Class TColTree
 	
@@ -93,7 +94,7 @@ Class TColTree
 						c_col_tree.tri_vix[ti+2]= v0				
 					
 						''Add to MeshCollider
-						c_col_tree.tri_surface[triindex] = s
+						
 						c_col_tree.tri_centres[triindex].x = c_col_tree.tri_verts[v0].x+c_col_tree.tri_verts[v1].x+c_col_tree.tri_verts[v2].x
 						c_col_tree.tri_centres[triindex].y = c_col_tree.tri_verts[v0].y+c_col_tree.tri_verts[v1].y+c_col_tree.tri_verts[v2].y
 						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_verts[v0].z+c_col_tree.tri_verts[v1].z+c_col_tree.tri_verts[v2].z
@@ -101,11 +102,13 @@ Class TColTree
 						c_col_tree.tri_centres[triindex].y = c_col_tree.tri_centres[triindex].y*ONETHIRD
 						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_centres[triindex].z*ONETHIRD
 						
-						c_col_tree.tris[triindex]=i
+						c_col_tree.tris[triindex]=triindex 'i
+						c_col_tree.tri_surface[triindex] = s & $0000ffff ''lo byte=surface
+						c_col_tree.tri_surface[triindex] = c_col_tree.tri_surface[triindex] | (i Shl 16) ''hi byte=realtriindex 
 						
 						vindex += 3
 						triindex += 1
-						
+			
 					Next
 	
 										
@@ -117,9 +120,10 @@ Class TColTree
 			
 			''add to nodes
 			c_col_tree.tree = c_col_tree.CreateNode( c_col_tree.tris )
-
+			c_col_tree.tree.name = mesh.classname 'debugging
 
 		Endif
+		
 		
 		Return c_col_tree
 				
@@ -144,7 +148,8 @@ End
 
 
 Class Node
-
+	
+	Field name:String ''debugging
 	Field box:Box
 	Field triangles:Int[]
 	Field left:Node
@@ -158,13 +163,13 @@ Class MeshCollider
 	
 	Public
 	
-	Const MAX_COLL_TRIS:Int =64'8'16
+	Const MAX_COLL_TRIS:Int =24 '8'16
 	
 	''main mesh info
 	Field tri_count:Int
 	Field vert_count:Int
 	Field tris:Int[] ''tri index  '' one to one
-	Field tri_surface:Int[]
+	Field tri_surface:Int[] ''16byteslo = surface, 16bytes high = real tri number '**byte packing
 	Field tri_vix:Int[] ''vertex index, tris*3
 	Field tri_verts:Vector[] ''vert = tri_verts[tri_index[tris]+0]
 	Field tri_centres:Vector[]
@@ -243,8 +248,7 @@ Class MeshCollider
 	Method CreateNode:Node( tris:Int[] )
 		
 		If( tris.Length() <=MAX_COLL_TRIS ) Return CreateLeaf( tris )
-		
-		
+				
 		Local c:Node = New Node
 		c.box = CreateNodeBox( tris )
 		
@@ -355,7 +359,10 @@ Class MeshCollider
 		Return r1 | r2
 	End
 
+	
+	
 
+	
 
 	''COLLIDE
 	'' -- takes a bounding box and orients it to find the new bounding box
@@ -366,35 +373,37 @@ Class MeshCollider
 			Print "TColTree: no tree"
 			Return False
 		Endif
-		
-		'' create local box
-		Local local_box:Box = New Box(li) 'New Box( li.o, li.d ) 'New Box(li)
-		local_box.Expand(radius)
 
 		Local t:TransformMat = tf.Copy()
 		't.m.Transpose() ''the orig c++ code uses different type of matrix
 		'local_box = t.Transpose().Multiply(local_box) 'transpose = fastinverse
 		'Box local_box=-t * box; ''was a full Inverse(), but opted on Transpose() since only using 3x3	<-- WRONG needs full inverse
 		
-		t.m.Transpose() ''the orig c++ code uses different type of matrix
-		t.m.Scale( 0.5/gsx, 0.5/gsy, 0.5/gsz )
-		t = t.Transpose()
-		local_box = t.Multiply(local_box)
+		't.m.Transpose() ''the orig c++ code uses different type of matrix
+		't = t.Transpose()
+		t.v = t.m.Multiply(t.v.Negate() ) ''transform transpose
 
-		Local line2:Line = New Line(li.o, li.d)
-		line2 = t.Multiply(line2)
-	
+		Local line2:Line '= New Line(li.o, li.d)
+		line2 = t.Multiply(li) 'line2)
+		
+		'' create local box
+		Local local_box:Box = New Box(line2)
+		local_box.Expand(radius)
+		
+		''fast world rejection
+		If (Not local_box.Overlaps(tree.box)) Then Return 0
+		
 		''setup ray for ray-box
-		Local ln:Float = line2.Length()
-		Local dir:Vector = New Vector( (line2.o.x-line2.d.x)/ln,(line2.o.y-line2.d.y)/ln,(line2.o.z-line2.d.z)/ln )
-		r_invx = 1.0/dir.x; r_invy = 1.0/dir.y; r_invz = 1.0/dir.z
+		Local ln:Float = 1.0/line2.Length()
+		Local dir:Vector = New Vector( (line2.o.x-line2.d.x)*ln,(line2.o.y-line2.d.y)*ln,(line2.o.z-line2.d.z)*ln )
+		If ln<> 1.0 Then r_invx = 1.0/dir.x; r_invy = 1.0/dir.y; r_invz = 1.0/dir.z
 		
 		r_sign[0] = (r_invx < 0)
 		r_sign[1] = (r_invy < 0)
 		r_sign[2] = (r_invz < 0)
-		
+
 		Return Collide(local_box, line2, radius, t, coll, tree)
-		
+
 	End
 
 
@@ -402,7 +411,9 @@ Class MeshCollider
 	Method Collide:Int( line_box:Box, line:Line, radius:Float, tform:TransformMat, curr_coll:CollisionObject, node:Node)
 		
 		''fast ray-box
-		If (Not RayBoxTest(line,node.box)) Then Return 0
+		If node <> tree
+			If (Not RayBoxTest(line,node.box)) Then Return 0
+		Endif
 		
 		'If (Not line_box.Overlaps(node.box)) Then Return 0
 
@@ -417,7 +428,6 @@ Class MeshCollider
 			
 		Endif
 
-	
 		For Local k:Int = 0 To node.triangles.Length()-1
 		
 			Local tri:Int = node.triangles[k]*3
@@ -428,21 +438,21 @@ Class MeshCollider
 		
 			''tri box
 			Local tri_box:Box = New Box(v0,v1,v2)
-			
-			If (Not tri_box.Overlaps(line_box)) Then Continue
+		
+			If (Not tri_box.Overlaps(line_box)) Then Continue ''check boxes
 
-			'tform.m.Transpose() ''the orig c++ code uses different type of matrix		
-			'If( Not curr_coll.TriangleCollide( line,radius,tform.Multiply(v0),tform.Multiply(v1),tform.Multiply(v2) ) ) Then Continue
+			'If( Not curr_coll.TriangleCollide( line,radius,v0,v1,v2 ) ) Then Continue
+	
+			If Not curr_coll.RayTriangle( line, radius, v0,v1,v2 ) Then Continue
 
-			If Not curr_coll.RayTriangle( line, v0,v1,v2 ) Then Continue
-			
 			curr_coll.surface=tri_surface[ node.triangles[k] ]
 			curr_coll.index= node.triangles[k]
 										
 			hit = 1
-			Exit '' exit early for hit ok? or check all triangles
+			'' no exit early for hit. or check all triangles and check which time is smallest
 			
 		Next
+
 		
 		Return hit
 	
@@ -490,7 +500,8 @@ Class MeshCollider
 	End
 
 
-
+	''ray testing
+	''ray extends forever from origin
 	Method RayBoxTest(li:Line,box:Box)
 		
 		Local tmin#, tmax#, tymin#, tymax#, tzmin#, tzmax#
@@ -515,7 +526,10 @@ Class MeshCollider
 		'If (tzmin > tmin) tmin = tzmin
 		'If (tzmax < tmax) tmax = tzmax
 		
-		Return True '( (tmin < 999999) And (tmax > -999999) )
+		'Print tmin+" :: "+tmax
+		
+		Return True
+		'Return ( (tmin < li.o.z) And (tmax > -999999) )
 			
 	End
 
