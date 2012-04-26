@@ -701,7 +701,7 @@ Class TEntity
 	
 	Method AnimateTexture(frame:Int, loop:Bool=False, i:Int=0)
 		
-		If Not brush or Not brush.tex[0] Then Return
+		If Not brush Or Not brush.tex[0] Then Return
 		
 		Local tf:Int = brush.tex[i].no_frames-1
 		Local nframe:Int = tf, bframe:Int = 0
@@ -779,6 +779,20 @@ Class TEntity
 
 		
 	End 
+	
+	Method PaintEntityGlobal(bru:TBrush)
+	
+		brush = bru
+
+		If TShaderBrush(bru) = bru
+			
+			DebugLog "TBrush: shader paint"
+			shader_brush = TShaderBrush(bru) '.Copy()
+			
+		Endif
+
+		
+	End
 	
 	Method EntityOrder(order_no)
 	
