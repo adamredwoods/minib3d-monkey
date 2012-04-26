@@ -91,7 +91,7 @@ Class TPixmap
 					alpha = ((((alpha Shr 24)+((rgb[4]&$ff000000)Shr 24) )Shr 1) Shl 24) & $ff000000
 				Endif
 				
-				newpix.pixels.PokeInt( x*4+y*neww*4, red|green|blue|alpha )
+				newpix.pixels.PokeInt( (x Shl 2)+y*(neww Shl 2), red|green|blue|alpha )
 				
 				xi = xi+ratiow
 			Next
@@ -124,7 +124,7 @@ Class TPixmap
 				''ints faster than bytes
 				rgb[0] = GetPixel(xx,yy,-1) 
 				
-				newpix.pixels.PokeInt( x*4+y*neww*4, rgb[0] )
+				newpix.pixels.PokeInt( (x Shl 2)+y*(neww Shl 2), rgb[0] ) '( x*4+y*neww*4, rgb[0] )
 				
 				xi = xi+ratiow
 			Next
@@ -151,10 +151,10 @@ Class TPixmap
 		Endif
 		
 		If rgba<0
-			Return pixels.PeekInt(x*4+y*width*4)
+			Return pixels.PeekInt( (x Shl 2)+y*(width Shl 2)) '(x*4+y*width*4)
 		Endif
 		
-		Return pixels.PeekByte(x*4+y*width*4+rgba)
+		Return pixels.PeekByte((x Shl 2)+y*(width Shl 2)+rgba) '(x*4+y*width*4+rgba)
 
 	End
 	

@@ -10,6 +10,17 @@ Class TModelB3D
 	Const DEBUGMODEL:Int =0
 #Endif
 	
+	Const NODE:Int = 1162104654
+	Const TEXS:Int = 1398293844
+	Const BRUS:Int = 1398100546
+	Const MESH:Int = 1213416781
+	Const VRTS:Int = 1398035030
+	Const TRIS:Int = 1397314132
+	Const ANIM:Int = 1296649793
+	Const BONE:Int = 1162760002
+	Const KEYS:Int = 1398359371
+	Const BB3D:Int = 1144209986
+	
 	Function LoadAnimB3D:TMesh(f_name$,parent_ent_ext:TEntity=Null)
 	
 		' Start file reading
@@ -24,21 +35,21 @@ Class TModelB3D
 			
 		' Header info
 		
-		Local tag$
-		Local prev_tag$
-		Local new_tag$
+		Local tag:Int
+		Local prev_tag:Int
+		Local new_tag:Int
 		Local vno:Int
 		
 		tag=file.ReadTag()
 		
-		If DEBUGMODEL Then Print "TModel "+tag
+		If DEBUGMODEL Then Print "TModel "+PrintTag(tag)
 
 		vno =file.ReadInt() 'tag
 		vno =file.ReadInt() 'size
 
 		vno =file.ReadInt() 'version
 
-		If tag<>"BB3D" DebugLog "Invalid b3d file"; Return New TMesh
+		If tag<>BB3D DebugLog "Invalid b3d file"; Return New TMesh
 		If Int(vno*0.01) >0 DebugLog "Invalid b3d file version"; Return New TMesh
 		
 		' Locals
@@ -187,7 +198,7 @@ Class TModelB3D
 				' deal with nested nodes
 				
 				old_node_level=node_level
-				If tag="NODE"
+				If tag=NODE ' "NODE"
 				
 					node_level=node_level+1
 			
@@ -249,16 +260,16 @@ Class TModelB3D
 				If DEBUGMODEL
 					Local tab$=""
 					Local info$=""
-					If tag="NODE" And parent_ent<>Null Then info=" (parent= "+parent_ent.name+")"
+					If tag=NODE And parent_ent<>Null Then info=" (parent= "+parent_ent.name+")"
 					For Local i=1 To node_level
 						tab=tab+"-"
 					Next
-					DebugLog tab+tag+info
+					DebugLog tab+" "+PrintTag(tag)+" "+info
 				Endif
 				
 			Else
 			
-				tag=""
+				tag=0
 				
 			Endif
 			
@@ -266,7 +277,7 @@ Class TModelB3D
 	
 			Select tag
 			
-				Case "TEXS"
+				Case TEXS '"TEXS"
 				
 					'Local tex_no=0 ' moved to top
 					
@@ -324,7 +335,7 @@ Class TModelB3D
 				
 					Wend
 			
-				Case "BRUS"
+				Case BRUS
 						
 					'Local brush_no=0 ' moved to top
 					
@@ -373,7 +384,7 @@ Class TModelB3D
 					
 					Wend
 					
-				Case "NODE"
+				Case NODE
 	
 					new_tag=file.ReadTag()
 					
@@ -399,7 +410,7 @@ Class TModelB3D
 	
 					new_tag=file.ReadTag()
 					
-					If new_tag="NODE" Or new_tag="ANIM"
+					If new_tag=NODE Or new_tag=ANIM
 		
 						' make 'piv' entity a mesh, not a pivot, as B3D does
 						Local piv:TMesh=New TMesh
@@ -449,7 +460,7 @@ Class TModelB3D
 				
 					Endif
 			
-				Case "MESH"
+				Case MESH
 						
 					m_brush_id=file.ReadInt()
 					
@@ -496,7 +507,7 @@ Class TModelB3D
 						mesh.mat.Overwrite(new_mat)'.Multiply(mat)
 					Endif				
 	
-				Case "VRTS"
+				Case VRTS
 				
 					'If v_mesh<>Null Then v_mesh=Null
 					'If v_surf<>Null Then v_surf=Null
@@ -549,16 +560,16 @@ Class TModelB3D
 														
 					Wend
 					
-				Case "TRIS"
+				Case TRIS
 							
 					Local old_tr_brush_id=tr_brush_id
 					tr_brush_id=file.ReadInt()
 	
 					' don't create new surface if tris chunk has same brush as chunk immediately before it
-					If (prev_tag<>"TRIS" Or tr_brush_id<>old_tr_brush_id)
+					If (prev_tag<>TRIS Or tr_brush_id<>old_tr_brush_id)
 					
 						' no further tri data for this surf - trim verts
-						If prev_tag="TRIS" Then TrimVerts(surf)
+						If prev_tag=TRIS Then TrimVerts(surf)
 					
 						' new surf - copy arrays
 						surf=mesh.CreateSurface()
@@ -600,12 +611,12 @@ Class TModelB3D
 					If m_brush_id<>-1 Then mesh.PaintEntity(brush[m_brush_id])
 					If tr_brush_id<>-1 Then surf.PaintSurface(brush[tr_brush_id])
 					
-					If v_flags&1=0 And new_tag<>"TRIS" Then mesh.UpdateNormals() ' if no normal data supplied and no further tri data then update normals
+					If v_flags&1=0 And new_tag<>TRIS Then mesh.UpdateNormals() ' if no normal data supplied and no further tri data then update normals
 	
 					' no further tri data for this surface - trim verts
-					If new_tag<>"TRIS" Then TrimVerts(surf)
+					If new_tag<>TRIS Then TrimVerts(surf)
 
-				Case "ANIM"
+				Case ANIM
 				
 					a_flags=file.ReadInt()
 					a_frames=file.ReadInt()
@@ -651,7 +662,7 @@ Class TModelB3D
 												
 					Endif
 	
-				Case "BONE"
+				Case BONE
 				
 					Local ix:Int=0
 					
@@ -794,7 +805,7 @@ Class TModelB3D
 
 					bo_bone.inv_mat=bo_bone.mat.Inverse()
 				
-					If new_tag<>"KEYS"
+					If new_tag<>KEYS
 					
 						bo_bone.entity_link = TEntity.entity_list.EntityListAdd(bo_bone)
 						mesh.bones=mesh.bones.Resize(bo_no_bones)
@@ -804,7 +815,7 @@ Class TModelB3D
 						
 					Endif
 		
-				Case "KEYS"
+				Case KEYS
 				
 					k_flags=file.ReadInt()
 				
@@ -858,7 +869,7 @@ Class TModelB3D
 							
 					Wend
 					
-					If new_tag<>"KEYS"
+					If new_tag<>KEYS
 					
 						If bo_bone<>Null ' check if bo_bone exists - it won't for non-boned, keyframe anims
 					
@@ -938,24 +949,41 @@ Class TModelB3D
 	
 
 	
-	Function NewTag(tag$)
+	Function NewTag(tag:Int)
 	
 		Select tag
 		
-			Case "TEXS" Return True
-			Case "BRUS" Return True
-			Case "NODE" Return True
-			Case "ANIM" Return True
-			Case "MESH" Return True
-			Case "VRTS" Return True
-			Case "TRIS" Return True
-			Case "BONE" Return True
-			Case "KEYS" Return True
+			Case TEXS Return True
+			Case BRUS Return True
+			Case NODE Return True
+			Case ANIM Return True
+			Case MESH Return True
+			Case VRTS Return True
+			Case TRIS Return True
+			Case BONE Return True
+			Case KEYS Return True
 			Default Return False
 		
 		End Select
 	
 	End 
+	
+	Function PrintTag:String(tag:Int)
+		Select tag
+		
+			Case TEXS Return "TEXS"
+			Case BRUS Return "BRUS"
+			Case NODE Return "NODE"
+			Case ANIM Return "ANIM"
+			Case MESH Return "MESH"
+			Case VRTS Return "VRTS"
+			Case TRIS Return "TRIS"
+			Case BONE Return "BONE"
+			Case KEYS Return "KEYS"
+			Default Return ""
+		
+		End Select
+	End
 
 End 
 

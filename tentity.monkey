@@ -37,7 +37,7 @@ Class TEntity
 	Field cull_radius#
 
 	Field brush:TBrush=New TBrush
-	'Field shader_brush:TShaderBrush = New TShaderBrush ''don't forget to fill in copy, etc.
+	Field shader_brush:TShaderBrush ''don't forget to fill in copy, etc.
 
 	Field anim:Int ' =1 if mesh contains bone anim data, =2 if vertex anim data
 	Field anim_render:Int ' true to render as anim mesh
@@ -103,7 +103,7 @@ Class TEntity
 
 	Method FreeEntity()
 	
-		entity_link.Remove()
+		If entity_link Then entity_link.Remove()
 		
 		' remove from collision entity lists
 		If collision_type<>0 collision_pair.ListRemove(Self, collision_type)
@@ -655,6 +655,14 @@ Class TEntity
 	
 	End 
 	
+	Method EntityColorFloat(r#,g#,b#)
+	
+		brush.red  =r
+		brush.green=g
+		brush.blue =b
+	
+	End
+	
 	Method EntityAlpha(a#)
 	
 		brush.alpha=a
@@ -667,16 +675,54 @@ Class TEntity
 	
 	End 
 	
+	''EntityTexture()
 	Method EntityTexture(texture:TTexture,frame=0,index=0)
 	
 		brush.tex[index]=texture
+		brush.u_scale = texture.u_scale
+		brush.v_scale = texture.v_scale
+		
 		If index+1>brush.no_texs Then brush.no_texs=index+1
 	
 		If frame<0 Then frame=0
-		If frame>texture.no_frames-1 Then frame=texture.no_frames-1 
+		If frame>texture.no_frames-1 Then frame=texture.no_frames-1
 		brush.tex_frame=frame
+		
+		If frame>0 And texture.no_frames>1
+			''move texture
+			Local x:Int = frame Mod texture.frame_xstep
+			Local y:Int =( frame/texture.frame_ystep) Mod texture.frame_ystep
+			brush.u_pos = x*texture.frame_ustep
+			brush.v_pos = y*texture.frame_vstep
+		Endif
 	
 	End 
+	
+	
+	Method AnimateTexture(frame:Int, loop:Bool=False, i:Int=0)
+		
+		If Not brush or Not brush.tex[0] Then Return
+		
+		Local tf:Int = brush.tex[i].no_frames-1
+		Local nframe:Int = tf, bframe:Int = 0
+		
+		If loop
+			nframe = frame Mod tf; bframe = frame - (-frame Mod tf)
+		Endif
+		
+		If frame<0 Then frame=bframe
+		If frame>tf Then frame= nframe
+		brush.tex_frame=frame
+		
+		If frame>0 And brush.tex[i].no_frames>1
+			''move texture
+			Local x:Int = frame Mod brush.tex[i].frame_xstep
+			Local y:Int =( frame/brush.tex[i].frame_ystep) Mod brush.tex[i].frame_ystep
+			brush.u_pos = x*brush.tex[i].frame_ustep
+			brush.v_pos = y*brush.tex[i].frame_vstep
+		Endif
+		
+	End
 	
 	Method EntityBlend(blend_no%)
 	
@@ -722,28 +768,15 @@ Class TEntity
 	
 	Method PaintEntity(bru:TBrush)
 	
-		brush.no_texs=bru.no_texs
-		brush.name=bru.name
-		brush.red=bru.red
-		brush.green=bru.green
-		brush.blue=bru.blue
-		brush.alpha=bru.alpha
-		brush.shine=bru.shine
-		brush.blend=bru.blend
-		brush.fx=bru.fx
-		brush.tex_frame = bru.tex_frame
-		For Local i=0 To 7
-			brush.tex[i]=bru.tex[i]
-		Next
-	
-		#rem
+		brush = bru.Copy()
+
 		If TShaderBrush(bru) = bru
 			
 			DebugLog "TBrush: shader paint"
-			shader_brush = TShaderBrush(bru)
+			shader_brush = TShaderBrush(bru) '.Copy()
 			
 		Endif
-		#end
+
 		
 	End 
 	
@@ -1346,7 +1379,9 @@ Class TEntity
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
 		
-		EntityRadius(Abs(x),Abs(y)) '' set for TCollisionPair regardless
+		If Not y Then y=x
+		
+		If Not z And Not w Then EntityRadius(Abs(x),Abs(y))
 		
 		If z And w Then EntityBox(x,y,z,w,d,h)
 		

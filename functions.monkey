@@ -106,6 +106,10 @@ Function Animate(ent:TEntity,mode=1,speed#=1.0,seq=0,trans=0)
 	ent.Animate(mode,speed,seq,trans)
 End 
 
+Function AnimateTexture(ent:TEntity, frame:Int, loop:Bool=False, i:Int=0)
+	ent.AnimateTexture(frame, loop, i)
+End
+
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=Animating">Online Help</a>
 #End 
@@ -883,7 +887,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadAnimTexture">Online Help</a>
 #End 
-Function LoadAnimTexture:TTexture(file$,flags,frame_width,frame_height,first_frame,frame_count)
+Function LoadAnimTexture:TTexture(file$,flags,frame_width,frame_height,first_frame%=0,frame_count%=-1)
 	Return TTexture.LoadAnimTexture(file,flags,frame_width,frame_height,first_frame,frame_count)
 End 
 
@@ -893,6 +897,10 @@ bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadBrush">On
 Function LoadBrush:TBrush(file$,flags=1,u_scale#=1.0,v_scale#=1.0)
 	Return TBrush.LoadBrush(file,flags,u_scale,v_scale)
 End 
+
+Function LoadAnimBrush:TBrush(file$,flags=1,frame_width,frame_height,first_frame%=0,frame_count%=-1)
+	Return TBrush.LoadAnimBrush(file,flags,frame_width,frame_height,first_frame,frame_count)
+End
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadMesh">Online Help</a>

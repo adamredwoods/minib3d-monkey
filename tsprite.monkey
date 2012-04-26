@@ -354,13 +354,18 @@ Class TBatchSpriteMesh Extends TMesh
 			max_x = TBatchSprite.max_x
 			max_y = TBatchSprite.max_y
 			max_z = TBatchSprite.max_z
-
+			
+			'If brush.tex[0] Then brush.tex[0].flags = brush.tex[0].flags | 16 |32 ''always clamp
+			'If surf.brush.tex[0] Then surf.brush.tex[0].flags = surf.brush.tex[0].flags | 16 |32 ''always clamp
+			
 		Else
 			''no more sprites in batch, reduce overhead
 			surf.ClearSurface()
 			free_stack.Clear()
 			
 		Endif
+		
+		
 		
 	End
 End
@@ -384,7 +389,7 @@ Class TBatchSprite Extends TSprite
 		
 		Method New()
 			
-			''new batch sprite
+			''new batch sprite, not added to entity list
 						
 		End
 		
@@ -502,12 +507,16 @@ Class TBatchSprite Extends TSprite
 			If mesh.free_stack.IsEmpty()
 				
 				mesh.num_sprites +=1
-				v = (mesh.num_sprites-1) * 4 ''4 vertex per quad
+				v = (mesh.num_sprites-1) * 4 '4 vertex per quad
+				'v = (mesh.num_sprites-1) * 3 '3 vertex per sprite
 				
 				mesh.surf.AddVertex(-1,-1,0, 0, 1) ''v0
 				mesh.surf.AddVertex(-1, 1,0, 0, 0)
 				mesh.surf.AddVertex( 1, 1,0, 1, 0)
 				mesh.surf.AddVertex( 1,-1,0, 1, 1)
+				'mesh.surf.AddVertex(-1,-3,0, 0, 2) ''v0
+				'mesh.surf.AddVertex(-1, -1,0, 0, 0)
+				'mesh.surf.AddVertex( 3, -1,0, 2, 0)
 				mesh.surf.AddTriangle(0+v,1+v,2+v)
 				mesh.surf.AddTriangle(0+v,2+v,3+v)
 				''v isnt guarateed to be v0, but seems to match up
@@ -621,6 +630,11 @@ Class TBatchSprite Extends TSprite
 			'p3 = mat_sp.TransformPoint(1.0,-1.0,0.0)
 			p3 = [m00 - m10 + o[0] , m01 - m11 + o[1], -m02 + m12 - o[2]]
 			
+			'3 triangle sprite trick (does not work for all conditions)
+			'p0 = [-m00 + -(m10+m10+m10) + o[0] , -m01 + -(m11+m11+m11) + o[1], m02 + m12+m12+m12 - o[2]]				
+			'p1 = [-m00 + m10 + o[0] , -m01 + m11 + o[1], m02 - m12 - o[2]]	
+			'p2 = [m00+m00+m00 + m10 + o[0] , m01+m01+m01 + m11 + o[1], -(m02+m02+m02) - m12 - o[2]]			
+			'p3 = [0.0,0.0,0.0]
 			
 			mainsprite[batch_id].surf.VertexCoords(vertex_id+0,p0[0],p0[1],p0[2])
 			mainsprite[batch_id].surf.VertexCoords(vertex_id+1,p1[0],p1[1],p1[2])

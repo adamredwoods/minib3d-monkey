@@ -116,12 +116,12 @@ Class TShaderBrush Extends TBrush
 		shader.SetVertexLocalParam(index, n1, n2, n3, n4 )
 	End
 	
-	Method SetVertexLocalParam4x4(index:Int, arr:Float[,] )
+	Method SetVertexLocalParamMatrix(index:Int, mat:Matrix )
 		Local x:Int=0, y:Int=0
 		For Local i:Int = index To index+3
 			'Local f:Float[] = [arr[x,0],arr[x,1],arr[x,2],arr[x,3]]
-			shader.SetVertexLocalParam(i, arr[x,0],arr[x,1],arr[x,2],arr[x,3] )
-			x:+1
+			shader.SetVertexLocalParam(i, mat.grid[x][0],mat.grid[x][1],mat.grid[x][2],mat.grid[x][3] )
+			x+=1
 		Next
 	End
 	

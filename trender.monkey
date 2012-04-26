@@ -38,7 +38,7 @@ Class TRender
 	Public
 	
 	
-	Method GetVersion:String() Abstract ''returns version of graphics platform being used
+	Method GetVersion:Float() Abstract ''returns version of graphics platform being used
 	
 	Method Reset:Void() Abstract ''reset for each camera
 	
@@ -334,9 +334,16 @@ Class OpenglES11 Extends TRender
 	End
 	
 	
-	Method GetVersion:String()
+	Method GetVersion:Float()
 		
-		Return glGetString(GL_VERSION)
+		Local s:String[] = glGetString(GL_VERSION).Split(".")
+		If s[0].Length() > 2
+			Local st:String[] = s[0].Split(" ")
+			s[0] = st[st.Length()-1]
+		Endif
+		
+		Local len:Float = 1.0/(10*s[1].Length())
+		Return Float( Int(s[0])+Int(s[1])*len )
 		
 	End
 	
@@ -654,7 +661,7 @@ Class OpenglES11 Extends TRender
 			glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,mat_specular)
 			glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,mat_shininess)
 			
-			glColor4f(1.0,0.0,0.0, alpha)
+			glColor4f(1.0,1.0,1.0, alpha)
 			
 				
 			' textures
@@ -669,8 +676,8 @@ Class OpenglES11 Extends TRender
 	
 				If surf.brush.tex[ix]<>Null Or ent.brush.tex[ix]<>Null
 					
-					Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale,tex_v_scale
-					Local tex_u_pos,tex_v_pos,tex_ang,tex_cube_mode,frame, tex_smooth
+					Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#,tex_v_scale#
+					Local tex_u_pos#,tex_v_pos#,tex_ang#,tex_cube_mode,frame, tex_smooth
 
 
 					' Main brush texture takes precedent over surface brush texture
@@ -679,11 +686,11 @@ Class OpenglES11 Extends TRender
 						tex_flags=ent.brush.tex[ix].flags
 						tex_blend=ent.brush.tex[ix].blend
 						tex_coords=ent.brush.tex[ix].coords
-						tex_u_scale=ent.brush.tex[ix].u_scale
-						tex_v_scale=ent.brush.tex[ix].v_scale
-						tex_u_pos=ent.brush.tex[ix].u_pos
-						tex_v_pos=ent.brush.tex[ix].v_pos
-						tex_ang=ent.brush.tex[ix].angle
+						tex_u_scale=ent.brush.u_scale ''changed, so brushes get individual uvs (for animation)
+						tex_v_scale=ent.brush.v_scale
+						tex_u_pos=ent.brush.u_pos
+						tex_v_pos=ent.brush.v_pos
+						tex_ang=ent.brush.angle
 						tex_cube_mode=ent.brush.tex[ix].cube_mode
 						frame=ent.brush.tex_frame
 						tex_smooth = ent.brush.tex[ix].tex_smooth		
@@ -692,11 +699,11 @@ Class OpenglES11 Extends TRender
 						tex_flags=surf.brush.tex[ix].flags
 						tex_blend=surf.brush.tex[ix].blend
 						tex_coords=surf.brush.tex[ix].coords
-						tex_u_scale=surf.brush.tex[ix].u_scale
-						tex_v_scale=surf.brush.tex[ix].v_scale
-						tex_u_pos=surf.brush.tex[ix].u_pos
-						tex_v_pos=surf.brush.tex[ix].v_pos
-						tex_ang=surf.brush.tex[ix].angle
+						tex_u_scale=surf.brush.u_scale
+						tex_v_scale=surf.brush.v_scale
+						tex_u_pos=surf.brush.u_pos
+						tex_v_pos=surf.brush.v_pos
+						tex_ang=surf.brush.angle
 						tex_cube_mode=surf.brush.tex[ix].cube_mode
 						frame=surf.brush.tex_frame
 						tex_smooth = surf.brush.tex[ix].tex_smooth		
@@ -719,7 +726,7 @@ Class OpenglES11 Extends TRender
 					glClientActiveTexture(GL_TEXTURE0+ix)
 
 					
-					glBindTexture(GL_TEXTURE_2D,texture.gltex[frame]) ' call before glTexParameteri
+					glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
 	
 					
 					Endif ''end preserve texture states---------------------------------
@@ -752,7 +759,7 @@ Class OpenglES11 Extends TRender
 							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
 						Endif
 					Endif
-					
+				
 					' clamp u flag
 					If tex_flags&16<>0
 						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE)

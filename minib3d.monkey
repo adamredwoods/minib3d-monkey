@@ -64,7 +64,7 @@ Import monkeyutility
 Import tpixmap
 
 '' shaders
-'Import tshader
+Import tshader
 
 '' functions
 Import functions

@@ -445,8 +445,8 @@ Class MeshCollider
 	
 			If Not curr_coll.RayTriangle( line, radius, v0,v1,v2 ) Then Continue
 
-			curr_coll.surface=tri_surface[ node.triangles[k] ]
-			curr_coll.index= node.triangles[k]
+			curr_coll.surface=tri_surface[ node.triangles[k] ] ''warning: byte packed
+			curr_coll.index= node.triangles[k] ''real tri is in hi-bytes of tri_surface
 										
 			hit = 1
 			'' no exit early for hit. or check all triangles and check which time is smallest

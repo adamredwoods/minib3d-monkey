@@ -22,6 +22,9 @@ Class TTexture
 	Field pixmap:TPixmap
 	Field gltex:Int[] = New Int[1]
 	Field no_frames:Int=1
+	Field frame_ustep:Float=1.0,frame_vstep:Float=1.0, frame_xstep:Int, frame_ystep:Int
+	Field frame_startx:Int, frame_starty:Int
+	
 	Field no_mipmaps:Int
 	
 	Field cube_pixmap:TPixmap[] = New TPixmap[7]
@@ -51,6 +54,8 @@ Class TTexture
 	
 	End 
 	
+	''CreateTexture()
+	'' -- frames disabled
 	Function CreateTexture:TTexture(width,height,flags=9,frames=1,tex:TTexture=Null)
 	
 		'If flags&128 Then Return CreateCubeMapTexture(width,height,flags,tex)
@@ -76,10 +81,10 @@ Class TTexture
 	
 		Local pixmap:TPixmap = tex.pixmap
 	
-		For Local i=0 To tex.no_frames-1
+		'For Local i=0 To tex.no_frames-1
 	
 			'pixmap=tex.pixmap.Window(x*width,0,width,height)
-			x=x+1
+			'x=x+1
 		
 			' ---
 		
@@ -93,8 +98,8 @@ Class TTexture
 			glGenTextures 1,name
 			glBindtexture GL_TEXTURE_2D,name[0]
 
-			Local mipmap:Int
-			If tex.flags&8 Then mipmap=True
+			Local mipmap:Int=0
+			If tex.flags&8 Then mipmap=1
 			Local mip_level:Int=0
 			
 			Repeat
@@ -115,9 +120,9 @@ Class TTexture
 			Forever
 			tex.no_mipmaps=mip_level
 
-			tex.gltex[i]=name[0]
+			tex.gltex[0]=name[0]
 
-		Next
+		'Next
 		
 		Return tex
 
@@ -143,7 +148,7 @@ Class TTexture
 		tex.pixmap = pixmap
 		If tex.pixmap.height = 0 Then Return tex
 		
-		Return BindAnimTexture(tex,flags,0,0,0,1)
+		Return BindAnimTexture(tex,flags)
 	
 	End
 	
@@ -157,7 +162,7 @@ Class TTexture
 	
 	End
 	
-	Function LoadAnimTexture:TTexture(file$,flags,frame_width,frame_height,first_frame,frame_count,tex:TTexture=Null,force_new:Int=False)
+	Function LoadAnimTexture:TTexture(file$,flags%,frame_width%,frame_height%,first_frame%=0,frame_count%=-1,tex:TTexture=Null,force_new:Int=False)
 	
 		If tex=Null Then tex=New TTexture
 		
@@ -184,11 +189,43 @@ Class TTexture
 		tex.pixmap=TPixmap.LoadPixmap(file)
 		If tex.pixmap.height = 0 Then Return tex
 		
-		Return BindAnimTexture(tex,flags,frame_width,frame_height,first_frame,frame_count)
+		' if tex not anim tex, get frame width and height
+		If frame_width=0 And frame_height=0
+			frame_width=tex.pixmap.width
+			frame_height=tex.pixmap.height
+		Endif
+
+		
+		tex.frame_xstep = tex.pixmap.width/frame_width
+		tex.frame_ystep = tex.pixmap.height/frame_height
+			
+		tex.frame_startx=first_frame Mod tex.frame_xstep
+		tex.frame_starty=( first_frame/tex.frame_ystep) Mod tex.frame_ystep
+		
+		If frame_count <0
+			frame_count = Int(tex.frame_xstep) * Int(tex.frame_ystep)
+		Endif
+	
+		tex.no_frames=frame_count
+		If tex.no_frames > 1
+			'tex.gltex=tex.gltex.Resize(tex.no_frames+1)
+			'tex.frame_u = tex.frame_u.Resize(tex.no_frames+1)
+			'tex.frame_v = tex.frame_v.Resize(tex.no_frames+1)
+			tex.frame_ustep = 1.0/tex.frame_xstep
+			tex.frame_vstep = 1.0/tex.frame_ystep
+			
+			'' move texture
+			tex.u_scale = tex.frame_ustep
+			tex.v_scale = tex.frame_vstep
+			tex.u_pos = tex.frame_startx*tex.frame_ustep
+			tex.v_pos = tex.frame_starty*tex.frame_vstep
+		Endif
+		
+		Return BindAnimTexture(tex,flags)
 	
 	End
 	
-	Function BindAnimTexture:TTexture(tex:TTexture,flags:Int,frame_width:Int,frame_height:Int,first_frame:Int,frame_count:Int)
+	Function BindAnimTexture:TTexture(tex:TTexture,flags:Int)
 		''
 		'' will return texture if one already exists (sometimes used for texture atlases)
 		''
@@ -212,40 +249,11 @@ Class TTexture
 		Endif
 
 		
-		' if tex not anim tex, get frame width and height
-		If frame_width=0 And frame_height=0
-			frame_width=tex.pixmap.width
-			frame_height=tex.pixmap.height
-		Endif
-
-		
-		tex.no_frames=frame_count
-		If tex.no_frames > 1 Then tex.gltex=tex.gltex[..tex.no_frames]
-
-		
 		' pixmap -> tex
-
-		Local xframes=tex.pixmap.width/frame_width
-		Local yframes=tex.pixmap.height/frame_height
-			
-		Local startx=first_frame Mod xframes
-		Local starty=(first_frame/yframes) Mod yframes
-			
-		Local x=startx
-		Local y=starty
 	
 		Local pixmap:TPixmap = tex.pixmap
 
-		For Local i=0 To tex.no_frames-1
-	
-			' get static pixmap window. when resize pixmap is called new pixmap will be returned.
-			'pixmap=tex.pixmap.Window(x*frame_width,y*frame_height,frame_width,frame_height)
-			x=x+1
-			If x>=xframes
-				x=0
-				y=y+1
-			Endif
-
+		'For Local i=0 To tex.no_frames-1
 		
 			pixmap=AdjustPixmap(pixmap)
 			tex.width=pixmap.width
@@ -255,10 +263,10 @@ Class TTexture
 			
 			Local name:Int[1]
 
-			If Not tex.gltex[i]
+			If Not tex.gltex[0]
 				glGenTextures 1,name
 			Else
-				name[0] = tex.gltex[i]
+				name[0] = tex.gltex[0]
 			Endif
 			
 			glBindTexture GL_TEXTURE_2D,name[0]
@@ -271,7 +279,7 @@ Class TTexture
 				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pixmap.pixels
 				
 				If( glGetError()<>GL_NO_ERROR )
-					Error "out of texture memory"
+					Error "** out of texture memory **"
 				Endif
 				
 				If Not mipmap Or (width=1 And height =1) Then Exit
@@ -284,9 +292,9 @@ Class TTexture
 			Forever
 			tex.no_mipmaps=mip_level
 
-			tex.gltex[i]=name[0]
+			tex.gltex[0]=name[0]
 
-		Next
+		'Next
 
 				
 		Return tex
@@ -485,21 +493,21 @@ Class TTexture
 	
 	End 
 	
-	Method ScaleTexture(u_s#,v_s#)
+	Method ScaleTexture(u_s#,v_s#) ''deprecated, use brush
 	
 		u_scale=1.0/u_s
 		v_scale=1.0/v_s
 	
 	End 
 	
-	Method PositionTexture(u_p#,v_p#)
+	Method PositionTexture(u_p#,v_p#) ''deprecated, use brush
 	
 		u_pos=-u_p
 		v_pos=-v_p
 	
 	End 
 	
-	Method RotateTexture(ang#)
+	Method RotateTexture(ang#) ''deprecated, use brush
 	
 		angle=ang
 	

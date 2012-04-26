@@ -447,9 +447,8 @@ Class CollisionInfo
 			
 				res = mesh_coll.Collide( coll_line,radius,tf,coll_obj )
 
-				''adjust normal
+				''adjust normal --not needed
 				'coll_obj.normal = tf.Multiply(coll_obj.normal)
-				'coll_obj.normal.Negate()
 		
 			Case COLLISION_METHOD_BOX
 			
@@ -499,16 +498,17 @@ Class CollisionInfo
 		hits += 1
 		If( hits>=MAX_HITS ) Return False
 	
-		Local impact:Vector = coll_line.Multiply(coll.time)
-		Local coll_plane:Plane = New Plane( impact, coll.normal ) 'coll.col_coords,coll.normal )
+		'Local impact:Vector = coll_line.Multiply(coll.time)
+		'impact.y *= y_scale
+		Local coll_plane:Plane = New Plane( coll.col_coords,coll.normal )
 		
-		'coll_plane.d -= COLLISION_EPSILON
-		'coll.time=coll_plane.T_Intersect( coll_line )
-'Print "coll_time "+coll.time+" "+y_scale	
-
-		If( coll.time>0 ) '' && fabs(coll.normal.dot( coll_line.d ))>EPSILON ){
+		coll_plane.d -= COLLISION_EPSILON
+		coll.time=coll_plane.T_Intersect( coll_line )
+	
+Print "coll_time "+coll.time
+		If( coll.time>0.0 ) '' && fabs(coll.normal.dot( coll_line.d ))>EPSILON ){
 			''update source position - ONLY If AHEAD!
-			sv=impact 'coll_line.Multiply(coll.time)
+			sv=coll.col_coords.Copy() 'coll_line.Multiply(coll.time) 'impact
 			td *=1.0-coll.time
 			td_xz *=1.0-coll.time
 		Endif
@@ -532,7 +532,6 @@ Class CollisionInfo
 				dv=coll_plane.Intersect( planes[0] ).Nearest( dv )
 			Else
 				''SQUISHED!
-				''Exit(0);
 				hits=MAX_HITS
 				Return False
 			Endif
@@ -551,16 +550,20 @@ Class CollisionInfo
 			dv=sv.Copy()
 			Return False
 		Endif
-	
+
 		If( response = COLLISION_RESPONSE_SLIDE )
+		
 			Local d:Float=dd.Length()
 			If( d<=EPSILON ) dv=sv.Copy(); Return False
 			If( d>td ) dd = dd.Multiply(td/d)
+			
 		Elseif( response = COLLISION_RESPONSE_SLIDEXZ )
+		
 			Local vv:Vector=New Vector( dd.x,0,dd.z )
 			Local d:Float = vv.Length()
 			If( d<=EPSILON ) Then dv=sv.Copy(); Return False
 			If( d>td_xz ) Then dd = dd.Multiply(td_xz/d) Else dd = New Vector(dd.x,0.0,dd.z)
+Print d+" :: "+td_xz		
 		Endif
 	
 		coll_line.o=sv.Copy()

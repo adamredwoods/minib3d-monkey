@@ -300,7 +300,7 @@ Class Base64
 	
 			Next
 
-			Local b24=(bb[0] Shl 18)|(bb[1] Shl 12)|(bb[2] Shl 6)|bb[3]		
+			Local b24:Int =(bb[0] Shl 18)|(bb[1] Shl 12)|(bb[2] Shl 6)|bb[3]		
 
 			buf.PokeByte( i+0, (b24 Shr 16)&255)
 			buf.PokeByte( i+1, (b24 Shr 8)&255)
@@ -326,26 +326,29 @@ Class Base64
 		Return data.PeekByte(pos-1)
 	End
 	
+	''Endianness is different for targets, so use PeekInt()
 	Method ReadInt:Int()
 		pos += 4
-		i2f.PokeByte(0,data.PeekByte(pos-4))
-		i2f.PokeByte(1,data.PeekByte(pos-3))
-		i2f.PokeByte(2,data.PeekByte(pos-2))
-		i2f.PokeByte(3,data.PeekByte(pos-1))
-		Return i2f.PeekInt(0)
-		'Return data.PeekInt(pos-4)
+		'i2f.PokeByte(0,data.PeekByte(pos-4))
+		'i2f.PokeByte(1,data.PeekByte(pos-3))
+		'i2f.PokeByte(2,data.PeekByte(pos-2))
+		'i2f.PokeByte(3,data.PeekByte(pos-1))
+		Return ((data.PeekByte(pos-1) & $000000ff) Shl 24) | ((data.PeekByte(pos-2)& $000000ff) Shl 16) | ((data.PeekByte(pos-3)& $000000ff) Shl 8) | (data.PeekByte(pos-4)& $000000ff)
+		'i2f.PokeInt(0, v)
+		'Return i2f.PeekInt(0)
 	End
 	
 	Method ReadFloat:Float()
 		pos += 4
-		i2f.PokeByte(0,data.PeekByte(pos-4))
-		i2f.PokeByte(1,data.PeekByte(pos-3))
-		i2f.PokeByte(2,data.PeekByte(pos-2))
-		i2f.PokeByte(3,data.PeekByte(pos-1))
+		'i2f.PokeByte(0,data.PeekByte(pos-4))
+		'i2f.PokeByte(1,data.PeekByte(pos-3))
+		'i2f.PokeByte(2,data.PeekByte(pos-2))
+		'i2f.PokeByte(3,data.PeekByte(pos-1))
+		i2f.PokeInt(0, ((data.PeekByte(pos-1) & $000000ff) Shl 24) | ((data.PeekByte(pos-2)& $000000ff) Shl 16) | ((data.PeekByte(pos-3)& $000000ff) Shl 8) | (data.PeekByte(pos-4)& $000000ff) )
 		Return i2f.PeekFloat(0)
-		'Return data.PeekFloat(pos-4)
 	End
 	
+	#rem
 	Method ReadTag:String()
 		''readtag does not increment position
 		If pos>size Then Return ""
@@ -359,6 +362,15 @@ Class Base64
 
 		Return (String.FromChar((d  ) & $00ff)+String.FromChar((d Shr 8 )& $00ff)+
 			String.FromChar((d Shr 16 )& $00ff)+String.FromChar((d Shr 24)& $00ff) )
+
+	End
+	#end
+	
+	Method ReadTag:Int()
+		''readtag does not increment position
+		If pos>size Then Return 0
+		
+		Return ((data.PeekByte(pos+3) Shl 24) | (data.PeekByte(pos+2) Shl 16) | (data.PeekByte(pos+1) Shl 8) | (data.PeekByte(pos)))
 
 	End
 	

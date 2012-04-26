@@ -157,7 +157,6 @@ Class TPick
 	Global vec_a:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_b:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_radius:Vector =New Vector(0.0,0.0,0.0)
-	Global col_info:CollisionInfo=New CollisionInfo(vec_a,vec_b,vec_radius)
 
 	Global vec_i:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_j:Vector =New Vector(0.0,0.0,0.0)
@@ -180,6 +179,13 @@ Class TPick
 		Local ray:Vector = New Vector((line.d.x-ax),(line.d.y-ay),(line.d.z-az)).Normalize()	
 		Local cen:Vector = New Vector(0,0,0)
 		
+		''coll ray info setup for pick
+		Local col_info:CollisionInfo = New CollisionInfo()
+		col_info.dir = ray
+		col_info.coll_line = line
+		col_info.radius = radius
+		col_info.y_scale = 1.0
+		
 		
 		For Local ent:TEntity=Eachin ent_list
 		
@@ -201,37 +207,10 @@ Class TPick
 
 			Endif
 			
-			''			
-			vec_i.Update(ent.mat.grid[0][0],ent.mat.grid[1][0],-ent.mat.grid[2][0]) '++-
-			vec_j.Update(ent.mat.grid[0][1],ent.mat.grid[1][1],-ent.mat.grid[2][1]) '++-
-			vec_k.Update(-ent.mat.grid[0][2],-ent.mat.grid[1][2],ent.mat.grid[2][2]) '--+
-			'mat.LoadIdentity()
-			mat.Update(vec_i,vec_j,vec_k)
 			
-			'mat = ent.mat.Inverse()
-			vec_v.Update(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2])
-			tform.Update(mat, vec_v)
+			col_info.CollisionSetup(ent, ent.pick_mode)
 		
-			' if pick mode is sphere or box then update collision info object to include entity radius/box info
-			If ent.pick_mode<>2
-				col_info.Update(ent.radius_x,ent.box_x,ent.box_y,ent.box_z,ent.box_x+ent.box_w,ent.box_y+ent.box_h,ent.box_z+ent.box_d)
-			Endif
-		
-			Local mesh_col:MeshCollider
-			Local mesh:TMesh = TMesh(ent)
-			If mesh<>Null	
-				mesh_col = mesh.col_tree.CreateMeshTree(mesh) ' create collision tree for mesh if necessary
-			Endif
-		
-			'' t_tform for testing
-			'mesh_col.t_tform = New TransformMat(ent.mat, New Vector(ent.mat.grid[3][0],ent.mat.grid[3][1],ent.mat.grid[3][2]) )
-		
-			''to allow collision rays to inverse scale quickly
-			mesh_col.gsx = mesh.gsx
-			mesh_col.gsy = mesh.gsy
-			mesh_col.gsz = mesh.gsz
-		
-			pick = col_info.Pick(line, radius, col_obj, tform, mesh_col, ent.pick_mode)
+			pick = col_info.CollisionDetect(col_obj)
 			
 			
 			If pick
@@ -257,11 +236,11 @@ Class TPick
 			
 			'picked_ent=ent
 			If TMesh(picked_ent)<>Null
-				picked_surface=col_obj.surface
+				picked_surface=col_obj.surface & $0000ffff
 			Else
 				picked_surface=-1
 			Endif
-			picked_triangle=col_obj.index
+			picked_triangle=((col_obj.surface & $ffff0000) Shr 16) ''byte packed
 	
 		Endif
 		
