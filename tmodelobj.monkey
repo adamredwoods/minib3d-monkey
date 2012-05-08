@@ -603,6 +603,9 @@ Class TObjMtl
 	
 	Field cache:VertCache
 	
+	Method New()
+		cache = New VertCache(1)
+	End
 End
 	
 Class VertCache
@@ -622,6 +625,8 @@ Class VertCache
 	'' CheckVert(vert index, texture index, norm index)
 	Method CheckVert:Int( i:Int, ti:Int, ni:Int)
 		
+		If i>size-1 Then Return 0
+		
 		If Not realvertindex[i] Then Return 0
 
 		''-- check for similar vertex, different vt and vn, if so, create new vertex
@@ -636,6 +641,14 @@ Class VertCache
 	
 	Method SetCache(i:Int, reali:Int, ti:Int=0, ni:Int=0)
 		''set real vert index
+		
+		If i>size-1
+			realvertindex = realvertindex.Resize(i+1)
+			texusedindex = texusedindex.Resize(i+1)
+			normusedindex = normusedindex.Resize(i+1)
+			size = i+1
+		Endif
+		
 		realvertindex[i] = reali
 		texusedindex[i] = ti
 		normusedindex[i] = ni

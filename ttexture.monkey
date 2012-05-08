@@ -577,7 +577,7 @@ Class TTexture
 			Local x=0,y=0
 	
 			glBindtexture GL_TEXTURE_2D,gltex[frame]
-			glCopyTexImage2D(GL_TEXTURE_2D,mipmap_no,GL_RGBA8,x,TRender.height-y-height,width,height,0)
+			glCopyTexImage2D(GL_TEXTURE_2D,mipmap_no,GL_RGBA,x,TRender.height-y-height,width,height,0)
 			
 		Else ' no cubemap texture (2012 gles 1.x)
 
