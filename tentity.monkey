@@ -37,7 +37,7 @@ Class TEntity
 	Field cull_radius#
 
 	Field brush:TBrush=New TBrush
-	Field shader_brush:TShaderBrush ''don't forget to fill in copy, etc.
+	Field shader_brush:TShader ''don't forget to fill in copy, etc.
 
 	Field anim:Int ' =1 if mesh contains bone anim data, =2 if vertex anim data
 	Field anim_render:Int ' true to render as anim mesh
@@ -72,7 +72,7 @@ Class TEntity
 	Field cam_layer:TCamera
 	
 		
-	''blitz3d functions-- can be depricated
+	''blitz3d functions-- can be deprecated
 	Global global_mat:Matrix = New Matrix
 	Global tformed_x#
 	Global tformed_y#
@@ -770,24 +770,25 @@ Class TEntity
 	
 		brush = bru.Copy()
 
-		If TShaderBrush(bru) = bru
+		If TShader(bru) = bru
 			
 			DebugLog "TBrush: shader paint"
-			shader_brush = TShaderBrush(bru) '.Copy()
+			shader_brush = TShader(bru) '.Copy()
 			
 		Endif
 
 		
 	End 
 	
+	'' does not paint with a copy
 	Method PaintEntityGlobal(bru:TBrush)
 	
 		brush = bru
 
-		If TShaderBrush(bru) = bru
+		If TShader(bru) = bru
 			
 			DebugLog "TBrush: shader paint"
-			shader_brush = TShaderBrush(bru) '.Copy()
+			shader_brush = TShader(bru) '.Copy()
 			
 		Endif
 
@@ -1141,7 +1142,6 @@ Class TEntity
 	End 
 	
 	Function TFormPoint(x#,y#,z#,src_ent:TEntity,dest_ent:TEntity)
-		''this routine could be optimized to help TCamera.EntityInFrustum()
 		
 		'Local mat:Matrix=global_mat.Copy() '***global***
 		temp_mat.Overwrite(global_mat)
@@ -1158,24 +1158,12 @@ Class TEntity
 		Endif
 
 		If dest_ent<>Null
-
-			temp_mat.LoadIdentity()
-		
-			Local ent:TEntity=dest_ent
+				
+			temp_mat = dest_ent.mat.Inverse() 'Copy()
 			
-			Repeat
-	
-				'temp_mat.Scale(1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
-				'temp_mat.RotateRoll(-ent.rz)
-				'temp_mat.RotatePitch(-ent.rx)
-				'temp_mat.RotateYaw(-ent.ry)
-				temp_mat.FastRotateScale(-ent.rz,-ent.rx,-ent.ry,1.0/ent.sx,1.0/ent.sy,1.0/ent.sz)
-				temp_mat.Translate(-ent.px,-ent.py,-ent.pz)																																																																																																																																																																																																																																																																																																																																									
-
-				ent=ent.parent
+			temp_mat.Scale(1.0/(dest_ent.gsx*dest_ent.gsx),1.0/(dest_ent.gsy*dest_ent.gsy),1.0/(dest_ent.gsz*dest_ent.gsz))
+			'temp_mat.Inverse()
 			
-			Until ent=Null
-		
 			temp_mat.Translate(x,y,-z)
 			
 			x=temp_mat.grid[3][0]

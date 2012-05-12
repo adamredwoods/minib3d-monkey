@@ -630,7 +630,7 @@ Class TBatchSprite Extends TSprite
 			'p3 = mat_sp.TransformPoint(1.0,-1.0,0.0)
 			p3 = [m00 - m10 + o[0] , m01 - m11 + o[1], -m02 + m12 - o[2]]
 			
-			'3 triangle sprite trick (does not work for all conditions)
+			'3 triangle sprite trick (does not work for all conditions, animated sprites)
 			'p0 = [-m00 + -(m10+m10+m10) + o[0] , -m01 + -(m11+m11+m11) + o[1], m02 + m12+m12+m12 - o[2]]				
 			'p1 = [-m00 + m10 + o[0] , -m01 + m11 + o[1], m02 - m12 - o[2]]	
 			'p2 = [m00+m00+m00 + m10 + o[0] , m01+m01+m01 + m11 + o[1], -(m02+m02+m02) - m12 - o[2]]			

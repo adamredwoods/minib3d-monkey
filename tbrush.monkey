@@ -6,7 +6,7 @@ Class TBrush
 	Field no_texs:Int
 	Field name$
 	Field red#=1.0,green#=1.0,blue#=1.0,alpha#=1.0
-	Field shine#
+	Field shine#, shine_strength#=100.0
 	Field blend:Int,fx:Int
 	Field tex_frame:Int
 	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle# ''per brush animation
@@ -17,10 +17,6 @@ Class TBrush
 	
 	End 
 	
-	Method Delete()
-
-	
-	End 
 	
 	Method Copy:TBrush()
 		

@@ -3,35 +3,84 @@
 '' TPixmap
 '' for monkey
 ''
+Import minib3d
 Import monkeyutility
 
 
+#If TARGET<>"html5"
+
+
+
 Class TPixmap
+
 	Field pixels:DataBuffer
 	Field width:Int, height:Int, format:Int, pitch:Int
-	Field orig_width:Int, orig_height:Int
 	
 	Field tex_id:Int[1]
 	
-	Const quad_verts[] = [-1, -1, 0,   -1,  1, 0,   1,  1, 0,  1, -1, 0]
-
-	Const quad_index[] = [0,1,2, 0,2,3] 
+	Global loading:Bool = False, loaded:Bool = False
+	Global old_file:String[1]
+	Global cur_file:Int=0
+	Global pixmap_preload:TPixmap[]
+	
+	
+	Function PreLoadPixmap:Int(file$[])
+		
+		If loaded And file[0] = old_file[0]
+			Return 1
+		Elseif file[0] <> old_file[0]
+			loaded = False
+			cur_file = -1
+			loading = True
+			pixmap_preload = New TPixmap[file.Length()]
+		Endif
+		
+		If loading Then cur_file +=1
+		
+		''run many times for other targets
+		loading = True
+					
+		pixmap_preload[cur_file] = LoadPixmap(file[cur_file])
+		
+		old_file = file
+		
+		If cur_file = file.Length()-1
+			loaded = True
+			loading = False
+			Return 1
+		Endif
+		
+		Return 0
+		
+	End
+	
 	
 	Function LoadPixmap:TPixmap(f$)
 	
 		Local p:TPixmap = New TPixmap
 		
 		Local info:Int[3]
-		p.pixels = LoadImageData( f,info )
+		
+		If loaded = False
+		
+			p.pixels = LoadImageData( f,info )
+			
+		Elseif loaded=True
+
+			For Local i:Int=0 To old_file.Length()-1
+				If f = old_file[i] Then Return pixmap_preload[i]
+			Next
+			p.pixels = LoadImageData( f,info )
+			
+		Endif
+		
 		p.width = info[0]
 		p.height = info[1]
-		p.orig_width = info[0]
-		p.orig_height = info[1]
 		p.format = PF_RGBA8888
 		
 		If info[1] Then p.pitch = p.pixels.Size()/4 / info[1]
 		
-		If Not info[0] And Not info[1] Then DebugLog "Image Not Found:",f
+		If Not info[0] And Not info[1] Then DebugLog "Image Not Found: "+f
 		
 		Return p
 		
@@ -207,3 +256,8 @@ Class TPixmap
 	
 End
 
+#Else
+	
+	Import tpixmaphtml5
+
+#Endif

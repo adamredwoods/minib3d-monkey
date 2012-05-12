@@ -450,7 +450,7 @@ Class MeshCollider
 										
 			hit = 1
 			'' no exit early for hit. or check all triangles and check which time is smallest
-			
+
 		Next
 
 		

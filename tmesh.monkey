@@ -602,7 +602,7 @@ Class TMesh Extends TEntity
 		
 		thissurf.CropSurfaceBuffers()
 		
-		'thissphere.UpdateNormals() ''slow
+			'thissphere.UpdateNormals() ''slow
 		thissurf.SnapVerts()
 		thissurf.UpdateNormals()
 			

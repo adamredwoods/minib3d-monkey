@@ -1,15 +1,22 @@
 Import minib3d
 Import monkeyutility
 
+#If MINIB3D_DRIVER="gles20"
+	Import opengl.gles20
+#Else
+	Import opengl.gles11
+#Endif
+
 ''NOTES:
 ''- may need  a method to release main texture memory from LoadImageData(), but keep in videomemory? what if we lose context (on pause)?
 '' - need an OnResume() fucntion to reload textures
 '' - ReloadAllTextures:: only doing first frame for now until anim_frames get sorted out
 '' - textures kept in memory for android OnResume()
 
+
 Class TTexture
 
-	Global render:TTexture '' reserved for future use for target extendability
+	Global render:TTextureDriver '' reserved for future use for target extendability
 	
 	Global tex_list:List<TTexture> = New List<TTexture>
 	Field tex_link:list.Node<TTexture>
@@ -17,14 +24,15 @@ Class TTexture
 	Field file$,flags:Int,blend:Int=2,coords:Int
 	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
 	
-	Field file_abs$,width:Int,height:Int ' returned by Name/Width/Height commands
+	Field width:Int,height:Int ' returned by Name/Width/Height commands
 	
 	Field pixmap:TPixmap
-	Field gltex:Int[] = New Int[1]
+		
 	Field no_frames:Int=1
 	Field frame_ustep:Float=1.0,frame_vstep:Float=1.0, frame_xstep:Int, frame_ystep:Int
 	Field frame_startx:Int, frame_starty:Int
 	
+	Field gltex:Int[] = New Int[1]
 	Field no_mipmaps:Int
 	
 	Field cube_pixmap:TPixmap[] = New TPixmap[7]
@@ -38,21 +46,18 @@ Class TTexture
 	
 	
 	End 
-	
-	Method Delete()
 
-	
-	End 
+	'' DeleteTexture and BindTexture in TRender
 	
 	Method FreeTexture()
 		
-		glDeleteTextures(1,gltex)
+		TRender.render.DeleteTexture(gltex)
 		tex_link.Remove()
 		pixmap=New TPixmap
 		cube_pixmap=New TPixmap[7]
 		gltex[0]=0
 	
-	End 
+	End
 	
 	''CreateTexture()
 	'' -- frames disabled
@@ -60,7 +65,7 @@ Class TTexture
 	
 		'If flags&128 Then Return CreateCubeMapTexture(width,height,flags,tex)
 		
-		TGlobal.ClearGLErrors()
+		TRender.render.ClearErrors()
 		
 		If tex=Null
 			tex=New TTexture
@@ -80,49 +85,12 @@ Class TTexture
 		Local x=0
 	
 		Local pixmap:TPixmap = tex.pixmap
-	
-		'For Local i=0 To tex.no_frames-1
-	
-			'pixmap=tex.pixmap.Window(x*width,0,width,height)
-			'x=x+1
 		
-			' ---
+		pixmap=AdjustPixmap(pixmap)
+		tex.width=pixmap.width
+		tex.height=pixmap.height
 		
-			'pixmap=AdjustPixmap(pixmap)
-			tex.width=pixmap.width
-			tex.height=pixmap.height
-			Local width=pixmap.width
-			Local height=pixmap.height
-
-			Local name:Int[1]
-			glGenTextures 1,name
-			glBindtexture GL_TEXTURE_2D,name[0]
-
-			Local mipmap:Int=0
-			If tex.flags&8 Then mipmap=1
-			Local mip_level:Int=0
-			
-			Repeat
-
-				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,0 'pixmap.pixels
-				
-				If( glGetError()<>GL_NO_ERROR )
-					Error "out of texture memory"
-				Endif
-				
-				If Not mipmap Then Exit
-				If width=1 And height=1 Exit
-				If width>1 width *= 0.5
-				If height>1 height *= 0.5
-
-				pixmap=pixmap.ResizePixmapNoSmooth(width,height) ''no data, no need to smooth
-				mip_level+=1
-			Forever
-			tex.no_mipmaps=mip_level
-
-			tex.gltex[0]=name[0]
-
-		'Next
+		TRender.render.BindTexture(tex,flags)
 		
 		Return tex
 
@@ -135,6 +103,7 @@ Class TTexture
 	
 	End
 	
+	''use this LoadTexture(pixmap) for lost context
 	Function LoadTexture:TTexture(pixmap:TPixmap,flags:Int=9, tex:TTexture = Null)
 		
 		If Not tex
@@ -148,7 +117,14 @@ Class TTexture
 		tex.pixmap = pixmap
 		If tex.pixmap.height = 0 Then Return tex
 		
-		Return BindAnimTexture(tex,flags)
+		''poweroftwo
+		tex.pixmap=AdjustPixmap(tex.pixmap)
+		tex.width=tex.pixmap.width
+		tex.height=tex.pixmap.height
+		
+		TRender.render.BindTexture(tex,flags)
+		
+		Return tex
 	
 	End
 	
@@ -186,13 +162,30 @@ Class TTexture
 		Endif
 
 		' load pixmap
+		Local new_scx:Float=1.0, new_scy:Float=1.0, oldw:Int=0, oldh:Int=0
+		
 		tex.pixmap=TPixmap.LoadPixmap(file)
 		If tex.pixmap.height = 0 Then Return tex
+		
+		oldw = tex.pixmap.width; oldh=tex.pixmap.width
+		
+		tex.pixmap=AdjustPixmap(tex.pixmap)
+		tex.width=tex.pixmap.width
+		tex.height=tex.pixmap.height
+		
+		If oldw<>tex.width Or oldh<>tex.height
+			new_scx = tex.width/Float(oldw)
+			new_scy = tex.height/Float(oldh)
+		Endif
 		
 		' if tex not anim tex, get frame width and height
 		If frame_width=0 And frame_height=0
 			frame_width=tex.pixmap.width
 			frame_height=tex.pixmap.height
+		Else
+			'' scale frames to new power-of-two
+			frame_width = frame_width*new_scx
+			frame_height = frame_height*new_scy
 		Endif
 
 		
@@ -221,85 +214,13 @@ Class TTexture
 			tex.v_pos = tex.frame_starty*tex.frame_vstep
 		Endif
 		
-		Return BindAnimTexture(tex,flags)
+		TRender.render.BindTexture(tex,flags)
+		
+		Return tex
 	
 	End
 	
-	Function BindAnimTexture:TTexture(tex:TTexture,flags:Int)
-		''
-		'' will return texture if one already exists (sometimes used for texture atlases)
-		''
-		
-		'If flags&128 Then Return LoadCubeMapTexture(file,flags,tex)
-		
-		OpenglES11(TRender.render).ClearGLErrors()
-
-
-		' check to see if pixmap contain alpha layer, set alpha_present to true if so (do this before converting)
-		Local alpha_present=True
-		
-		' if alpha flag is true and pixmap doesn't contain alpha info, apply alpha based on color values
-		If tex.flags&2 And alpha_present=False
-			'tex.pixmap=ApplyAlpha(tex.pixmap)
-		Endif		
-
-		' if mask flag is true, mask pixmap
-		If tex.flags&4
-			tex.pixmap.MaskPixmap(0,0,0)
-		Endif
-
-		
-		' pixmap -> tex
-	
-		Local pixmap:TPixmap = tex.pixmap
-
-		'For Local i=0 To tex.no_frames-1
-		
-			pixmap=AdjustPixmap(pixmap)
-			tex.width=pixmap.width
-			tex.height=pixmap.height
-			Local width=pixmap.width
-			Local height=pixmap.height
-			
-			Local name:Int[1]
-
-			If Not tex.gltex[0]
-				glGenTextures 1,name
-			Else
-				name[0] = tex.gltex[0]
-			Endif
-			
-			glBindTexture GL_TEXTURE_2D,name[0]
-			
-			Local mipmap:Int= 0, mip_level:Int=0
-			If tex.flags&8 Then mipmap=True
-
-			Repeat
-			
-				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pixmap.pixels
-				
-				If( glGetError()<>GL_NO_ERROR )
-					Error "** out of texture memory **"
-				Endif
-				
-				If Not mipmap Or (width=1 And height =1) Then Exit
-				If width>1 width *= 0.5
-				If height>1 height *= 0.5
-
-				If resize_smooth Then pixmap=pixmap.ResizePixmap(width,height) Else pixmap=pixmap.ResizePixmapNoSmooth(width,height)
-				mip_level+=1
-				
-			Forever
-			tex.no_mipmaps=mip_level
-
-			tex.gltex[0]=name[0]
-
-		'Next
-
-				
-		Return tex
-		
-	End 
+ 
 
 #rem
 	''no cube maps in gl es 1.x
@@ -513,23 +434,21 @@ Class TTexture
 	
 	End 
 	
-	Method TextureWidth:Int(orig:Bool = False)
-	
-		If orig Then Return pixmap.orig_width
+	Method TextureWidth:Int()
+
 		Return width
 	
 	End 
 	
-	Method TextureHeight:Int(orig:Bool = False)
-		
-		If orig Then Return pixmap.orig_height
+	Method TextureHeight:Int()
+
 		Return height
 	
 	End 
 	
 	Method TextureName$()
 	
-		Return file_abs
+		Return file
 	
 	End 
 	
@@ -658,7 +577,7 @@ Class TTexture
 		' adjust width and height size to next biggest power of 2 size
 		Local width=Pow2Size(pixmap.width)
 		Local height=Pow2Size(pixmap.height)
-
+		
 		' if width or height have changed then resize pixmap
 		If width<>pixmap.width Or height<>pixmap.height
 			If resize_smooth Then pixmap=pixmap.ResizePixmap(width,height) Else pixmap=pixmap.ResizePixmapNoSmooth(width,height)
@@ -712,9 +631,7 @@ Class TTexture
 			''** only doing first frame for now until anim_frames get sorted out
 			'For local i:=0 To tex.no_frames-1
 
-				name[0] = tex.gltex[0]
-				glDeleteTextures(1,name)
-				tex.gltex[0] = 0
+				TRender.render.DeleteTexture(tex.gltex)				
 				
 				If tex.is_font
 					TTexture.ResizeNoSmooth()
@@ -735,6 +652,8 @@ Class TTexture
 	
 	
 End 
+
+
 
 Class TTextureFilter
 

@@ -449,6 +449,7 @@ Class CollisionInfo
 
 				''adjust normal --not needed
 				'coll_obj.normal = tf.Multiply(coll_obj.normal)
+
 		
 			Case COLLISION_METHOD_BOX
 			
@@ -474,7 +475,7 @@ Class CollisionInfo
 			coll_obj.col_time=coll_obj.time
 			coll_obj.col_surface=coll_obj.surface
 			coll_obj.col_index=coll_obj.index	
-			
+	
 			coll_obj.col_coords=coll_line.d.Multiply(coll_obj.time).Add(coll_line.o)'.Subtract(coll_obj.normal.Multiply(radius))
 			
 			'coll_obj.col_coords=coll_line.d.Subtract(coll_line.o).Multiply(coll_obj.time).Add(coll_line.o).Subtract(coll_obj.normal.Multiply(radius))
@@ -608,6 +609,9 @@ Print d+" :: "+td_xz
 	
 	End 
 End
+
+
+
 
 
 Class CollisionObject

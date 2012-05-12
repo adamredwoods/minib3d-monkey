@@ -4,7 +4,7 @@ Import matrix
 Class Line
 	Public
 	
-	Field o:Vector, d:Vector
+	Field o:Vector, d:Vector ''Line.d is relative to Line.o (not world space)
 	
 	Method New()
 		o = New Vector

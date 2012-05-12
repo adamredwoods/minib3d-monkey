@@ -3,7 +3,7 @@
 '' 3d text for minib3d + monkey
 Import tsprite
 Import minib3d
-Import tsurface
+
 
 
 Class TText Extends TSprite
@@ -15,6 +15,8 @@ Class TText Extends TSprite
 	Field text$="" , old_text$=""
 	Field length:Int
 	Field font_file:String
+	Field orig_width:Float, orig_height:Float ''retain this info for font ratios
+	
 	Field char_uvwidth:Float
 	Field surf:TSurface
 	Field char_pixels:Int
@@ -62,9 +64,13 @@ Class TText Extends TSprite
 		Endif
 		
 		TTexture.ResizeNoSmooth() ''dont smooth on resize
-		'TTexture.ClearTextureFilters() ''no mip map
+		'TTexture.ClearTextureFilters() ''no mip map on fonts
 		
 		Local pixmap:TPixmap = TPixmap.LoadPixmap( tt.font_file)
+		tt.orig_width = pixmap.width; tt.orig_height = pixmap.height
+		
+		If pixmap.height = 0 Then Print"Font file not found."; Return tt
+		
 		
 		pixmap.MaskPixmap(tt.mask_color & $0000ff, (tt.mask_color & $00ff00) Shr 8 , (tt.mask_color & $ff0000) Shr 16) 
 		Local tex:TTexture = TTexture.LoadTexture(pixmap,4)
@@ -79,15 +85,15 @@ Class TText Extends TSprite
 		
 		tt.surf = tt.CreateSurface()
 		tt.EntityTexture(tex)
-		tt.char_rows = Ceil( (c_pixels*num_chars+(num_chars*(pad*2) )) /Float(tex.TextureWidth(True)) )
+		tt.char_rows = Ceil( (c_pixels*num_chars+(num_chars*(pad*2) )) / tt.orig_width )
 
-		tt.pixel_ratio = tex.TextureWidth()/Float( tex.TextureWidth(True) )
+		tt.pixel_ratio = tex.width/tt.orig_width
 		
 		Local temp_chars_per_row:Int = Floor( num_chars/tt.char_rows)
-		tt.char_uvwidth = (tt.char_pixels * tt.pixel_ratio) / Float(tex.TextureWidth())	
+		tt.char_uvwidth = (tt.char_pixels * tt.pixel_ratio) / Float(tex.width)	
 		tt.padding = tt.pixel_ratio*pad
 
-		'Print "charuv:"+tt.char_uvwidth+" "+tt.pixel_ratio+"  "+tt.char_rows
+		'Print "charuv:"+tt.char_uvwidth+" "+tt.pixel_ratio+"  "+tt.char_rows+" :: "+tex.TextureWidth(True)
 		
 		' update matrix
 		If tt.parent<>Null
@@ -157,12 +163,17 @@ Class TText Extends TSprite
 	Method SetText(str$,x:Float, y:Float, z:Float = 0.0, align:Int=0)
 		
 		Local resurf:Int = 0
-		
+	
 		If mode=False
 			PositionEntity(x,y,z)
 		Else
-			Local vec:Vector = cam.CameraUnProject(x-char_pixels-4,y+char_pixels+char_pixels-4, 0.95)
+			Local zz:Float = (cam.range_far * cam.range_near) / (cam.range_far - cam.range_near) -0.05
+			
+			scale_x = cam.inv_zoom
+			scale_y = cam.inv_zoom
+			Local vec:Vector = cam.CameraUnProject(x-char_pixels-4,y+char_pixels+char_pixels-4, zz )'0.95 )
 			PositionEntity(vec.x,vec.y,vec.z)
+			'ScaleEntity(1/cam.zoom,1/cam.zoom,1.0)
 		Endif
 		
 		If str = old_text Or str = "" Then Return

@@ -180,7 +180,7 @@ Class TSurface
 	''-- a method to shorten the memory buffers use to optimal size after mesh has been created
 	''
 	Method CropSurfaceBuffers()
-	
+
 		If no_verts<1 And no_tris<1 Then Return
 		
 		vert_coords= CopyFloatBuffer(vert_coords, FloatBuffer.Create(no_verts*3) )
@@ -603,13 +603,13 @@ Class TSurface
 	
 	Method UpdateVBO() ''--depricated
 		
-		OpenglES11.render.UpdateVBO(Self)
+		'OpenglES11.render.UpdateVBO(Self)
 		
 	End 
 	
 	Method FreeVBO() ''--depricated
 		
-		OpenglES11.render.FreeVBO(Self)
+		'OpenglES11.render.FreeVBO(Self)
 	
 	End 
 	

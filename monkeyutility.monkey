@@ -2,6 +2,7 @@
 '' helper classes and functions for monkey conversion
 ''
 Import monkey
+Import opengl.databuffer
 Import tutility
 Import minib3d
 
@@ -17,7 +18,7 @@ Extern
 #if TARGET = "glfw" Or TARGET = "mingw" Or TARGET = "ios"
 	Function RestoreMojo2D() = "app->GraphicsDevice()->BeginRender();//"
 #elseif TARGET = "android"
-	Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().BeginRender( (GL11)MonkeyGame.app.GraphicsDevice().gl );//"
+	Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().Flush(); MonkeyGame.app.GraphicsDevice().BeginRender( (GL10) null );//"
 #end
 
 Public
@@ -50,18 +51,34 @@ Class FloatBuffer
 	Const INVSIZE:Float = 1.0/4.0
 	
 	Field buf:DataBuffer
+	Global i2f:DataBuffer
 	
 	Function Create:FloatBuffer(i:Int=0)
+	
+		i2f= DataBuffer.Create(4)
+	
 		Local b:FloatBuffer = New FloatBuffer
 		b.buf = DataBuffer.Create(i*SIZE+1)
 		Return b
+		
 	End
 	
 	Method Poke:Void(i:Int,v:Float)
+		'i =i*SIZE
+		'i2f.PokeFloat(0,v)
+		'buf.PokeByte(i+0,(i2f.PeekByte(0) & $000000ff))
+		'buf.PokeByte(i+1,(i2f.PeekByte(1) & $000000ff) )
+		'buf.PokeByte(i+2,(i2f.PeekByte(2) & $000000ff) )
+		'buf.PokeByte(i+3,(i2f.PeekByte(3) & $000000ff) )
+		
 		buf.PokeFloat(i*SIZE,v)
 	End
 	
 	Method Peek:Float(i:Int)
+		'i =i*SIZE  
+		'i2f.PokeInt(0, ((buf.PeekByte(i+3) & $000000ff) Shl 24) | ((buf.PeekByte(i+2) & $000000ff) Shl 16) | ((buf.PeekByte(i+1)& $000000ff) Shl 8) | (buf.PeekByte(i)& $000000ff) )
+		'Return i2f.PeekFloat(0)
+
 		Return buf.PeekFloat(i*SIZE)
 	End
 	
@@ -77,18 +94,30 @@ Class ShortBuffer
 	Const INVSIZE:Float = 1.0/2.0
 	
 	Field buf:DataBuffer
+	Global i2f:DataBuffer
 	
 	Function Create:ShortBuffer(i:Int=0)
+		i2f= DataBuffer.Create(4)
+	
 		Local b:ShortBuffer = New ShortBuffer
 		b.buf = DataBuffer.Create(i*SIZE+1)
 		Return b
 	End
 	
 	Method Poke:Void(i:Int,v:Int)
+		'i =i*SIZE
+		'i2f.PokeShort(0,v)
+		'buf.PokeByte(i+0,(i2f.PeekByte(0) & $000000ff))
+		'buf.PokeByte(i+1,(i2f.PeekByte(1) & $000000ff) )
+		
 		buf.PokeShort(i*SIZE,v)
 	End
 	
 	Method Peek:Int(i:Int)
+		'i =i*SIZE  
+		'i2f.PokeShort(0, ( ((buf.PeekByte(i+1)& $000000ff) Shl 8) | (buf.PeekByte(i)& $000000ff) ))
+		'Return i2f.PeekShort(0)
+	
 		Return buf.PeekShort(i*SIZE)
 	End
 	

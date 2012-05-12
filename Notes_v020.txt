@@ -1,0 +1,2 @@
+
+-- problem with FireFox webgl, does not like empty vertex colors array. will flicker. turning off does nothing.

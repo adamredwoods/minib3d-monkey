@@ -20,6 +20,8 @@ Please see readme.txt for more details
 
 'Strict
 
+#MINIB3D_DRIVER="default"
+
 Import mojo
 
 
@@ -68,5 +70,4 @@ Import tshader
 
 '' functions
 Import functions
-
 

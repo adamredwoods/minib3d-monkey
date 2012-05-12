@@ -1,14 +1,20 @@
 Import minib3d
 
-Class TLight Extends TEntity
+#If MINIB3D_DRIVER="gles20"
+	Import opengl.gles20
+#Else
+	Import opengl.gles11
+#Endif
 
-	Global light_no:Int =0
+Class TLight Extends TEntity
+	
+	Const INV255:Float = 1.0/255.0
+	
+	'Global light_no:Int =0 'moved to trender
 	Global no_lights:Int =0
 	Global max_lights:Int =8
 	
-	' enter gl consts here for each available light
-	Global gl_light:Int[] = [GL_LIGHT0,GL_LIGHT1,GL_LIGHT2,GL_LIGHT3,GL_LIGHT4,GL_LIGHT5,GL_LIGHT6,GL_LIGHT7]
-
+	
 	Global light_list:List<TLight> = New List<TLight>
 	Field light_link:list.Node<TLight>
 
@@ -16,8 +22,10 @@ Class TLight Extends TEntity
 	Field range#=1.0/1000.0
 	Field red#=1.0,green#=1.0,blue#=1.0
 	Field inner_ang#=0.0,outer_ang#=45.0
+	Field spec_red#=1.0,spec_grn#=1.0,spec_blu#=1.0,spec_a#=1.0
 	
-	Global ambient_red:Float=0.5,ambient_green:Float=0.5,ambient_blue:Float=0.5
+	
+	Global ambient_red:Float=0.1,ambient_green:Float=0.1,ambient_blue:Float=0.1
 	
 	Method New()
 
@@ -119,7 +127,7 @@ Class TLight Extends TEntity
 	
 		If no_lights>0 Then no_lights=no_lights-1
 		
-		glDisable(gl_light[no_lights])
+		TRender.render.DisableLight(Self)
 		
 		light_link.Remove()
 			
@@ -129,30 +137,17 @@ Class TLight Extends TEntity
 	
 	Function CreateLight:TLight(l_type=1,parent_ent:TEntity=Null)
 
+		If no_lights >= max_lights Then Return ' no more lights available, return
+
 		Local light:TLight=New TLight
 		light.light_type=l_type
-		light.classname="Light"
-		
-		If no_lights >= max_lights Then Return ' no more lights available, return and gc will collect create light
+		light.classname="Light"	
 		
 		' no of lights increased, enable additional gl light
 		no_lights=no_lights+1
-		glEnable(gl_light[no_lights-1])
+		'glEnable(gl_light[no_lights-1])
 		
-		Local white_light#[]=[1.0,1.0,1.0,1.0]
-		glLightfv(gl_light[no_lights-1],GL_SPECULAR,white_light)
 		
-		' if point light or spotlight then set constant attenuation to 0
-		If light.light_type>1
-			Local light_range#[]=[0.0]
-			glLightfv(gl_light[no_lights-1],GL_CONSTANT_ATTENUATION,light_range)
-		Endif
-		
-		' if spotlight then set exponent to 10.0 (controls fall-off of spotlight - roughly matches B3D)
-		If light.light_type=3
-			Local exponent#[]=[10.0]
-			glLightfv(gl_light[no_lights-1],GL_SPOT_EXPONENT,exponent)
-		Endif
 	
 		light.light_link = light_list.AddLast(light)
 		light.entity_link = entity_list.EntityListAdd(light) ''for collisions
@@ -179,9 +174,9 @@ Class TLight Extends TEntity
 		
 	Method LightColor(r#,g#,b#)
 	
-		red=r/255.0
-		green=g/255.0
-		blue=b/255.0
+		red=r *INV255
+		green=g *INV255
+		blue=b *INV255
 		
 	End 
 	
@@ -194,65 +189,16 @@ Class TLight Extends TEntity
 	
 	
 	Function AmbientLight(r#,g#,b#)
-	
-		Local inv:Float = 1.0/255.0
-		ambient_red=r*inv
-		ambient_green=g*inv
-		ambient_blue=b*inv
+		
+		ambient_red=r *INV255
+		ambient_green=g *INV255
+		ambient_blue=b *INV255
 	
 	End 
 	
-	
 	Method Update(cam:TCamera)
 
-		light_no=light_no+1
-		If light_no>no_lights Then light_no=1
-
-		If Hidden()=True
-			glDisable(gl_light[light_no-1])
-			Return
-		Else
-			glEnable(gl_light[light_no-1])
-		Endif
-
-		glPushMatrix()
-
-		glMultMatrixf(mat.ToArray() )
-		
-		Local z#=1.0
-		Local w#=0.0
-		If light_type>1
-			z=0.0
-			w=1.0
-		Endif
-		
-		Local rgba#[]=[red,green,blue,1.0]
-		Local pos#[]=[0.0,0.0,z,w]
-		
-		glLightfv(gl_light[light_no-1],GL_POSITION,pos)
-		glLightfv(gl_light[light_no-1],GL_DIFFUSE,rgba)
-
-		' point or spotlight, set attenuation
-		If light_type>1
-		
-			Local light_range#[]=[range]
-			
-			glLightfv(gl_light[light_no-1],GL_LINEAR_ATTENUATION,light_range)
-		
-		Endif
-
-		' spotlight, set direction and range
-		If light_type=3 
-		
-			Local dir#[]=[0.0,0.0,-1.0]
-			Local outer#[]=[outer_ang]
-		
-			glLightfv(gl_light[light_no-1],GL_SPOT_DIRECTION,dir)
-			glLightfv(gl_light[light_no-1],GL_SPOT_CUTOFF,outer)
-		
-		Endif
-		
-		glPopMatrix()
+		''deprecated to trender.UpdateLight(cam,light)
 																	
 	End 		
 		

@@ -235,9 +235,10 @@ Class TAnimation
 		
 
 		' cycle through all surfs
+		Local anim_surf:TSurface
 		For Local surf:TSurface=Eachin mesh.surf_list
 
-			Local anim_surf:TSurface = mesh.anim_surf[surf.surf_id]
+			anim_surf = mesh.anim_surf[surf.surf_id]
 			Local vanim:Int=0, pack:Int=0, pack_id:Int=0, get_next_pack:Int=1
 			Local va_id:Int=0
 			
@@ -495,18 +496,19 @@ Class TAnimation
 		Next
 
 		Local qx:Float, qy:Float, qz:Float, qw:Float, rot:Float[4]
-
+		Local bPos:Vector, bQuat:Quaternion
 		Local basemesh:Float[no_verts*3]
+		Local surf:TSurface
 		
 		''maxkeys is inclusive i guess (not maxkeys-1)
 		For Local i:Int =0 To maxkeys
 		
 			For Local bone:TBone=Eachin mesh.bones			
 					
-				Local pos:Vector = bone.keys.GetPosition(i,0,bone.keys.frames)
-				Local quat:Quaternion = bone.keys.GetQuaternion(i,0,bone.keys.frames)
+				bPos= bone.keys.GetPosition(i,0,bone.keys.frames)
+				bQuat= bone.keys.GetQuaternion(i,0,bone.keys.frames)
 								
-				bone.Transform(pos, quat)
+				bone.Transform(bPos, bQuat)
 								
 			Next
 			
@@ -519,7 +521,7 @@ Class TAnimation
 			Local sid:Int
 						
 			
-			For Local surf:TSurface = Eachin mesh.surf_list
+			For surf = Eachin mesh.surf_list
 				
 				Local pack:Int=0, pack_id:Int=0
 				Local no_anim_verts:Int=0
@@ -547,6 +549,10 @@ Class TAnimation
 		Next 'all keys
 		
 		''clear bones & bone keys
+		For Local e:TEntity = Eachin mesh.child_list
+			e.FreeEntity()
+		Next
+		
 		
 		''set new anim=2 number
 		mesh.anim = 2

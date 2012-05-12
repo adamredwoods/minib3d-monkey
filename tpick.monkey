@@ -176,7 +176,8 @@ Class TPick
 		Local col_obj:CollisionObject = New CollisionObject()
 		
 		Local line:Line = New Line(ax,ay,az,bx-ax,by-ay,bz-az)
-		Local ray:Vector = New Vector((line.d.x-ax),(line.d.y-ay),(line.d.z-az)).Normalize()	
+		'Local ray:Vector = New Vector((line.d.x-ax),(line.d.y-ay),(line.d.z-az)).Normalize()
+		Local ray:Vector = New Vector((line.d.x),(line.d.y),(line.d.z)).Normalize()	
 		Local cen:Vector = New Vector(0,0,0)
 		
 		''coll ray info setup for pick
@@ -184,6 +185,7 @@ Class TPick
 		col_info.dir = ray
 		col_info.coll_line = line
 		col_info.radius = radius
+		col_info.radii = New Vector(radius,radius,radius)
 		col_info.y_scale = 1.0
 		
 		
