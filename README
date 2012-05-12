@@ -1,4 +1,6 @@
 minib3d+monkey
+v0.20 - new render encapsulation allows new render targets (opengles2.0, WebGL, etc.)
+
 v0.14 - TTexture, animated textures, texture fixes
 v0.13 - TPick, TCollisions accuracy and speed increase
 v0.12 - fixed Gluproject, alpha sorting; fixed OBJ loader, B3D Loader; Base64 Android; LoadMesh fixes
