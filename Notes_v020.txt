@@ -1,2 +1,5 @@
+- requires at least monkey 56, recommend monkey 59
+
+- Uses #MINIB3D_DRIVER="driver name" for debug info and compiler side conditionals
 
 -- problem with FireFox webgl, does not like empty vertex colors array. will flicker. turning off does nothing.

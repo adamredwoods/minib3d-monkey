@@ -995,9 +995,10 @@ Class OpenglES11 Extends TRender
 		
 		old_no_lights = light_no
 		
+		glMatrixMode(GL_MODELVIEW)
 		glPushMatrix()
 
-		glMultMatrixf(light.mat.ToArray() )
+		glLoadMatrixf(light.mat.ToArray() )
 		
 		Local z#=1.0
 		Local w#=0.0
