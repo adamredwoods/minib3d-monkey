@@ -395,26 +395,26 @@ Class OpenglES11 Extends TRender
 						tex_flags=ent.brush.tex[ix].flags
 						tex_blend=ent.brush.tex[ix].blend
 						tex_coords=ent.brush.tex[ix].coords
-						tex_u_scale=ent.brush.u_scale ''changed, so brushes get individual uvs (for animation)
-						tex_v_scale=ent.brush.v_scale
-						tex_u_pos=ent.brush.u_pos
-						tex_v_pos=ent.brush.v_pos
-						tex_ang=ent.brush.angle
+						tex_u_scale=ent.brush.tex[ix].u_scale
+						tex_v_scale=ent.brush.tex[ix].v_scale
+						tex_u_pos=ent.brush.tex[ix].u_pos
+						tex_v_pos=ent.brush.tex[ix].v_pos
+						tex_ang=ent.brush.tex[ix].angle
 						tex_cube_mode=ent.brush.tex[ix].cube_mode
-						frame=ent.brush.tex_frame
+						frame=ent.brush.tex[ix].tex_frame
 						tex_smooth = ent.brush.tex[ix].tex_smooth		
 					Else
 						texture=surf.brush.tex[ix]
 						tex_flags=surf.brush.tex[ix].flags
 						tex_blend=surf.brush.tex[ix].blend
 						tex_coords=surf.brush.tex[ix].coords
-						tex_u_scale=surf.brush.u_scale
-						tex_v_scale=surf.brush.v_scale
-						tex_u_pos=surf.brush.u_pos
-						tex_v_pos=surf.brush.v_pos
-						tex_ang=surf.brush.angle
+						tex_u_scale=surf.brush.tex[ix].u_scale
+						tex_v_scale=surf.brush.tex[ix].v_scale
+						tex_u_pos=surf.brush.tex[ix].u_pos
+						tex_v_pos=surf.brush.tex[ix].v_pos
+						tex_ang=surf.brush.tex[ix].angle
 						tex_cube_mode=surf.brush.tex[ix].cube_mode
-						frame=surf.brush.tex_frame
+						frame=surf.brush.tex[ix].tex_frame
 						tex_smooth = surf.brush.tex[ix].tex_smooth		
 					Endif
 	
@@ -587,7 +587,7 @@ Class OpenglES11 Extends TRender
 					If tex_ang<>0.0
 						glRotatef(tex_ang,0.0,0.0,1.0)
 					Endif
-					If tex_u_scale<>0.0 Or tex_v_scale<>0.0
+					If tex_u_scale<>1.0 Or tex_v_scale<>1.0
 						glScalef(tex_u_scale,tex_v_scale,1.0)
 					Endif
 					

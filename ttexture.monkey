@@ -30,12 +30,13 @@ Class TTexture
 		
 	Field no_frames:Int=1
 	Field frame_ustep:Float=1.0,frame_vstep:Float=1.0, frame_xstep:Int, frame_ystep:Int
+	Field tex_frame:Int=0
 	Field frame_startx:Int, frame_starty:Int
 	
 	Field gltex:Int[] = New Int[1]
 	Field no_mipmaps:Int
 	
-	Field cube_pixmap:TPixmap[] = New TPixmap[7]
+	Field cube_pixmap:TPixmap[] 
 	Field cube_face:Int=0,cube_mode:Int=1
 
 	Field tex_smooth:Bool =True ''smooths texture via graphics driver
@@ -414,21 +415,21 @@ Class TTexture
 	
 	End 
 	
-	Method ScaleTexture(u_s#,v_s#) ''deprecated, use brush
+	Method ScaleTexture(u_s#,v_s#) ''need to keep in case of a texture by texture manipulation
 	
 		u_scale=1.0/u_s
 		v_scale=1.0/v_s
 	
 	End 
 	
-	Method PositionTexture(u_p#,v_p#) ''deprecated, use brush
+	Method PositionTexture(u_p#,v_p#) 
 	
 		u_pos=-u_p
 		v_pos=-v_p
 	
 	End 
 	
-	Method RotateTexture(ang#) ''deprecated, use brush
+	Method RotateTexture(ang#) 
 	
 		angle=ang
 	

@@ -679,27 +679,26 @@ Class TEntity
 	Method EntityTexture(texture:TTexture,frame=0,index=0)
 	
 		brush.tex[index]=texture
-		brush.u_scale = texture.u_scale
-		brush.v_scale = texture.v_scale
 		
 		If index+1>brush.no_texs Then brush.no_texs=index+1
 	
 		If frame<0 Then frame=0
 		If frame>texture.no_frames-1 Then frame=texture.no_frames-1
-		brush.tex_frame=frame
+		brush.tex[index].tex_frame=frame
 		
 		If frame>0 And texture.no_frames>1
 			''move texture
 			Local x:Int = frame Mod texture.frame_xstep
 			Local y:Int =( frame/texture.frame_ystep) Mod texture.frame_ystep
-			brush.u_pos = x*texture.frame_ustep
-			brush.v_pos = y*texture.frame_vstep
+			brush.tex[index].u_pos = x*texture.frame_ustep
+			brush.tex[index].v_pos = y*texture.frame_vstep
 		Endif
 	
 	End 
 	
 	
 	Method AnimateTexture(frame:Int, loop:Bool=False, i:Int=0)
+
 		
 		If Not brush Or Not brush.tex[0] Then Return
 		
@@ -712,14 +711,15 @@ Class TEntity
 		
 		If frame<0 Then frame=bframe
 		If frame>tf Then frame= nframe
-		brush.tex_frame=frame
+		brush.tex[i].tex_frame=frame
 		
 		If frame>0 And brush.tex[i].no_frames>1
 			''move texture
 			Local x:Int = frame Mod brush.tex[i].frame_xstep
 			Local y:Int =( frame/brush.tex[i].frame_ystep) Mod brush.tex[i].frame_ystep
-			brush.u_pos = x*brush.tex[i].frame_ustep
-			brush.v_pos = y*brush.tex[i].frame_vstep
+			brush.tex[i].u_pos = x*brush.tex[i].frame_ustep
+			brush.tex[i].v_pos = y*brush.tex[i].frame_vstep
+
 		Endif
 		
 	End

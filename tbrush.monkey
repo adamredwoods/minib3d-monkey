@@ -6,10 +6,9 @@ Class TBrush
 	Field no_texs:Int
 	Field name$
 	Field red#=1.0,green#=1.0,blue#=1.0,alpha#=1.0
-	Field shine#, shine_strength#=100.0
+	Field shine#=0.05, shine_strength#=100.0
 	Field blend:Int,fx:Int
-	Field tex_frame:Int
-	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle# ''per brush animation
+
 	Field tex:TTexture[8]
 	
 
@@ -31,7 +30,6 @@ Class TBrush
 		brush.shine=shine
 		brush.blend=blend
 		brush.fx=fx
-		brush.tex_frame=tex_frame
 		brush.tex[0]=tex[0]
 		brush.tex[1]=tex[1]
 		brush.tex[2]=tex[2]
@@ -40,12 +38,6 @@ Class TBrush
 		brush.tex[5]=tex[5]
 		brush.tex[6]=tex[6]
 		brush.tex[7]=tex[7]
-		
-		brush.u_scale=u_scale
-		brush.v_scale=v_scale
-		brush.u_pos=u_pos
-		brush.v_pos=v_pos
-		brush.angle=angle
 					
 		Return brush
 
@@ -71,11 +63,13 @@ Class TBrush
 	Function LoadBrush:TBrush(file$,flags:Int=1,u_scale#=1.0,v_scale#=1.0)
 	
 		Local brush:TBrush=New TBrush
-		brush.tex[0]=TTexture.LoadTexture(file,flags)
-		brush.no_texs=1
-		brush.tex[0].u_scale=u_scale
-		brush.tex[0].v_scale=v_scale
-		brush.tex_frame=0
+		brush.no_texs += 1
+		Local i:Int = brush.no_texs-1
+		brush.tex[i]=TTexture.LoadTexture(file,flags)
+		
+		brush.tex[i].u_scale=u_scale
+		brush.tex[i].v_scale=v_scale
+		brush.tex[i].tex_frame=0
 		Return brush
 		
 	End 
@@ -83,13 +77,16 @@ Class TBrush
 	Function LoadAnimBrush:TBrush(file$,flags:Int=1,w:Int,h:Int,first_frame:Int=0,no_frames:Int=-1)
 	
 		Local brush:TBrush=New TBrush
-		brush.tex[0]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames)
-		brush.u_scale = brush.tex[0].u_scale
-		brush.v_scale = brush.tex[0].v_scale
-		brush.u_pos = brush.tex[0].u_pos 
-		brush.v_pos = brush.tex[0].v_pos 
-		brush.no_texs=1
-		brush.tex_frame=0
+		
+		brush.no_texs += 1
+		Local i:Int = brush.no_texs-1
+		
+		brush.tex[i]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames)
+		'brush.u_scale = brush.tex[i].u_scale
+		'brush.v_scale = brush.tex[i].v_scale
+		'brush.u_pos = brush.tex[i].u_pos 
+		'brush.v_pos = brush.tex[i].v_pos 
+		brush.tex[i].tex_frame=0
 		Return brush
 		
 	End
@@ -129,14 +126,14 @@ Class TBrush
 		
 		If frame<0 Then frame=0
 		If frame>texture.no_frames-1 Then frame=texture.no_frames-1 
-		tex_frame=frame
+		texture.tex_frame=frame
 		
 		If frame>0 And texture.no_frames>1
 			''move texture
 			Local x:Int = frame Mod texture.frame_xstep
 			Local y:Int =( frame/texture.frame_ystep) Mod texture.frame_ystep
-			u_pos = x*texture.frame_ustep
-			v_pos = y*texture.frame_vstep
+			texture.u_pos = x*texture.frame_ustep
+			texture.v_pos = y*texture.frame_vstep
 		Endif
 		
 	End 
@@ -153,24 +150,28 @@ Class TBrush
 	
 	End 
 	
-	Method ScaleBrush(u_s#,v_s#)
-	
-		u_scale=1.0/u_s
-		v_scale=1.0/v_s
-	
+	Method ScaleBrush(u_s#,v_s#,i:Int=0)
+		
+		If tex[i]
+			tex[i].u_scale=1.0/u_s
+			tex[i].v_scale=1.0/v_s
+		Endif
 	End 
 	
-	Method PositionBrush(u_p#,v_p#)
-	
-		u_pos=-u_p
-		v_pos=-v_p
-	
+	Method PositionBrush(u_p#,v_p#,i:Int=0)
+		
+		If tex[i]
+			tex[i].u_pos=-u_p
+			tex[i].v_pos=-v_p
+		Endif
 	End 
 	
-	Method RotateBrush(ang#)
+	Method RotateBrush(ang#,i:Int=0)
 	
-		angle=ang
-	
+		If tex[i]
+			tex[i].angle=ang
+		Endif
+		
 	End 
 	
 	
@@ -217,5 +218,6 @@ Class TBrush
 		Return True
 	
 	End 
+
 	
 End 
