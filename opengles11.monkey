@@ -48,7 +48,7 @@ Class OpenglES11 Extends TRender
 		Local s:String[] = glGetString(GL_VERSION).Split(".")
 		If s[0].Length() > 2
 			Local st:String[] = s[0].Split(" ")
-			s[0] = st[st.Length()-1]
+			s[0] = st[2]
 		Endif
 		
 		Local len:Float = 1.0/(10*s[1].Length())
@@ -1094,6 +1094,34 @@ Class OpenglES11 Extends TRender
 	
 	End
 	
+	
+	Method BackBufferToTex(mipmap_no=0,frame=0)
+
+		If flags&128=0 ' normal texture
+	
+			Local x=0,y=0
+	
+			glBindtexture GL_TEXTURE_2D,gltex[frame]
+			glCopyTexImage2D(GL_TEXTURE_2D,mipmap_no,GL_RGBA,x,TRender.height-y-height,width,height,0)
+			
+		Else ' no cubemap texture (2012 gles 1.x)
+
+			'Local x=0,y=0
+	
+			'glBindtexture GL_TEXTURE_CUBE_MAP_EXT,gltex[0]
+			'Select cube_face
+				'Case 0 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
+				'Case 1 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
+				'Case 2 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
+				'Case 3 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
+				'Case 4 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
+				'Case 5 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
+			'End Select
+		
+		Endif
+
+	End 
+
 	
 End
 

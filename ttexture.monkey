@@ -167,13 +167,13 @@ Class TTexture
 		
 		tex.pixmap=TPixmap.LoadPixmap(file)
 		If tex.pixmap.height = 0 Then Return tex
-		
+	
 		oldw = tex.pixmap.width; oldh=tex.pixmap.width
 		
 		tex.pixmap=AdjustPixmap(tex.pixmap)
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
-		
+	
 		If oldw<>tex.width Or oldh<>tex.height
 			new_scx = tex.width/Float(oldw)
 			new_scy = tex.height/Float(oldh)
@@ -214,7 +214,7 @@ Class TTexture
 			tex.u_pos = tex.frame_startx*tex.frame_ustep
 			tex.v_pos = tex.frame_starty*tex.frame_vstep
 		Endif
-		
+	
 		TRender.render.BindTexture(tex,flags)
 		
 		Return tex
@@ -492,28 +492,7 @@ Class TTexture
 	
 	Method BackBufferToTex(mipmap_no=0,frame=0)
 	
-		If flags&128=0 ' normal texture
-	
-			Local x=0,y=0
-	
-			glBindtexture GL_TEXTURE_2D,gltex[frame]
-			glCopyTexImage2D(GL_TEXTURE_2D,mipmap_no,GL_RGBA,x,TRender.height-y-height,width,height,0)
-			
-		Else ' no cubemap texture (2012 gles 1.x)
-
-			'Local x=0,y=0
-	
-			'glBindtexture GL_TEXTURE_CUBE_MAP_EXT,gltex[0]
-			'Select cube_face
-				'Case 0 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_X,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
-				'Case 1 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Z,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
-				'Case 2 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
-				'Case 3 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Z,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
-				'Case 4 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
-				'Case 5 glCopyTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_Y,mipmap_no,GL_RGBA8,x,TGlobal.height-y-height,width,height,0)
-			'End Select
-		
-		Endif
+		TRender.render.BackBufferToTex(mipmap,frame)
 
 	End 
 		
@@ -583,8 +562,7 @@ Class TTexture
 		If width<>pixmap.width Or height<>pixmap.height
 			If resize_smooth Then pixmap=pixmap.ResizePixmap(width,height) Else pixmap=pixmap.ResizePixmapNoSmooth(width,height)
 		Endif
-		
-		' return pixmap
+
 		Return pixmap
 		
 	End 
