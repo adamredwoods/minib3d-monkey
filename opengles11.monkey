@@ -43,18 +43,31 @@ Class OpenglES11 Extends TRender
 	'End
 	
 	
-	Method GetVersion:Float()
+Method GetVersion:Float()
+		Local st:String
 		
-		Local s:String[] = glGetString(GL_VERSION).Split(".")
-		If s[0].Length() > 2
-			Local st:String[] = s[0].Split(" ")
-			s[0] = st[2]
-		Endif
+		Local s:String = glGetString(GL_VERSION)
 		
-		Local len:Float = 1.0/(10*s[1].Length())
-		Return Float( Int(s[0])+Int(s[1])*len )
+		Local num:Int=0
+		
+		For Local i:Int=0 To s.Length()-1
+
+			If (s[i] >47 And s[i]<58)
+				st=st+String.FromChar(s[i])
+				If num =0 Then num=1
+			Elseif s[i]=46
+				If num=2 Then Exit
+				st=st+String.FromChar(s[i])
+				num=2
+			Elseif num<>0
+				Exit
+			Endif 
+		Next
+
+		Return Float( st )
 		
 	End
+
 	
 	Method Reset:Void()
 		
