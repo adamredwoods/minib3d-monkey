@@ -24,6 +24,8 @@ End
 
 Class TRender
 
+	Const DEBUG:Int=1
+
 	Global render:TRender
 	Global vbo_enabled:Bool=False ' this is set in GraphicsInit - will be set to true if USE_VBO is true and the hardware supports vbos
 	
@@ -40,13 +42,14 @@ Class TRender
 	Global render_list:List<TMesh> = New List<TMesh>
 	Global render_alpha_list:RenderAlphaList = New RenderAlphaList
 	
+	Global temp_shader:TShader
 	
 	Public
 	
 	
 	Method GetVersion:Float() Abstract ''returns version of graphics platform being used
 	
-	Method Reset:Void() Abstract ''reset for each camera
+	Method Reset:Void() Abstract ''reset, called before render for each camera
 	Method Finish:Void() Abstract ''finish pass for each camera
 	
 	Method GraphicsInit:Int(flags:Int=0) Abstract ''init during SetRender()
@@ -217,23 +220,43 @@ Print ent.classname
 
 			'If cam.parent_hidden=True Or cam.hidden=True Then Continue
 			If cam.Hidden()=True Then Continue
-
-			TRender.render.RenderCamera(cam)
-
+			
+			TShader.PreProcess()
+			
+			''override the default render routine for custom shader
+			
+			If TShaderRender(TShader.g_shader)=Null
+			
+				TRender.render.RenderCamera(cam)
+				
+			Else
+			
+				temp_shader = TShader.g_shader ''to keep custom shader on return
+				
+				TShaderRender(TShader.g_shader).Render(cam)
+				
+				TShader.g_shader = temp_shader
+				
+			Endif
+			
+			TShader.PostProcess()
+			
 		Next
-
 
 	End 
 	
 	
 	Method RenderCamera:Void(cam:TCamera, skip:Int=0)
-	
+		
+		
+		Reset() ''reset render pass
+		
 		'' use skip to render without updating camera
 		'' would be useful for FSAA, FBOs, or a render layer system
 		If (Not skip)
 		
 			cam.Update(cam)
-			UpdateCamera( cam ) ''update Render
+			UpdateCamera( cam ) ''update Render driver
 			
 		Endif
 	
@@ -244,6 +267,8 @@ Print ent.classname
 			
 		Next
 
+		
+		
 		render_list.Clear()
 		render_alpha_list.Clear()
 		
@@ -251,8 +276,6 @@ Print ent.classname
 		Local mesh:TMesh
 		Local alpha_count:Int=0
 
-		
-		Reset() ''reset render pass
 		
 		For Local ent:TEntity=Eachin TEntity.entity_list
 			

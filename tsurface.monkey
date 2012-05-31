@@ -137,7 +137,6 @@ Class TSurface
 		brush.shine=bru.shine
 		brush.blend=bru.blend
 		brush.fx=bru.fx
-		brush.tex_frame = bru.tex_frame
 		
 		For Local i=0 To 7
 			brush.tex[i]=bru.tex[i]

@@ -11,6 +11,7 @@ Class TBrush
 
 	Field tex:TTexture[8]
 	
+	Const MAX_TEXS:Int = 8
 
 	Method New()
 	
@@ -87,6 +88,39 @@ Class TBrush
 		'brush.u_pos = brush.tex[i].u_pos 
 		'brush.v_pos = brush.tex[i].v_pos 
 		brush.tex[i].tex_frame=0
+		Return brush
+		
+	End
+	
+	''LoadTexture()
+	'' -- a method to load a texture into an existing brush. used for multiple textures
+	Method LoadTexture:TTexture(file$,flags:Int=1,u_scale#=1.0,v_scale#=1.0)
+
+		no_texs += 1
+		If no_texs>MAX_TEXS Then Return Null
+		
+		Local i:Int = no_texs-1
+		tex[i]=TTexture.LoadTexture(file,flags)
+		
+		tex[i].u_scale=u_scale
+		tex[i].v_scale=v_scale
+		tex[i].tex_frame=0
+		
+		Return tex[i]
+		
+	End
+	
+	''LoadAnimTexture()
+	'' -- a method to load an animated texture into an existing brush. used for multiple textures
+	Method LoadAnimTexture:TTexture(file$,flags:Int=1,w:Int,h:Int,first_frame:Int=0,no_frames:Int=-1)
+		
+		no_texs += 1
+		If no_texs>MAX_TEXS Then Return Null
+		Local i:Int = no_texs-1
+		
+		brush.tex[i]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames) 
+		brush.tex[i].tex_frame=0
+		
 		Return brush
 		
 	End

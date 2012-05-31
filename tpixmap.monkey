@@ -62,7 +62,7 @@ Class TPixmap
 		Local info:Int[3]
 		
 		If loaded = False
-		
+	
 			p.pixels = LoadImageData( f,info )
 			
 		Elseif loaded=True
@@ -81,7 +81,7 @@ Class TPixmap
 		If info[1] Then p.pitch = p.pixels.Size()/4 / info[1]
 		
 		If Not info[0] And Not info[1] Then DebugLog "Image Not Found: "+f
-		
+
 		Return p
 		
 	End
@@ -95,6 +95,14 @@ Class TPixmap
 		p.height = h
 		p.format = format
 		p.pitch = w
+		
+		For Local y:Int = 0 To h-1
+			For Local x:Int = 0 To w-1
+				
+				p.pixels.PokeInt( (x Shl 2)+y*(w Shl 2), $ffffffff ) ''ARGB
+	
+			Next
+		Next
 		
 		Return p
 	End

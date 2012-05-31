@@ -10,26 +10,35 @@ Class TShader Extends TBrush
 	
 	'' TBrush includes color, shininess, texture, etc.
 	
-	Global process_list:List<TShaderProcess> = New List<TShaderProcess>
-	Field list_link:list.Node<TShaderProcess>
+	Global process_list:List<TShader> = New List<TShader>
+	Global layer_list:List<TShader> = New List<TShader>
+	Field list_link:list.Node<TShader>
 	
 	Global enabled:Int =0 ''Init shaders by TRender ---NOT USED??? use active instead?
 	
 	Global g_shader:TShader
+	Global default_shader:TShader
 	
 	Field active:Int =0
 	Field shader_id:Int =0
 	Field fragment_id:Int =0
 	Field vertex_id:Int =0
 	
+	Field override:Bool = False ''override shader brushes
+	
 	''all driver implementations need this
 	'Method LoadShader:TShader(vp_file:String, fp_file:String) Abstract
 	Method CompileShader:Int(source:String, type:Int) Abstract
 
-	Function DefaultShader:Void(vp_file:String, fp_file:String) 'Abstract
+
+	Method Update()
+		''for setting uniforms and such when SetShader() is called
+	End
+
+	Function LoadDefaultShader:TShader(vp_file:String, fp_file:String) 'Abstract
 		''load default shader on init
 		''extend me
-		'g_shader = LoadShader(vp_file, fp_file)
+		'default_shader = LoadShader(vp_file, fp_file)
 	End
 
 	Function LoadShader:TShader(vp_file:String, fp_file:String) 'Abstract
@@ -44,17 +53,61 @@ Class TShader Extends TBrush
 	
 	Function PreProcess()
 		
-		For Local sh:TShaderProcess = Eachin process_list
-			sh.PreProcess()
+		For Local sh:TShader = Eachin process_list
+			TShaderProcess(sh).PreProcess()
 		Next
 		
 	End
 	
 	Function PostProcess()
 		
-		For Local sh:TShaderProcess = Eachin process_list
-			sh.PostProcess()
+		For Local sh:TShader = Eachin process_list
+			TShaderProcess(sh).PostProcess()
 		Next
+		
+	End
+	
+	''adds to TShaderProcess list in TShader
+	''
+	Function AddProcess(sh:TShader)
+		
+		If TShaderProcess(sh) <> Null
+			
+			sh.list_link = TShader.process_list.AddLast(sh)
+			
+		Endif
+		
+	End
+	
+	
+	''Custom Shader methods
+	''
+	
+	Function SetShader(sh:TShader)
+		
+		If g_shader Then g_shader.active = 0
+		g_shader = sh
+		g_shader.active = 1
+			
+	End
+	
+	Function DefaultShader()
+		
+		g_shader.active = 0
+		g_shader = default_shader
+		g_shader.active = 1
+		
+	End
+	
+	Method Override(i:Int)
+	
+		If i Then override = True Else override = False
+		
+	End
+	
+	Method RenderCamera(cam:TCamera)
+		
+		TRender.render.RenderCamera(cam)
 		
 	End
 	
@@ -63,12 +116,18 @@ End
 
 Interface TShaderProcess
 	
-	Method PreProcess:Void() ''run before all rendering (ie. clear framebuffer)
+	Method PreProcess:Int() ''run before all rendering (ie. clear framebuffer)
 	
-	Method PostProcess:Void() ''run after all rendering (ie. draw framebuffer, blur, etc)
-	
-	Method AddProcessList:Void() ''adds to TShaderProcess list in TShader
-	'self.list_link = TShader.process_list.AddLast(self)
+	Method PostProcess:Int() ''run after all rendering (ie. draw framebuffer, blur, etc)
 	
 End
 
+Interface TShaderRender Extends TShaderProcess
+	
+	Method Render:Int(cam:TCamera)
+	
+	'Method PreProcess:Int() ''run before all rendering (ie. clear framebuffer)
+	
+	'Method PostProcess:Int() ''run after all rendering (ie. draw framebuffer, blur, etc)
+	
+End
