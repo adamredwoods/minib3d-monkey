@@ -1,10 +1,6 @@
 Import minib3d
 
-#If MINIB3D_DRIVER="gles20"
-	Import opengl.gles20
-#Else
-	Import opengl.gles11
-#Endif
+
 
 Class TLight Extends TEntity
 	
@@ -19,11 +15,13 @@ Class TLight Extends TEntity
 	Field light_link:list.Node<TLight>
 
 	Field light_type:Int=0
-	Field range#=1.0/1000.0
+	Field range#=1.0/1000.0 ''inverse range to be precise
+	Field actual_range#=1000.0/1.0
 	Field red#=1.0,green#=1.0,blue#=1.0
 	Field inner_ang#=0.0,outer_ang#=45.0
-	Field spec_red#=1.0,spec_grn#=1.0,spec_blu#=1.0,spec_a#=1.0
-	
+	Field spec_red#=0.0,spec_grn#=0.0,spec_blu#=0.0,spec_a#=0.0
+	Field const_att#=0.0,lin_att#=1.0,quad_att#=0.0
+	Field spot_exp:Float = 10.0
 	
 	Global ambient_red:Float=0.1,ambient_green:Float=0.1,ambient_blue:Float=0.1
 	
@@ -118,6 +116,10 @@ Class TLight Extends TEntity
 		light.blue=blue
 		light.inner_ang=inner_ang
 		light.outer_ang=outer_ang
+		light.const_att =const_att
+		light.lin_att =lin_att
+		light.quad_att =quad_att
+		light.spot_exp =spot_exp
 		
 		Return light
 		
@@ -147,7 +149,7 @@ Class TLight Extends TEntity
 		no_lights=no_lights+1
 		'glEnable(gl_light[no_lights-1])
 		
-		
+		light.lin_att = 1.0 
 	
 		light.light_link = light_list.AddLast(light)
 		light.entity_link = entity_list.EntityListAdd(light) ''for collisions
@@ -168,6 +170,7 @@ Class TLight Extends TEntity
 
 	Method LightRange(light_range#)
 	
+		actual_range = light_range
 		range=1.0/light_range
 		
 	End 
@@ -195,6 +198,14 @@ Class TLight Extends TEntity
 		ambient_blue=b *INV255
 	
 	End 
+	
+	Method LightAttenuation(val1#=0.0,val2#=1.0,val3#=0.0)
+		
+		const_att=val1
+		lin_att=val2
+		quad_att=val3
+
+	End
 	
 	Method Update(cam:TCamera)
 
