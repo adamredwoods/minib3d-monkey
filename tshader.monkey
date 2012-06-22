@@ -11,13 +11,13 @@ Class TShader Extends TBrush
 	'' TBrush includes color, shininess, texture, etc.
 	
 	Global process_list:List<TShader> = New List<TShader>
-	Global layer_list:List<TShader> = New List<TShader>
+	'Global layer_list:List<TShader> = New List<TShader>
 	Field list_link:list.Node<TShader>
 	
-	Global enabled:Int =0 ''Init shaders by TRender ---NOT USED??? use active instead?
+	'Global enabled:Int =0 ''Init shaders by TRender ---NOT USED??? use active instead?
 	
-	Global g_shader:TShader
-	Global default_shader:TShader
+	Global g_shader:TShader ''current shader
+	Global default_shader:TShader ''fixed function equivalent
 	
 	Field active:Int =0
 	Field shader_id:Int =0
@@ -30,10 +30,6 @@ Class TShader Extends TBrush
 	'Method LoadShader:TShader(vp_file:String, fp_file:String) Abstract
 	Method CompileShader:Int(source:String, type:Int) Abstract
 
-
-	Method Update()
-		''for setting uniforms and such when SetShader() is called
-	End
 
 	Function LoadDefaultShader:TShader(vp_file:String, fp_file:String) 'Abstract
 		''load default shader on init
@@ -111,7 +107,14 @@ Class TShader Extends TBrush
 		
 	End
 	
+	Method Update()
+		
+		''runs after each mesh (if implemented in hardware render). ideal for setting uniforms
+		
+	End
+	
 End
+
 
 
 Interface TShaderProcess
