@@ -1,9 +1,17 @@
 minib3d+monkey
+v0.30 - new targets, Html5, XNA, opengl2.0, GPU shaders
+v0.20 - new render encapsulation allows new render targets (opengles2.0, WebGL, etc.)
 
-v0.10
+v0.14 - TTexture, animated textures, texture fixes
+v0.13 - TPick, TCollisions accuracy and speed increase
+v0.12 - fixed Gluproject, alpha sorting; fixed OBJ loader, B3D Loader; Base64 Android; LoadMesh fixes
+v0.11 - fixes: faster TPick; ClearWorld(); TText added centering align; OBJ loader for multiple coordinates;
+        Base64 Loader fix for ARM data alignment (works on iPhone, iPad)
+v0.10 - first release
 
 original minib3d (c) Simon Harrison
 monkey version (c) Adam Piette
+xna version (c) Sascha Schmidt
 various contributions through many authors
 
 This software is provided 'as-is', without any express or implied

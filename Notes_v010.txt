@@ -1,0 +1,36 @@
+march 1 2012
+
+minib3d+monkey for glfw(pc mac), android, ios
+https://github.com/adamredwoods/minib3d-monkey
+
+config.h for glfw:
+- turn on config.h depth_buffer_bits = 32
+
+Adaption Notes v0.10
+--------------------
+
+When I first encountered minib3d I found it to be an elegant, non-complex 3d solution and I've tried to keep that... but the quest for optimization can lead to complexity.
+
+Several things to think about regarding minib3d+monkey. Performance and memory. Effort was made to optimize matrix functions and the render loop. For matrix functions, be aware matrix functions act on themselves instead of creating new objects. Vector functions are not this way. Also, entities that are not parented will run faster than those that are obviously. I'm currently using a global scale for each entity to quickly remove scaling from any matrix equations. I believe this was a problem with blitzmax minib3d but should be fixed here.
+
+I've removed TGlobal. All functions there were moved to their respective locations, mainly into TRender. TRender is broken out so it will be easier to introduce a new render pipeline using SetRender(). Possibilites include opengl20, flash, directx, and even raytraced or raycasting. Ttexture has not been broken out and i wonder if i should do this or allow respective targets to offer their own ttexture_directx class themselves. I'm open to suggestions.
+
+I've taken liberty to add new functions to offer simplicity for expansion. CameraLayers is such functionality. One could associate entities to only be rendered with certain cameras like ortho cameras. This helps with huds, overlays, text boxes and shader effects. Entityfx is now given value 64 which disables depth testing for that entity. Ttexture now offers smoothing or no smoothing. TBatchSprite has been added to manage particles and sprites. Very similar to sprites, particles can be added by using CreateSprite(), but a behind the scenes mesh is managed on the fly. I guess this could be used for grass or clouds too.
+
+Vertex animation has been added. One can now convert b3d bone animation to vertex animation, which uses more memory, but for many identical entities offers a performance solution. I had 20 zombies animating at 30 fps on android. I plan to add an MDD file format loader since most 3d programs offer this export. MD2 files use a similar format, but i find very few MD2 exporters available. I added an OBJ loader, so OBJ+MDD would be a nice way to add animation without B3D exporters available. (Collada is crap, slow, and overly complex, i've already tried and it's unfinished. fbx is closed source.)
+
+Collisions and picking are slow. I converted everything over but considered rewriting my own. Such a chore. Optimization will be considered, but i have already consolidated quite a bit of the functions and classes, although more can be done. I would like to rename some entity collision functions to use "collision" in the function call, like EntityBox() to CollisionBox() for the function to define the entities collision presence. Is anyone opposed to this? It'd make more sense imho. I already added EntityCollision() which could be overloaded to handle a lot of this setup.
+
+Base64 is one of the ideal file formats for monkey. In tmonkeyutility you will find a nice decoder that offers file stream like functions. Base64 takes binary files and converts them to text. You could even encapsulate files into one text file. Online base64 converters are available online, or its possible make one in blitmax or any language.
+
+Reloading context is necessary on mobile devices. If interrupted or paused, apps need a way to restore their state. I use the excess-memory method where loaded textures are kept in memory. Be aware of this, although it would be easy to de-allocate them if one so desires. TPixmap was created to help with this.
+
+This version of minib3d was made to be extended. TRender is ripe for this. Ill probably make an opengl20 version quickly enough, with FBO and GLSL. Directx is entirely possible. Flash 11 stage3d is poor since AGAL is not glsl or hlsl but their own interpretation (why oh why adobe?).
+
+I've added other small things here and there like TText, since I couldn't get back to Mojo after miniB3D rendering. This TText offers 2d or 3d rendering. You can add your own bitmap font if you please.
+
+I've added AlignToVector with slerp, and shared that code with Blitzmax minib3d users.
+
+As always I will be looking for bugs and revising minib3d+monkey as I continue with FBOs and Opengl20. I'm happy to add revisions or additions from the community.
+
+Enjoy. 
