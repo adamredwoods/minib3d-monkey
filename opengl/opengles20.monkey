@@ -948,14 +948,9 @@ Class OpenglES20 Extends TRender
 		ClearErrors()
 		
 		''---load default shader here----
-#If TARGET="mingw"	
-		'TShaderGLSL.LoadDefaultShader(New FastBrightShader)	
-		TShaderGLSL.LoadDefaultShader("../../../../../_shaders/shader_onetex.vp.txt","../../../../../_shaders/shader_onetex.fp.txt")
-#else	
-		'TShaderGLSL.LoadDefaultShader(New FastBrightShader)	
-		TShaderGLSL.LoadDefaultShader("shader_full.vp.txt","shader_full.fp.txt")
-#endif
-		'TShaderGLSL.LoadDefaultShader("simpleshader_vp.txt","simpleshader_fp2.txt")
+
+		TShaderGLSL.LoadDefaultShader(New FullShader)	
+
 		
 		
 		If glGetError()<>GL_NO_ERROR Then Return 0
