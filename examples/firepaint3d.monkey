@@ -44,9 +44,11 @@ Class Game Extends App
 	
 	Method OnCreate()
 		
-		SetRender(New OpenglES11)
+		SetRender()
 		SetUpdateRate 30
 		
+		''use to preload images for html5
+		TPixmap.PreLoadPixmap(["blitzlogo.png","stars.png","bluspark.png"])
 
 		AmbientLight 0,0,0
 		

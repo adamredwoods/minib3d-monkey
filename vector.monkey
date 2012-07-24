@@ -149,7 +149,7 @@ Class Vector
 	' Function by patmaba
 	Function VectorPitch#(vx#,vy#,vz#)
 
-		Local ang#=ATan2(Sqr(vx*vx+vz*vz),vy)-90.0
+		Local ang#=ATan2(Sqrt(vx*vx+vz*vz),vy)-90.0
 
 		If ang<=0.0001 And ang>=-0.0001 Then ang=0
 	

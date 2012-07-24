@@ -13,8 +13,7 @@ Class TShader Extends TBrush
 	Global process_list:List<TShader> = New List<TShader>
 	'Global layer_list:List<TShader> = New List<TShader>
 	Field list_link:list.Node<TShader>
-	
-	'Global enabled:Int =0 ''Init shaders by TRender ---NOT USED??? use active instead?
+
 	
 	Global g_shader:TShader ''current shader
 	Global default_shader:TShader ''fixed function equivalent
@@ -24,11 +23,13 @@ Class TShader Extends TBrush
 	Field fragment_id:Int =0
 	Field vertex_id:Int =0
 	
-	Field override:Bool = False ''override shader brushes
+	Field override:Bool = False ''override all other shader brushes
 	
 	''all driver implementations need this
 	'Method LoadShader:TShader(vp_file:String, fp_file:String) Abstract
 	Method CompileShader:Int(source:String, type:Int) Abstract
+
+	Method Copy:TBrush() Abstract
 
 
 	Function LoadDefaultShader:TShader(vp_file:String, fp_file:String) 'Abstract
@@ -47,18 +48,18 @@ Class TShader Extends TBrush
 		
 	End
 	
-	Function PreProcess()
+	Function PreProcess(cam:TCamera)
 		
 		For Local sh:TShader = Eachin process_list
-			TShaderProcess(sh).PreProcess()
+			IShaderProcess(sh).PreProcess(cam)
 		Next
 		
 	End
 	
-	Function PostProcess()
+	Function PostProcess(cam:TCamera)
 		
 		For Local sh:TShader = Eachin process_list
-			TShaderProcess(sh).PostProcess()
+			IShaderProcess(sh).PostProcess(cam)
 		Next
 		
 	End
@@ -67,7 +68,7 @@ Class TShader Extends TBrush
 	''
 	Function AddProcess(sh:TShader)
 		
-		If TShaderProcess(sh) <> Null
+		If IShaderProcess(sh) <> Null
 			
 			sh.list_link = TShader.process_list.AddLast(sh)
 			
@@ -84,14 +85,16 @@ Class TShader Extends TBrush
 		If g_shader Then g_shader.active = 0
 		g_shader = sh
 		g_shader.active = 1
-			
+					
 	End
 	
-	Function DefaultShader()
+	Function DefaultShader:TShader()
 		
 		g_shader.active = 0
 		g_shader = default_shader
 		g_shader.active = 1
+		
+		Return default_shader
 		
 	End
 	
@@ -109,28 +112,62 @@ Class TShader Extends TBrush
 	
 	Method Update()
 		
-		''runs after each mesh (if implemented in hardware render). ideal for setting uniforms
+		''runs per each surface (if implemented in hardware render). ideal for setting uniforms
+		
+	End
+	
+	''-- draw entity with g_shader instead of brush shader
+	Method DrawEntity:Void(cam:TCamera, ent:TEntity)
+		
+		''update camera, since this routine is used in shaders
+		Local temp1:Int = cam.cls_color
+		Local temp2:Int = cam.cls_zbuffer
+		cam.cls_color = False
+		cam.cls_zbuffer = False
+		
+		TRender.render.UpdateCamera(cam)
+		
+		cam.cls_color = temp1
+		cam.cls_zbuffer = temp2
+		
+		
+		Local temp:Int = ent.shader_brush.active
+		ent.shader_brush.active= 0	
+		TRender.render.Render(ent,cam)
+		ent.shader_brush.active= temp
 		
 	End
 	
 End
 
 
-
-Interface TShaderProcess
+''
+'' standard pre/post per camera
+''
+Interface IShaderProcess
 	
-	Method PreProcess:Int() ''run before all rendering (ie. clear framebuffer)
+	Method PreProcess:Int(cam:TCamera) ''run before all rendering (ie. clear framebuffer)
 	
-	Method PostProcess:Int() ''run after all rendering (ie. draw framebuffer, blur, etc)
+	Method PostProcess:Int(cam:TCamera) ''run after all rendering (ie. draw framebuffer, blur, etc)
 	
 End
 
-Interface TShaderRender Extends TShaderProcess
+''
+''used to take control of the pipeline
+''
+Interface IShaderRender Extends IShaderProcess
 	
 	Method Render:Int(cam:TCamera)
 	
-	'Method PreProcess:Int() ''run before all rendering (ie. clear framebuffer)
+End
+
+
+''
+''used to process a pre/post shader per entity
+''
+Interface IShaderEntity Extends IShaderProcess
 	
-	'Method PostProcess:Int() ''run after all rendering (ie. draw framebuffer, blur, etc)
+	Method RenderEntity:Void(cam:TCamera, ent:TEntity)
 	
 End
+

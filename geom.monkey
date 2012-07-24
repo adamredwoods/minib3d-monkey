@@ -41,7 +41,8 @@ Class Line
 	''Return Line( o-q,d );
 
 	Method Multiply:Vector(q:Float)
-		Return o.Add(d.Multiply(q))
+		'Return o.Add(d.Multiply(q))
+		Return New Vector(o.x+(d.x*q),o.y+(d.y*q),o.z+(d.z*q))
 	End
 	''Return o+d*q;
 

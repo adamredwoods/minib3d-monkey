@@ -118,8 +118,8 @@ Class TBrush
 		If no_texs>MAX_TEXS Then Return Null
 		Local i:Int = no_texs-1
 		
-		brush.tex[i]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames) 
-		brush.tex[i].tex_frame=0
+		tex[i]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames) 
+		tex[i].tex_frame=0
 		
 		Return brush
 		
@@ -237,7 +237,6 @@ Class TBrush
 			If brush1.shine<>brush2.shine Then Return False
 			If brush1.blend<>brush2.blend Then Return False
 			If brush1.fx<>brush2.fx Then Return False
-			If brush1.tex_frame<>brush2.tex_frame Then Return False ''may not want if animtextures have different start frames
 			For Local i=0 To 7
 				If brush1.tex[i]=Null And brush2.tex[i]<>Null Then Return False
 				If brush1.tex[i]<>Null And brush2.tex[i]=Null Then Return False

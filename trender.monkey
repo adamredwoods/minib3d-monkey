@@ -2,25 +2,12 @@ Import minib3d
 Import opengl.databuffer
 
 
-#If MINIB3D_DRIVER="default"
-	Import minib3d.opengles11
-#endif
 
-#Print "MINIB3D_DRIVER="+MINIB3D_DRIVER
-
-
-
-
-
-
-Function SetRender(r:TRender, flags:Int=0)
-
-	TRender.render = r
-	
-	TRender.render.GraphicsInit(flags)
-	
-End
-
+''-- also create this function
+'Function SetRender(flags:Int=0)
+'	TRender.render = New OpenglES11
+'	TRender.render.Graphicsinit(flags)
+'End
 
 Class TRender
 
@@ -70,6 +57,7 @@ Class TRender
 	
 	''-------------------------------------------------------
 	
+
 	
 	Function ClearWorld(entities=True,brushes=True,textures=True)
 		
@@ -195,7 +183,8 @@ Print ent.classname
 			
 						mesh.anim_time=mesh.anim_time+(mesh.anim_speed*anim_speed)
 						If mesh.anim_time>last
-							mesh.anim_time=last
+							'mesh.anim_time = last
+							mesh.anim_time = first + (mesh.anim_time - last)
 							mesh.anim_mode=0
 						Endif
 					
@@ -221,11 +210,11 @@ Print ent.classname
 			'If cam.parent_hidden=True Or cam.hidden=True Then Continue
 			If cam.Hidden()=True Then Continue
 			
-			TShader.PreProcess()
+			TShader.PreProcess(cam)
 			
 			''override the default render routine for custom shader
 			
-			If TShaderRender(TShader.g_shader)=Null
+			If IShaderRender(TShader.g_shader)=Null
 			
 				TRender.render.RenderCamera(cam)
 				
@@ -233,13 +222,13 @@ Print ent.classname
 			
 				temp_shader = TShader.g_shader ''to keep custom shader on return
 				
-				TShaderRender(TShader.g_shader).Render(cam)
+				IShaderRender(TShader.g_shader).Render(cam)
 				
 				TShader.g_shader = temp_shader
 				
 			Endif
 			
-			TShader.PostProcess()
+			TShader.PostProcess(cam)
 			
 		Next
 
@@ -319,7 +308,7 @@ Print ent.classname
 					
 						mesh.alpha_order=0.0
 						TRender.render.Render(mesh,cam)
-						
+	
 					Endif
 					
 				Endif

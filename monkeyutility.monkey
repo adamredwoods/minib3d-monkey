@@ -2,26 +2,25 @@
 '' helper classes and functions for monkey conversion
 ''
 Import monkey
-Import opengl.databuffer
 Import tutility
 Import minib3d
+
+
+#If TARGET="html5" Or TARGET="glfw" Or TARGET="mingw" Or TARGET="ios" Or TARGET="android"
+
+Import opengl.databuffer
+
+#elseif TARGET="xna"
+	
+Import xna.xna_driver.databuffer	
+
+#endif
 
 
 Const PF_RGBA8888:Int = 1
 Const PF_RGB888:Int = 2
 Const PF_A8:Int = 3
 
-
-
-Extern
-
-#if TARGET = "glfw" Or TARGET = "mingw" Or TARGET = "ios"
-	Function RestoreMojo2D() = "app->GraphicsDevice()->BeginRender();//"
-#elseif TARGET = "android"
-	Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().Flush(); MonkeyGame.app.GraphicsDevice().BeginRender( (GL10) null );//"
-#end
-
-Public
 
 
 Function AllocateFloatArray:Float[][]( i:Int, j:Int)
@@ -44,6 +43,191 @@ End
 ''
 '' helper databuffer classes
 ''
+
+
+Class VertexDataBuffer
+	
+	Const SIZE:Int			= 64
+	Const INVSIZE:Float		= 1.0/64.0
+	
+	Const POS_OFFSET:Int 		= 0
+	Const NORMAL_OFFSET:Int 	= 16
+	Const COLOR_OFFSET:Int 		= 32
+	Const TEXCOORDS_OFFSET:Int 	= 48
+
+	Const ELEMENT0:Int = 0
+	Const ELEMENT1:Int = 4
+	Const ELEMENT2:Int = 8
+	Const ELEMENT3:Int = 12
+	
+	Field buf:DataBuffer
+	
+	Method Size:Int()
+		Return Float(buf.Size())*INVSIZE
+	End
+	
+	Function Create:VertexDataBuffer(i:Int=0)
+		Local b:VertexDataBuffer = New VertexDataBuffer
+		b.buf = DataBuffer.Create((i+1)*SIZE)
+		Return b
+	End
+	
+	Method PokeVertCoords(i:Int,x#,y#,z#)
+		Local index = i*SIZE+POS_OFFSET
+		buf.PokeFloat(index,x )
+		buf.PokeFloat(index+ELEMENT1,y )
+		buf.PokeFloat(index+ELEMENT2,z )
+	End
+	
+	Method PokeNormals(i:Int,x#,y#,z#)
+		Local index = i*SIZE+NORMAL_OFFSET
+		buf.PokeFloat(index,x )
+		buf.PokeFloat(index+ELEMENT1,y )
+		buf.PokeFloat(index+ELEMENT2,z )
+	End
+	
+	Method PokeTexCoords(i:Int,s0#,t0#, s1#, t1#)
+		Local index = i*SIZE+TEXCOORDS_OFFSET
+		buf.PokeFloat(index,s0 )
+		buf.PokeFloat(index+ELEMENT1,t0 )
+		buf.PokeFloat(index+ELEMENT2,s1 )
+		buf.PokeFloat(index+ELEMENT3,t1 )
+	End
+	
+	Method PokeTexCoords0(i:Int,s0#,t0#)
+		Local index = i*SIZE+TEXCOORDS_OFFSET
+		buf.PokeFloat(index,s0 )
+		buf.PokeFloat(index+ELEMENT1,t0 )
+	End
+	
+	Method PokeTexCoords1(i:Int,s1#, t1#)
+		Local index = i*SIZE+TEXCOORDS_OFFSET
+		buf.PokeFloat(index+ELEMENT2,s1 )
+		buf.PokeFloat(index+ELEMENT3,t1 )
+	End
+	
+	Method PokeColor(i:Int, r#,g#,b#, a#)
+		Local index = i*SIZE+COLOR_OFFSET
+		buf.PokeFloat(index,r)
+		buf.PokeFloat(index+ELEMENT1,g)
+		buf.PokeFloat(index+ELEMENT2,b)
+		buf.PokeFloat(index+ELEMENT3,a)
+	End
+	
+	Method VertexX#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+POS_OFFSET + ELEMENT0 )
+	End 
+
+	Method VertexY#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+POS_OFFSET + ELEMENT1 )
+	End 
+	
+	Method VertexZ#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+POS_OFFSET + ELEMENT2 )
+	End 
+	
+	Method PeekVertCoords:Vector(vid:Int)
+		Local v:Int = vid*SIZE+POS_OFFSET
+		Return New Vector(buf.PeekFloat(v + ELEMENT0 ),buf.PeekFloat(v + ELEMENT1 ),buf.PeekFloat(v + ELEMENT2 ))
+	End
+	
+	Method VertexRed#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+COLOR_OFFSET + ELEMENT0 )
+	End
+	
+	Method VertexGreen#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+COLOR_OFFSET + ELEMENT1 )
+	End 
+	
+	Method VertexBlue#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+COLOR_OFFSET + ELEMENT2 )
+	End Method
+	
+	Method VertexAlpha#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+COLOR_OFFSET + ELEMENT3 )
+	End 
+	
+	Method VertexNX#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+NORMAL_OFFSET + ELEMENT0 )
+	End 
+	
+	Method VertexNY#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+NORMAL_OFFSET + ELEMENT1 )
+	End 
+	
+	Method VertexNZ#(vid:Int)
+		Return buf.PeekFloat(vid*SIZE+NORMAL_OFFSET + ELEMENT2 )
+	End 
+	
+	Method VertexU#(vid:Int ,coord_set=0)
+		If coord_set=0 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT0 )
+		If coord_set=1 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT2 )
+	End 
+	
+	Method VertexV#(vid:Int,coord_set=0)
+		If coord_set=0 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT1 )
+		If coord_set=1 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT3 )
+	End 
+
+End
+
+
+
+
+
+''CopyDataBuffer() overloaded
+
+Function CopyDataBuffer:DataBuffer( src:DataBuffer, dest:DataBuffer )
+	'Const SIZE:Int = 4
+	If src = Null Then Return dest
+	
+	Local size:Int = src.Size()
+	If dest.Size() < size Then size = dest.Size()
+	
+	For Local i:= 0 To size-1
+		dest.PokeByte(i,src.PeekByte(i))	
+	Next
+	
+	Return dest
+End
+
+Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataBuffer )
+
+	If src.buf = Null Then Return dest
+	
+	Local size:Int = src.buf.Size()
+	If dest.buf.Size() < size Then size = dest.buf.Size()
+	
+	'' step 4 (2 times) is ok since VertexDataBuffer is always multiple of 4
+	For Local i:= 0 To size-1 Step 8
+		dest.buf.PokeInt(i,src.buf.PeekInt(i))
+		dest.buf.PokeInt(i+4,src.buf.PeekInt(i+4))	
+	Next
+	
+	Return dest
+End
+
+Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataBuffer, begin:Int=0, bend:Int=0 )
+	
+	If src.buf = Null Then Return dest
+	
+	begin *= VertexDataBuffer.SIZE
+	bend *= VertexDataBuffer.SIZE
+	
+	If begin=0 And bend=0 Then bend = src.buf.Size()-1
+	If dest.buf.Size()-1 < bend Then bend = dest.buf.Size()-1
+
+	For Local i:= begin To bend Step 4
+		'dest.buf.PokeByte(i,src.buf.PeekByte(i))
+		dest.buf.PokeInt(i,src.buf.PeekInt(i))	
+	Next
+	
+	Return dest
+End
+
+
+
+
 
 Class FloatBuffer
 
@@ -72,6 +256,14 @@ Class FloatBuffer
 		'buf.PokeByte(i+3,(i2f.PeekByte(3) & $000000ff) )
 		
 		buf.PokeFloat(i*SIZE,v)
+	End
+	
+	Method PokeVertCoords:Void(i:Int,v0:Float, v1:Float, v2:Float)
+		
+		buf.PokeFloat(i*12,v0)
+		buf.PokeFloat((i)*12+4,v1)
+		buf.PokeFloat((i)*12+8,v2)
+		
 	End
 	
 	Method Peek:Float(i:Int)
@@ -128,23 +320,11 @@ Class ShortBuffer
 End
 
 
+
+
 ''
 '' helper databuffer functions: copy a buffer and return the destination buffer
 ''
-
-Function CopyDataBuffer:DataBuffer( src:DataBuffer, dest:DataBuffer )
-	'Const SIZE:Int = 4
-	If src = Null Then Return DataBuffer.Create(0)
-	
-	Local size:Int = src.Size()
-	If dest.Size() < size Then size = dest.Size()
-	
-	For Local i:= 0 To size-1
-		dest.PokeByte(i,src.PeekByte(i))	
-	Next
-	
-	Return dest
-End
 
 ''copies limited area of a buffer
 '' begin, end, are in byte offsets

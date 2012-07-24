@@ -26,19 +26,19 @@ Class TText Extends TSprite
 	
 	Field align:Int = 0
 	
-	Global mask_color:Int = $ffffff
+	Global mask_color:Int = $000000
 	
 	Field use3D:Bool '' is this text 2d or 3d
 	
 	Function CreateText3D:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
 		Local tt:TText = CreateText(camx,str,font,num_chars,c_pixels,pad)
-		tt.mode = False
+		tt.SetMode3D()
 		Return tt
 	End
 	
 	Function CreateText2D:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
 		Local tt:TText = CreateText(camx,str,font,num_chars,c_pixels,pad)
-		tt.mode = True
+		tt.SetMode2D()
 		Return tt
 	End
 	
@@ -152,12 +152,12 @@ Class TText Extends TSprite
 	
 	Method SetMode2D()
 		mode = True
-		brush.fx = brush.fx |64 ''disable depth testing
+		brush.fx = brush.fx |64|8 ''disable depth testing, fog
 	End
 	
 	Method SetMode3D()
 		mode = False
-		brush.fx = brush.fx &(~64) ''enable depth testing
+		brush.fx = brush.fx &(~64) &(~8) ''enable depth testing, fog
 	End
 	
 	Method SetText(str$,x:Float, y:Float, z:Float = 0.0, align:Int=0)

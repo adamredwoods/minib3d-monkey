@@ -12,7 +12,7 @@ Class TCamera Extends TEntity
 	Global cam_list:EntityList<TCamera> = New EntityList<TCamera>
 	Field cam_link:list.Node<TCamera>
 
-	Field vx,vy,vwidth,vheight
+	Field vx:Int,vy:Int,vwidth:Int,vheight:Int
 	Field cls_r#=0.0,cls_g#=0.0,cls_b#=0.0
 	Field cls_color:Int=True,cls_zbuffer:Int=True
 	
@@ -28,8 +28,11 @@ Class TCamera Extends TEntity
 	Field fog_range_near#=1.0,fog_range_far#=1000.0
 	
 	' used by CameraProject
-	Field mod_mat:Matrix =New Matrix 'Float[16]
+	'mat:Matrix = cam view matrix (inverse it)
+	Field mod_mat:Matrix =New Matrix ''this is the view matrix, sorry to confuse, but was this way before me
 	Field proj_mat:Matrix =New Matrix'Float[16]
+	Field projview_mat:Matrix = New Matrix
+	Field view_mat:Matrix ''will point to mod_mat
 	Field viewport:Int[4]
 	
 	Global projected_x#
@@ -195,6 +198,7 @@ Class TCamera Extends TEntity
 		viewport[1] = vy
 		viewport[2] = w
 		viewport[3] = h
+		
 	End
 	
 	Method CameraClsColor(r#,g#,b#)
@@ -511,7 +515,7 @@ Class TCamera Extends TEntity
 	End
 	
 	
-	''move to trnder, keep frustum update here
+	''move to trender, keep frustum update here
 	Method Update(cam:TCamera)
 	
 		'' old AA jitter stuff
@@ -524,6 +528,10 @@ Class TCamera Extends TEntity
 
 		'mod_mat = LoadIndentity()
 		mod_mat = mat.Inverse()
+		view_mat = mod_mat
+		projview_mat.Overwrite(proj_mat ) 'Copy()
+		projview_mat.Multiply4(mod_mat)
+		
 		If eyedx Or eyedy Then mod_mat.Translate(-eyedx,-eyedy,0.0)
 
 		If cam Then ExtractFrustum() ''allows for skipping of frustum (used in camera project)

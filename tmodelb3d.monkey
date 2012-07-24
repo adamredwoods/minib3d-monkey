@@ -28,7 +28,7 @@ Class TModelB3D
 		Local file:Base64 = Base64.Load(f_name)
 		
 		If file.Size() <=1
-			DebugLog "File not found"
+			Dprint "File not found"
 			Return New TMesh
 		Endif
 		
@@ -49,8 +49,8 @@ Class TModelB3D
 
 		vno =file.ReadInt() 'version
 
-		If tag<>BB3D DebugLog "Invalid b3d file"; Return New TMesh
-		If Int(vno*0.01) >0 DebugLog "Invalid b3d file version"; Return New TMesh
+		If tag<>BB3D Dprint  "Invalid b3d file"; Return New TMesh
+		If Int(vno*0.01) >0 Dprint  "Invalid b3d file version"; Return New TMesh
 		
 		' Locals
 		
@@ -264,7 +264,7 @@ Class TModelB3D
 					For Local i=1 To node_level
 						tab=tab+"-"
 					Next
-					DebugLog tab+" "+PrintTag(tag)+" "+info
+					Dprint  tab+" "+PrintTag(tag)+" "+info
 				Endif
 				
 			Else
@@ -325,7 +325,7 @@ Class TModelB3D
 						' if not then the texture created above (supplied as param below) will be returned
 						tex[tex_no]=TTexture.LoadTexture(te_file,te_flags,tex[tex_no])
 						
-						If tex[tex_no].gltex[0] And DEBUGMODEL Then DebugLog "-Load Texture:"+te_file
+						If tex[tex_no].gltex[0] And DEBUGMODEL Then Dprint  "-Load Texture:"+te_file
 											
 						tex_no=tex_no+1
 						tex=tex.Resize(tex_no+1) ' resize array +1
@@ -481,7 +481,7 @@ Class TModelB3D
 					mesh.qy=n_qy
 					mesh.qz=n_qz
 					
-					TEntity.entity_list.EntityListAdd(mesh)
+					'TEntity.entity_list.EntityListAdd(mesh)
 					last_ent=mesh
 					
 					' root ent?
@@ -559,7 +559,7 @@ Class TModelB3D
 						new_tag=file.ReadTag()
 														
 					Wend
-					
+
 				Case TRIS
 							
 					Local old_tr_brush_id=tr_brush_id
@@ -574,11 +574,13 @@ Class TModelB3D
 						' new surf - copy arrays
 						surf=mesh.CreateSurface()
 						surf.no_verts = v_surf.no_verts
-						surf.vert_coords=CopyFloatBuffer(v_surf.vert_coords, FloatBuffer.Create(surf.no_verts*3))
-						surf.vert_col=CopyFloatBuffer(v_surf.vert_col, FloatBuffer.Create(surf.no_verts*4))
-						surf.vert_norm=CopyFloatBuffer(v_surf.vert_norm,  FloatBuffer.Create(surf.no_verts*3))
-						surf.vert_tex_coords0=CopyFloatBuffer(v_surf.vert_tex_coords0, FloatBuffer.Create(surf.no_verts*2))
-						surf.vert_tex_coords1=CopyFloatBuffer(v_surf.vert_tex_coords1, FloatBuffer.Create(surf.no_verts*2))
+						
+						surf.vert_data=CopyDataBuffer(v_surf.vert_data, VertexDataBuffer.Create(surf.no_verts))
+						'surf.vert_coords=CopyFloatBuffer(v_surf.vert_coords, FloatBuffer.Create(surf.no_verts*3))
+						'surf.vert_col=CopyFloatBuffer(v_surf.vert_col, FloatBuffer.Create(surf.no_verts*4))
+						'surf.vert_norm=CopyFloatBuffer(v_surf.vert_norm,  FloatBuffer.Create(surf.no_verts*3))
+						'surf.vert_tex_coords0=CopyFloatBuffer(v_surf.vert_tex_coords0, FloatBuffer.Create(surf.no_verts*2))
+						'surf.vert_tex_coords1=CopyFloatBuffer(v_surf.vert_tex_coords1, FloatBuffer.Create(surf.no_verts*2))
 					
 					Endif
 	
@@ -643,7 +645,8 @@ Class TModelB3D
 
 							anim_surf.no_verts=surf.no_verts
 										
-							anim_surf.vert_coords=CopyFloatBuffer(surf.vert_coords, FloatBuffer.Create(surf.no_verts*3))
+							'anim_surf.vert_coords=CopyFloatBuffer(surf.vert_coords, FloatBuffer.Create(surf.no_verts*3))
+							anim_surf.vert_data=CopyDataBuffer(surf.vert_data, VertexDataBuffer.Create(surf.no_verts))
 						
 							anim_surf.vert_bone1_no=anim_surf.vert_bone1_no.Resize(surf.no_verts+1)
 							anim_surf.vert_bone2_no=anim_surf.vert_bone2_no.Resize(surf.no_verts+1)
@@ -916,11 +919,12 @@ Class TModelB3D
 		Local vmax=surf.vmax
 		Local diff = vmax-vmin
 		
-		surf.vert_coords=CopyFloatBuffer(surf.vert_coords, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
-		surf.vert_col=CopyFloatBuffer(surf.vert_col, FloatBuffer.Create( diff*4+4 ), vmin*4,vmax*4+4)
-		surf.vert_norm=CopyFloatBuffer(surf.vert_norm, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
-		surf.vert_tex_coords0= CopyFloatBuffer(surf.vert_tex_coords0, FloatBuffer.Create( diff*2+2 ), vmin*2,vmax*2+2)
-		surf.vert_tex_coords1= CopyFloatBuffer(surf.vert_tex_coords1, FloatBuffer.Create( diff*2+2 ), vmin*2,vmax*2+2)
+		surf.vert_data= CopyDataBuffer(surf.vert_data, VertexDataBuffer.Create(diff+1), vmin,vmax+1)
+		'surf.vert_coords=CopyFloatBuffer(surf.vert_coords, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
+		'surf.vert_col=CopyFloatBuffer(surf.vert_col, FloatBuffer.Create( diff*4+4 ), vmin*4,vmax*4+4)
+		'surf.vert_norm=CopyFloatBuffer(surf.vert_norm, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
+		'surf.vert_tex_coords0= CopyFloatBuffer(surf.vert_tex_coords0, FloatBuffer.Create( diff*2+2 ), vmin*2,vmax*2+2)
+		'surf.vert_tex_coords1= CopyFloatBuffer(surf.vert_tex_coords1, FloatBuffer.Create( diff*2+2 ), vmin*2,vmax*2+2)
 		
 		'Local temp_tris:ShortBuffer = ShortBuffer.Create((surf.no_tris*3)+3)
 		

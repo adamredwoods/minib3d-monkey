@@ -8,7 +8,7 @@ Import vector
 ''m3 m7 m11 m15
 ''
 
-''matrix acts on themselves, to speed up garbage collection
+''matrix methods act on themselves, to speed up garbage collection
 ''this is different than vector, line, plane
 
 Class Matrix

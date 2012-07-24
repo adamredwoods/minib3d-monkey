@@ -1,7 +1,30 @@
 Import minib3d
 
-Class TAnimation
 
+''
+'' NOTES:
+'' -- does not transform normals. TODO?
+
+
+Class TVertexAnim
+	
+	Field offset:Int
+	Field vert_buffer:FloatBuffer
+	
+End
+
+Class TAnimation
+	
+	
+
+	#If TARGET="xna"
+	
+		Const DONT_USE_VERT_POINTER:Int = True
+	#Else
+		Const DONT_USE_VERT_POINTER:Int = False
+	
+	#Endif
+	
 	Global quat:Quaternion
 	
 	Global new_mat:Matrix = New Matrix
@@ -30,7 +53,7 @@ Class TAnimation
 						
 				If Not bent Continue
 						
-				
+			
 				' position
 				temp_vec = bent.keys.GetPosition(framef, start_frame, end_frame)		
 								
@@ -238,15 +261,35 @@ Class TAnimation
 		Local anim_surf:TSurface
 		For Local surf:TSurface=Eachin mesh.surf_list
 
-			anim_surf = mesh.anim_surf[surf.surf_id]
-			Local vanim:Int=0, pack:Int=0, pack_id:Int=0, get_next_pack:Int=1
-			Local va_id:Int=0
+			anim_surf = mesh.anim_surf[surf.surf_id]		
 			
-			anim_surf.reset_vbo = anim_surf.reset_vbo|1
 			anim_surf.vbo_dyn = True
 			
+			'Local vanim:Int=0, pack:Int=0, pack_id:Int=0, get_next_pack:Int=1
+			'Local va_id:Int=0		
+
 			''point to new buffer			
-			If surf.vert_anim[frame].vert_buffer Then anim_surf.vert_coords = surf.vert_anim[frame].vert_buffer
+			If anim_surf.vert_anim[frame].vert_buffer
+			
+				If DONT_USE_VERT_POINTER = False
+				
+					anim_surf.anim_frame = frame
+					anim_surf.reset_vbo = anim_surf.reset_vbo|1
+					
+				Else
+					
+					'' --- per vertex memory copy, slow, used for XNA
+					For Local vid:Int=0 To anim_surf.no_verts-1
+						Local vv:Int = vid*3
+						anim_surf.vert_data.PokeVertCoords(vid, anim_surf.vert_anim[frame].vert_buffer.Peek(vv), anim_surf.vert_anim[frame].vert_buffer.Peek(vv+1), anim_surf.vert_anim[frame].vert_buffer.Peek(vv+2))
+					Next 
+					
+					''update vbo
+					anim_surf.reset_vbo = anim_surf.reset_vbo|1
+					
+				Endif
+			
+			Endif
 			
 		Next
 		
@@ -296,10 +339,10 @@ Class TAnimation
 					If weight > 0.0
 						' get original vertex position					
 						
-						Local j:Int = vid3*4
-						ovx=surf.vert_coords.buf.PeekFloat(j+0) 'VertexX(vid)
-						ovy=surf.vert_coords.buf.PeekFloat(j+4) 'VertexY(vid)
-						ovz=surf.vert_coords.buf.PeekFloat(j+8) 'VertexZ(vid)
+						'Local j:Int = vid3*4
+						ovx=surf.vert_data.VertexX(vid) 'surf.vert_coords.buf.PeekFloat(j+0) 'VertexX(vid)
+						ovy=surf.vert_data.VertexY(vid) 'surf.vert_coords.buf.PeekFloat(j+4) 'VertexY(vid)
+						ovz=surf.vert_data.VertexZ(vid) 'surf.vert_coords.buf.PeekFloat(j+8) 'VertexZ(vid)
 						
 						' transform vertex position with transform mat
 						x= ( bone.tform_mat.grid[0][0]*ovx + bone.tform_mat.grid[1][0]*ovy + bone.tform_mat.grid[2][0]*ovz + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight)*ovx
@@ -365,10 +408,12 @@ Class TAnimation
 					
 					' update vertex position
 					'anim_surf.VertexCoords(vid,x,y,z)
-					Local j:= vid3*4
-					anim_surf.vert_coords.buf.PokeFloat(j+0,x)
-					anim_surf.vert_coords.buf.PokeFloat(j+4,y)
-					anim_surf.vert_coords.buf.PokeFloat(j+8,z)
+					
+					anim_surf.vert_data.PokeVertCoords(vid,x,y,z)
+					'Local j:= vid3*4
+					'anim_surf.vert_coords.buf.PokeFloat(j+0,x)
+					'anim_surf.vert_coords.buf.PokeFloat(j+4,y)
+					'anim_surf.vert_coords.buf.PokeFloat(j+8,z)
 					
 				Endif
 
@@ -490,15 +535,20 @@ Class TAnimation
 		Next
 		
 		Local no_verts:Int=0
+		Local surf:TSurface
 		
-		For Local surf:TSurface = Eachin mesh.surf_list
+		For surf = Eachin mesh.surf_list
 			no_verts += surf.no_verts
+			'surf.vert_anim = surf.vert_anim.Resize(maxkeys+1)
+			
+			Local anim_surf:TSurface = mesh.anim_surf[surf.surf_id]
+			anim_surf.vert_anim = New TVertexAnim[maxkeys+1]
 		Next
 
 		Local qx:Float, qy:Float, qz:Float, qw:Float, rot:Float[4]
 		Local bPos:Vector, bQuat:Quaternion
 		Local basemesh:Float[no_verts*3]
-		Local surf:TSurface
+		
 		
 		''maxkeys is inclusive i guess (not maxkeys-1)
 		For Local i:Int =0 To maxkeys
@@ -514,6 +564,7 @@ Class TAnimation
 			
 						
 			''deform & store
+			''mesh.anim_surf[] holds new vert info
 			VertexDeform(mesh)
 			
 			
@@ -525,10 +576,10 @@ Class TAnimation
 				
 				Local pack:Int=0, pack_id:Int=0
 				Local no_anim_verts:Int=0
+				Local org_surf:TSurface = mesh.anim_surf[surf.surf_id]
 				
-				surf.vert_anim = surf.vert_anim.Resize(maxkeys+1)
-				surf.vert_anim[i] = New TVertexAnimKeys ''new set of anim keys per surface
-				surf.vert_anim[i].vert_buffer = FloatBuffer.Create(surf.no_verts*3)
+				org_surf.vert_anim[i] = New TVertexAnim ''new set of anim keys per surface			
+				org_surf.vert_anim[i].vert_buffer = FloatBuffer.Create(surf.no_verts*3)
 				
 				sid = surf.surf_id
 		
@@ -536,10 +587,14 @@ Class TAnimation
 					
 					Local j3:Int = j*3
 											
-					surf.vert_anim[i].vert_buffer.Poke(j3+0, mesh.anim_surf[sid].vert_coords.Peek(j3+0))
-					surf.vert_anim[i].vert_buffer.Poke(j3+1, mesh.anim_surf[sid].vert_coords.Peek(j3+1))
-					surf.vert_anim[i].vert_buffer.Poke(j3+2, mesh.anim_surf[sid].vert_coords.Peek(j3+2))
-						
+					'surf.vert_anim[i].vert_buffer.Poke(j3+0, mesh.anim_surf[sid].vert_coords.Peek(j3+0))
+					'surf.vert_anim[i].vert_buffer.Poke(j3+1, mesh.anim_surf[sid].vert_coords.Peek(j3+1))
+					'surf.vert_anim[i].vert_buffer.Poke(j3+2, mesh.anim_surf[sid].vert_coords.Peek(j3+2))
+					org_surf.vert_anim[i].vert_buffer.PokeVertCoords(j,org_surf.vert_data.VertexX(j), org_surf.vert_data.VertexY(j), org_surf.vert_data.VertexZ(j))
+					'surf.vert_anim[i].vert_buffer[j3+0]= mesh.anim_surf[sid].vert_data.VertexX(j)
+					'surf.vert_anim[i].vert_buffer[j3+1]= mesh.anim_surf[sid].vert_data.VertexY(j)
+					'surf.vert_anim[i].vert_buffer[j3+2]= mesh.anim_surf[sid].vert_data.VertexZ(j)
+					
 				Next ''all verts
 
 				
@@ -561,22 +616,6 @@ Class TAnimation
 
 End	
 	
-'' -- only vert_buffer is used, but reserved for future use
-Class TVertexAnimKeys
-
-	''use an array per keyframe index
-	'' example: vert_keys:TVertexAnimKeys[total_anim_frames]
-	''since verts are usually in order, do the search as we hit each vert2x
-	
-	Field no_verts:Int ''number of verts that changed from base mesh (-- or prev state(key-1)? how to handle backwards?)
-	'Field vert2x:Int[1] ''store 2 vert ids in here, store only if they have moved from base object
-	'Field pos:Float[3] ''no_vert * 3
-	
-	''for vbo based vertex animation
-	Field vert_buffer:FloatBuffer
-	
-End
-
 
 
 

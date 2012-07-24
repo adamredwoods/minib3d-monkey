@@ -1,8 +1,6 @@
 
-Import mojo
-
-
 Import minib3d
+
 
 Function Main()
 	New Game
@@ -10,10 +8,11 @@ End
 
 Class Game Extends App
 
-	Field cam:TCamera 
+	Field cam:TCamera, cam2:TCamera 
 	
 	Field light:TLight
 	Field sphere1:TMesh
+	Field dot:TMesh
 
 	Field txt:TText
 	
@@ -26,8 +25,11 @@ Class Game Extends App
 
 	Field whitebrush:TBrush
 
+	Field nodesprite:TMesh[5000]
 
 	Field init_gl:Bool = False
+	
+	Field cz:Float, pm:Int
 	
 	Method OnCreate()
 		SetUpdateRate 30
@@ -38,24 +40,35 @@ Class Game Extends App
 		If init_gl Then Return
 		init_gl = True
 		
-		SetRender(New OpenglES11)
-	
+		SetRender()', DISABLE_VBO)
+
 		
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,80)
 
+		cam2 = CreateCamera
+		cam2.CameraViewport 0,0,200,200
+		cam2.CameraClsMode(False,True)
+		cam2.PositionEntity(0,0,5)
+
 		
 		light=CreateLight(1)
 		
-		sphere1 = CreateSphere()
-	
+		dot = CreateSphere(5)
+		dot.ScaleEntity(0.2,0.2,0.2)
+		dot.EntityColor(0,255,0)
+
+		
+		sphere1 = CreateSphere(20)
+
+		
 		txt = TText.CreateText(cam)
-		'txt.NoSmooth()
+		txt.NoSmooth()
 		
 		light.PositionEntity 0,3,-3
 		cam.PositionEntity 0.5,1,-5
 
-		PositionEntity sphere1,-1,0,0
+		
 
 		
 		whitebrush = New TBrush
@@ -66,15 +79,36 @@ Class Game Extends App
 		sphere1.EntityFX(2)
 		sphere1.RotateEntity(145,145,0)
 		sphere1.ScaleEntity(2.0,2.0,2.0)
+		'sphere1.PositionEntity(2.5,4.2,-4.0)
+
+
 		
 		old_ms=Millisecs()
-		
-		'Wireframe(True)
+
 		
 		Print "main: intit done"
 	End
 	
 	Method OnUpdate()	
+		Init()
+		
+		If KeyDown(187)
+			'anim_time += 1
+			cz +=0.1
+			cam.CameraZoom(cz)
+		End
+		If KeyDown(189)
+			'anim_time -= 1
+			cz -=0.1
+			cam.CameraZoom(cz)
+		End
+
+		If KeyHit(KEY_SPACE)
+			pm=1-pm
+			If pm = 1 Then cam.CameraProjMode(2); cam.CameraZoom(cz) Else cam.CameraProjMode(1)
+		Endif
+		
+		
 		
 		' control camera
 		Local lr:Float = KeyDown(KEY_LEFT)-KeyDown(KEY_RIGHT)
@@ -108,24 +142,27 @@ Class Game Extends App
 		Endif
 	
 		MoveEntity cam,camup,0,camin
-		sphere1.TurnEntity(ud*2,lr*2,0)
-		'cam.TurnEntity ud,lr,0
+		'sphere1.TurnEntity(ud*2,lr*2,0)
+		cam.TurnEntity ud,lr,0
 
-		cam.PointEntity(sphere1)
+	
+'Print PickedX()+" "+PickedY()+" "+PickedZ()
 
-		
+	
 		If TouchDown(0)
 			Local e:TEntity = cam.CameraPick(TouchX(), TouchY() )
 			
 			Local surf:TSurface = PickedSurface()
 			Local v0:Int, v1:Int, v2:Int
 			
+			dot.PositionEntity(PickedX(), PickedY(), PickedZ() )
+			
 			If surf
 				v0 = surf.TriangleVertex( PickedTriangle(), 0)
 				v1 = surf.TriangleVertex( PickedTriangle(), 1)
 				v2 = surf.TriangleVertex( PickedTriangle(), 2)
 				
-				'Print v0+" "+v1+" "+v2
+				'Print "*** "+v0+" "+v1+" "+v2
 				
 				surf.VertexColor(v0,255,0,0)
 				surf.VertexColor(v1,255,0,0)
@@ -148,12 +185,18 @@ Class Game Extends App
 			renders=0
 		Endif
 		
-		UpdateWorld()
+		
+		If KeyDown(KEY_ESCAPE)
+			Print "clear"
+          	ClearWorld()
+		End
+		
+		'UpdateWorld()
 		
 	End
 	
 	Method OnRender()
-		Init()
+		
 		
 		RenderWorld()
 		renders=renders+1				

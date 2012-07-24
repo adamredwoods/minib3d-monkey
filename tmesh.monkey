@@ -15,7 +15,7 @@ Class TMesh Extends TEntity
 	Field no_surfs:Int=0
 	Field surf_list:List<TSurface>= New List<TSurface>
 	
-	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id
+	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id 'deprecated
 	
 	Field no_bones=0
 	Field bones:TBone[]
@@ -154,69 +154,7 @@ Class TMesh Extends TEntity
 		mesh.surf_list=surf_list
 		
 		' copy anim surf list
-		If anim=1
-		
-			mesh.anim_surf = New TSurface[no_surfs]
-			
-			For Local surf:TSurface=Eachin surf_list
-				'Local new_surf:TSurface=New TSurface
-				Local anim_surf2:TSurface = anim_surf[surf.surf_id] ''original anim_surf
-					
-				mesh.anim_surf[surf.surf_id] = anim_surf2.Copy()
-				Local new_surf:TSurface = mesh.anim_surf[surf.surf_id]
-				
-				new_surf.no_verts=anim_surf2.no_verts
-				
-				' copy vertex
-				'' dont need below, since Copy() method does this
-				'new_surf.vert_coords = CopyFloatBuffer(anim_surf2.vert_coords, FloatBuffer.Create(anim_surf2.no_verts*3) )
-	
-				' pointers to arrays, don't need separate copies
-				new_surf.tris = anim_surf2.tris
-				
-				new_surf.vert_bone1_no=anim_surf2.vert_bone1_no
-				new_surf.vert_bone2_no=anim_surf2.vert_bone2_no
-				new_surf.vert_bone3_no=anim_surf2.vert_bone3_no
-				new_surf.vert_bone4_no=anim_surf2.vert_bone4_no
-				new_surf.vert_weight1=anim_surf2.vert_weight1
-				new_surf.vert_weight2=anim_surf2.vert_weight2
-				new_surf.vert_weight3=anim_surf2.vert_weight3
-				new_surf.vert_weight4=anim_surf2.vert_weight4
-				
-				new_surf.vert_array_size=anim_surf2.vert_array_size
-				new_surf.tri_array_size=anim_surf2.tri_array_size
-				new_surf.vmin=anim_surf2.vmin
-				new_surf.vmax=anim_surf2.vmax
-				
-				new_surf.reset_vbo=-1 ' (-1 = all)
-				
-			Next
-		
-		Elseif anim=2
-			
-			mesh.anim_surf = New TSurface[no_surfs]
-			For Local surf:TSurface=Eachin surf_list
-				'Local new_surf:TSurface=New TSurface
-				Local anim_surf2:TSurface = anim_surf[surf.surf_id] ''original anim_surf
-					
-				mesh.anim_surf[surf.surf_id] = anim_surf2.Copy()
-				Local new_surf:TSurface = mesh.anim_surf[surf.surf_id]
-				
-				new_surf.no_verts=anim_surf2.no_verts
-				
-				new_surf.vert_anim = anim_surf2.vert_anim
-								
-				new_surf.vert_array_size=anim_surf2.vert_array_size
-				new_surf.tri_array_size=anim_surf2.tri_array_size
-				new_surf.vmin=anim_surf2.vmin
-				new_surf.vmax=anim_surf2.vmax
-				
-				new_surf.reset_vbo=-1 ' (-1 = all)
-				
-			Next
-
-			
-		Endif
+		mesh.anim_surf = CopyAnimSurfs()
 		
 		mesh.col_tree=col_tree
 	
@@ -228,6 +166,84 @@ Class TMesh Extends TEntity
 		Return mesh
 
 	End 
+	
+	'' CopyAnimSurfs()
+	'' -- full copy will keep new animation copies instead of pointer
+	Method CopyAnimSurfs:TSurface[]( fullcopy:Int =0 ) 
+	
+		Local new_surf:TSurface[] = New TSurface[no_surfs] 'mesh.anim_surf[surf.surf_id]
+		
+		
+		For Local surf:TSurface=Eachin surf_list
+			
+			Local id:Int = surf.surf_id
+			Local anim_surf2:TSurface = anim_surf[surf.surf_id] ''original anim_surf shortcut
+			If Not anim_surf2 Then Continue
+			
+					
+			' copy vertex, full copy
+			'If fullcopy
+				new_surf[id] = anim_surf2.Copy()
+			'Else
+				'new_surf[id] = New TSurface
+			'Endif
+			
+			new_surf[id].no_verts=anim_surf2.no_verts
+			
+						
+			new_surf[id].vert_array_size=anim_surf2.vert_array_size
+			new_surf[id].tri_array_size=anim_surf2.tri_array_size
+			new_surf[id].vmin=anim_surf2.vmin
+			new_surf[id].vmax=anim_surf2.vmax
+			
+			surf.surf_id = anim_surf2.surf_id
+
+			surf.vbo_dyn=anim_surf2.vbo_dyn
+			surf.alpha_enable=anim_surf2.alpha_enable
+			
+			new_surf[id].reset_vbo=-1 ' (-1 = all)
+			
+			'' 1=bones, 2=vertanims
+			If anim=1 And Not fullcopy 
+			
+				'mesh.anim_surf = New TSurface[no_surfs]
+				'Local new_surf:TSurface=New TSurface
+				'Local new_surf:TSurface = mesh.anim_surf[surf.surf_id]
+				
+
+				'' dont need below, since Copy() method does this
+				'new_surf.vert_coords = CopyFloatBuffer(anim_surf2.vert_coords, FloatBuffer.Create(anim_surf2.no_verts*3) )
+	
+				' pointers to arrays, don't need separate copies unles fullcopy=1
+				new_surf[id].tris = anim_surf2.tris
+				
+				new_surf[id].vert_bone1_no=anim_surf2.vert_bone1_no
+				new_surf[id].vert_bone2_no=anim_surf2.vert_bone2_no
+				new_surf[id].vert_bone3_no=anim_surf2.vert_bone3_no
+				new_surf[id].vert_bone4_no=anim_surf2.vert_bone4_no
+				new_surf[id].vert_weight1=anim_surf2.vert_weight1
+				new_surf[id].vert_weight2=anim_surf2.vert_weight2
+				new_surf[id].vert_weight3=anim_surf2.vert_weight3
+				new_surf[id].vert_weight4=anim_surf2.vert_weight4
+
+			
+			Elseif anim=2
+				
+				'mesh.anim_surf = New TSurface[no_surfs]
+				'Local new_surf:TSurface=New TSurface
+					
+				'mesh.anim_surf[surf.surf_id] = anim_surf2.Copy()
+				'Local new_surf:TSurface = mesh.anim_surf[surf.surf_id]
+				
+				new_surf[id].vert_anim = anim_surf2.vert_anim ''pointer to shared anim data
+				
+			Endif
+		
+		Next
+		
+		Return new_surf
+		
+	End
 	
 	Method FreeEntity()
 
@@ -248,7 +264,7 @@ Class TMesh Extends TEntity
 
 		mesh.classname="Mesh"
 	
-		mesh.AddParent(parent_ent)
+		If parent_ent Then mesh.AddParent(parent_ent)
 		mesh.entity_link = entity_list.EntityListAdd(mesh)
 
 		' update matrix
@@ -275,7 +291,7 @@ Class TMesh Extends TEntity
 		mesh.classname="Model"
 
 		mesh.AddParent(parent_ent)
-		mesh.entity_link = entity_list.EntityListAdd(mesh)
+		'mesh.entity_link = entity_list.EntityListAdd(mesh)
 
 		' update matrix
 		If mesh.parent<>Null
@@ -328,8 +344,97 @@ Class TMesh Extends TEntity
 		Return surf
 		
 	End
+	
+	'' AddSurface()
+	'' -- helper for AddMesh()
+	Method AddSurface:TSurface(surf:TSurface)
+
+		surf_list.AddLast(surf)
+		
+		no_surfs=no_surfs+1
+		
+		'' anim surf pointer
+		surf.surf_id = no_surfs-1
+		anim_surf = anim_surf.Resize(no_surfs)
+		
+		' new mesh surface - update reset flags
+		reset_bounds=True
+		col_tree.reset_col_tree=True
+
+		Return surf
+		
+	End
+
+	'' CreateGrid(x,y,parent)
+	'' creates a plane of quads x segments by y segments each segment 1x1 unit large
+	Function CreateGrid:TMesh(x_seg:Int,y_seg:Int,parent_ent:TEntity=Null)
+	
+		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
+	
+		Local surf:TSurface=mesh.CreateSurface()
+		Local yhalf# = y_seg*0.5
+		Local xhalf# = x_seg*0.5
+		Local xstep# = 1.0/x_seg
+		Local ystep# = 1.0/y_seg
+		Local texx:Float = 0.0, texy:Float = 0.0
+		Local v0:Int,v1:Int,v2:Int,v3:Int
+		Local pv2:Int[x_seg+1]
+		Local qv2:Int[x_seg+1]
+		
+		For Local y:Float = -yhalf To yhalf Step 1.0
+		
+			v0= surf.AddVertex( -xhalf-0.5, 0, y-0.5)
+			v1= surf.AddVertex( -xhalf-0.5, 0, y+0.5)	
+			
+			For Local x:Float = -xhalf To xhalf Step 1.0
 
 
+				If x<>-xhalf Then v1 = v2; v0 = v3
+				If y= -yhalf
+					
+					v3= surf.AddVertex( x+0.5, 0, y-0.5)
+
+				Else
+					v3 = pv2[xhalf + x]
+									
+				Endif
+				
+				v2= surf.AddVertex( x+0.5, 0, y+0.5)
+				qv2[xhalf + x] = v2
+				
+			
+				surf.VertexNormal(v0,0.0,1.0,0.0)
+				surf.VertexNormal(v1,0.0,1.0,0.0)
+				surf.VertexNormal(v2,0.0,1.0,0.0)
+				surf.VertexNormal(v3,0.0,1.0,0.0)
+				surf.VertexTexCoords(v0,texx,texy+ystep)
+				surf.VertexTexCoords(v1,texx,texy)
+				surf.VertexTexCoords(v2,texx+xstep,texy)
+				surf.VertexTexCoords(v3,texx+xstep,texy+ystep)
+				surf.AddTriangle(v0,v1,v2)
+				surf.AddTriangle(v0,v2,v3)
+				
+	
+				texx += xstep
+				
+			Next
+			
+			For Local i:Int = 0 To x_seg
+				pv2[i] = qv2[i]
+			Next
+			qv2 = New Int[x_seg+1]
+			
+			texy += ystep
+			
+		Next
+		
+		
+		surf.CropSurfaceBuffers()
+		
+		mesh.classname = "MeshGrid"
+		Return mesh
+		
+	End
 
 	Function CreateCube:TMesh(parent_ent:TEntity=Null)
 	
@@ -850,18 +955,56 @@ Class TMesh Extends TEntity
 		
 	End 
 	
+	
 	Method CopyMesh:TMesh(parent_ent:TEntity=Null)
 	
 		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
-		Self.AddMesh(mesh)
+		Self.AddMesh(mesh) ''add self TO mesh 
+		
+		''copy children
+		For Local ent:TEntity=Eachin child_list
+			ent.CopyEntity(mesh)
+		Next
+		
+		mesh.name=name
+		mesh.classname=classname
+		mesh.order=order
+		mesh.hide=hide
+		mesh.auto_fade=auto_fade
+		mesh.fade_near=fade_near
+		mesh.fade_far=fade_far
+		
+		mesh.anim=anim
+		mesh.anim_render=anim_render
+		mesh.anim_mode=anim_mode
+		mesh.anim_time=anim_time
+		mesh.anim_speed=anim_speed
+		mesh.anim_seq=anim_seq
+		mesh.anim_trans=anim_trans
+		mesh.anim_dir=anim_dir
+		mesh.anim_seqs_first=anim_seqs_first[..]
+		mesh.anim_seqs_last=anim_seqs_last[..]
+		mesh.no_seqs=no_seqs
+		mesh.anim_update=anim_update
+		
+		''need a full copy of bones list, not just pointers
+		If bones
+	 
+			mesh.bones = CopyBonesList(mesh, New List<TBone>, 0).ToArray()
+		Endif
+		
+		' copy anim surf list
+		mesh.anim_surf = CopyAnimSurfs(1) ''full copy, dont use pointers
+		
 		Return mesh
 	
 	End 
 	
+	
 	''AddMesh()
 	'' -- add self mesh to mesh2
-	''
-	Method AddMesh(mesh2:TMesh)
+	'' -- confusing
+	Method AddMesh(mesh2:TMesh, combine_brush:Bool=True)
 		
 		If Not mesh2 Then Return
 		
@@ -877,81 +1020,91 @@ Class TMesh Extends TEntity
 			Local surf:TSurface = Null
 			Local stest:TSurface
 			
-			For stest= Eachin mesh2.surf_list '1 To mesh2.CountSurfaces()	
-
-				' if brushes properties are the same, add surf1 verts and tris to surf2
-				If (TBrush.CompareBrushes(surf1.brush,stest.brush)=True)
-					
-					tri_offset = stest.CountVertices()
-					new_surf=False
-					surf = stest
-					
-					Exit
-			
-				Endif
+			If combine_brush
+				For stest= Eachin mesh2.surf_list '1 To mesh2.CountSurfaces()	
+	
+					' if brushes properties are the same, add surf1 verts and tris to surf2
+					If (TBrush.CompareBrushes(surf1.brush,stest.brush)=True)
+						
+						tri_offset = stest.CountVertices()
+						new_surf=False
+						surf = stest
+						
+						Exit
 				
-			Next
+					Endif
+					
+				Next
+			Endif
 			
 			' add new surface
 			
 			
 			If new_surf=True
 			
-				surf=mesh2.CreateSurface()
+				'surf = mesh2.CreateSurface()
+				surf = surf1.Copy()
+				mesh2.AddSurface(surf)
 				
-			Endif	
-			
-			
-			' add vertices
-			Local s1v:Int = surf1.CountVertices()		
-			For Local v:Int=0 To s1v-1
-
-				Local vx#=surf1.VertexX(v)
-				Local vy#=surf1.VertexY(v)
-				Local vz#=surf1.VertexZ(v)
-				Local vr#=surf1.VertexRed(v)
-				Local vg#=surf1.VertexGreen(v)
-				Local vb#=surf1.VertexBlue(v)
-				Local va#=surf1.VertexAlpha(v)
-				Local vnx#=surf1.VertexNX(v)
-				Local vny#=surf1.VertexNY(v)
-				Local vnz#=surf1.VertexNZ(v)
-				Local vu0#=surf1.VertexU(v,0)
-				Local vv0#=surf1.VertexV(v,0)
-				Local vw0#=surf1.VertexW(v,0)
-				Local vu1#=surf1.VertexU(v,1)
-				Local vv1#=surf1.VertexV(v,1)
-				Local vw1#=surf1.VertexW(v,1)
+				
+				
+			Else	
+				
+				' add vertices to existing surface
+				
+				Local s1v:Int = surf1.CountVertices()		
+				For Local v:Int=0 To s1v-1
+	
+					Local vx#=surf1.VertexX(v)
+					Local vy#=surf1.VertexY(v)
+					Local vz#=surf1.VertexZ(v)
+					Local vr#=surf1.VertexRed(v)
+					Local vg#=surf1.VertexGreen(v)
+					Local vb#=surf1.VertexBlue(v)
+					Local va#=surf1.VertexAlpha(v)
+					Local vnx#=surf1.VertexNX(v)
+					Local vny#=surf1.VertexNY(v)
+					Local vnz#=surf1.VertexNZ(v)
+					Local vu0#=surf1.VertexU(v,0)
+					Local vv0#=surf1.VertexV(v,0)
+					Local vw0#=surf1.VertexW(v,0)
+					Local vu1#=surf1.VertexU(v,1)
+					Local vv1#=surf1.VertexV(v,1)
+					Local vw1#=surf1.VertexW(v,1)
+						
+					Local v2:Int = surf.AddVertex(vx,vy,vz)
+					surf.VertexColor(v2,vr,vg,vb,va)
+					surf.VertexNormal(v2,vnx,vny,vnz)
+					surf.VertexTexCoords(v2,vu0,vv0,vw0,0)
+					surf.VertexTexCoords(v2,vu1,vv1,vw1,1)
+	
+				Next
+		
+				' add triangles
+		
+				For Local t=0 To surf1.CountTriangles()-1
+	
+					Local v0=surf1.TriangleVertex(t,0) + tri_offset
+					Local v1=surf1.TriangleVertex(t,1) + tri_offset
+					Local v2=surf1.TriangleVertex(t,2) + tri_offset
 					
-				Local v2:Int = surf.AddVertex(vx,vy,vz)
-				surf.VertexColor(v2,vr,vg,vb,va)
-				surf.VertexNormal(v2,vnx,vny,vnz)
-				surf.VertexTexCoords(v2,vu0,vv0,vw0,0)
-				surf.VertexTexCoords(v2,vu1,vv1,vw1,1)
-
-			Next
+					surf.AddTriangle(v0,v1,v2)
 	
-			' add triangles
-	
-			For Local t=0 To surf1.CountTriangles()-1
-
-				Local v0=surf1.TriangleVertex(t,0) + tri_offset
-				Local v1=surf1.TriangleVertex(t,1) + tri_offset
-				Local v2=surf1.TriangleVertex(t,2) + tri_offset
+				Next
 				
-				surf.AddTriangle(v0,v1,v2)
-
-			Next
-			
-			surf.CropSurfaceBuffers()
-			
-			' copy brush
-			
-			If surf1.brush<>Null
-			
-				surf.brush=surf1.brush.Copy()
+				surf.CropSurfaceBuffers()
 				
+				' copy brush
+			
+				If surf1.brush<>Null
+				
+					surf.brush=surf1.brush.Copy()
+					
+				Endif
+			
 			Endif
+			
+
 			
 			' mesh shape has changed - update reset flags
 			surf.reset_vbo=-1 ' (-1 = all)
@@ -990,10 +1143,12 @@ Class TMesh Extends TEntity
 			' flip vertex normals
 			For Local v=0 To surf.no_verts-1
 			
-				surf.vert_norm.Poke(v*3, -surf.vert_norm.Peek(v*3) )' x
-				surf.vert_norm.Poke((v*3)+1, -surf.vert_norm.Peek((v*3)+1) )' y
-				surf.vert_norm.Poke((v*3)+2, -surf.vert_norm.Peek((v*3)+2) )' z
+				'surf.vert_norm.Poke(v*3, -surf.vert_norm.Peek(v*3) )' x
+				'surf.vert_norm.Poke((v*3)+1, -surf.vert_norm.Peek((v*3)+1) )' y
+				'surf.vert_norm.Poke((v*3)+2, -surf.vert_norm.Peek((v*3)+2) )' z
+				surf.vert_data.PokeNormals(v, -surf.vert_data.VertexNX(v),-surf.vert_data.VertexNY(v),-surf.vert_data.VertexNZ(v) )
 
+				
 			Next
 			
 			' mesh shape has changed - update reset flag
@@ -1165,9 +1320,9 @@ Class TMesh Extends TEntity
 				
 			For Local v=0 To surf.no_verts-1
 		
-				surf.vert_coords.Poke(v*3, surf.vert_coords.Peek(v*3)*sx)
-				surf.vert_coords.Poke(v*3+1, surf.vert_coords.Peek(v*3+1)*sy)
-				surf.vert_coords.Poke(v*3+2, surf.vert_coords.Peek(v*3+2)*sz) 'surf.vert_coords[v*3+2] *= sz
+				surf.vert_data.PokeVertCoords(v, surf.vert_data.VertexX(v)*sx,surf.vert_data.VertexY(v)*sy,surf.vert_data.VertexZ(v)*sz)
+				'surf.vert_data.Poke(v+1, surf.vert_data.Peek(v+1)*sy)
+				'surf.vert_data.Poke(v+2, surf.vert_data.Peek(v+2)*sz) 'surf.vert_coords[v*3+2] *= sz
 
 			Next
 			
@@ -1196,22 +1351,25 @@ Class TMesh Extends TEntity
 				
 			For Local v=0 To surf.no_verts-1
 		
-				Local vx#=surf.vert_coords.Peek(v*3)
-				Local vy#=surf.vert_coords.Peek(v*3+1)
-				Local vz#=surf.vert_coords.Peek(v*3+2)
+				Local vx#=surf.vert_data.VertexX(v)
+				Local vy#=surf.vert_data.VertexY(v)
+				Local vz#=surf.vert_data.VertexZ(v)
 	
-				surf.vert_coords.Poke(v*3, mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
-				surf.vert_coords.Poke(v*3+1, mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
-				surf.vert_coords.Poke(v*3+2, mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
-
-				Local nx#=surf.vert_norm.Peek(v*3)
-				Local ny#=surf.vert_norm.Peek(v*3+1)
-				Local nz#=surf.vert_norm.Peek(v*3+2)
+				Local rx# =(mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
+				Local ry# =(mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
+				Local rz# =(mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
+				
+				surf.vert_data.PokeVertCoords(v, rx,ry,rz)
+				
+				Local nx#=surf.vert_data.VertexNX(v)
+				Local ny#=surf.vert_data.VertexNY(v)
+				Local nz#=surf.vert_data.VertexNZ(v)
 	
-				surf.vert_norm.Poke(v*3, mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz + mat.grid[3][0] )
-				surf.vert_norm.Poke(v*3+1, mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz + mat.grid[3][1] )
-				surf.vert_norm.Poke(v*3+2, mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz + mat.grid[3][2] )
-
+				rx=( mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz + mat.grid[3][0] )
+				ry=( mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz + mat.grid[3][1] )
+				rz=( mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz + mat.grid[3][2] )
+				
+				surf.vert_data.PokeNormals(v, rx,ry,rz)
 			Next
 			
 			' mesh shape has changed - update reset flag
@@ -1235,10 +1393,12 @@ Class TMesh Extends TEntity
 				
 			For Local v=0 To surf.no_verts-1
 		
-				surf.vert_coords.Poke(v*3, surf.vert_coords.Peek(v*3) + px )
-				surf.vert_coords.Poke(v*3+1, surf.vert_coords.Peek(v*3+1) + py )
-				surf.vert_coords.Poke(v*3+2, surf.vert_coords.Peek(v*3+2) + pz ) 'surf.vert_coords[v*3+2] += pz
-
+				'surf.vert_coords.Poke(v*3, surf.vert_coords.Peek(v*3) + px )
+				'surf.vert_coords.Poke(v*3+1, surf.vert_coords.Peek(v*3+1) + py )
+				'surf.vert_coords.Poke(v*3+2, surf.vert_coords.Peek(v*3+2) + pz ) 'surf.vert_coords[v*3+2] += pz
+				
+				surf.vert_data.PokeVertCoords(v, surf.vert_data.VertexX(v)+px,surf.vert_data.VertexY(v)+py,surf.vert_data.VertexZ(v)+pz)
+				
 			Next
 			
 			' mesh shape has changed - update reset flag
@@ -1394,13 +1554,15 @@ Class TMesh Extends TEntity
 	' recursive, returns number of bones
 	Function CopyBonesList:List<TBone>(ent:TEntity, bone_list:List<TBone>, no_bones:Int=0)
 		
-		For Local ent:TEntity=Eachin ent.child_list
-			If TBone(ent)<>Null
+		Local bone:TBone
+		For Local e:TEntity=Eachin ent.child_list
+			bone = TBone(e)
+			If bone<>Null
 
-				bone_list.AddLast(TBone(ent))
+				bone_list.AddLast(bone)
 				
 			Endif
-			CopyBonesList(ent,bone_list,no_bones)
+			CopyBonesList(bone,bone_list,no_bones)
 		Next
 		
 		Return bone_list
@@ -1459,21 +1621,25 @@ Class TMesh Extends TEntity
 				
 			For Local v=0 To surf.no_verts-1
 		
-				Local vx#=surf.vert_coords.Peek(v*3)
-				Local vy#=surf.vert_coords.Peek(v*3+1)
-				Local vz#=surf.vert_coords.Peek(v*3+2)
+				Local vx#=surf.vert_data.VertexX(v)
+				Local vy#=surf.vert_data.VertexY(v)
+				Local vz#=surf.vert_data.VertexZ(v)
 	
-				surf.vert_coords.Poke(v*3, mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
-				surf.vert_coords.Poke(v*3+1, mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
-				surf.vert_coords.Poke(v*3+2, mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
-
-				Local nx#=surf.vert_norm.Peek(v*3)
-				Local ny#=surf.vert_norm.Peek(v*3+1)
-				Local nz#=surf.vert_norm.Peek(v*3+2)
+				Local rx#=( mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
+				Local ry#=( mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
+				Local rz#=( mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
+				
+				surf.vert_data.PokeVertCoords(v, rx,ry,rz)
+				
+				Local nx#=surf.vert_data.VertexNX(v)
+				Local ny#=surf.vert_data.VertexNY(v)
+				Local nz#=surf.vert_data.VertexNZ(v)
 	
-				surf.vert_norm.Poke(v*3, mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz )
-				surf.vert_norm.Poke(v*3+1, mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz )
-				surf.vert_norm.Poke(v*3+2, mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz )
+				rx=( mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz )
+				ry=( mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz )
+				rz=( mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz )
+				
+				surf.vert_data.PokeNormals(v, rx,ry,rz)
 
 			Next
 							
@@ -1548,15 +1714,15 @@ Class TMesh Extends TEntity
 		
 				For Local v=0 Until surf.no_verts
 				
-					Local x#=surf.vert_coords.Peek(v*3) ' surf.VertexX(v)
+					Local x#=surf.vert_data.VertexX(v) 'vert_coords.Peek(v*3) ' surf.VertexX(v)
 					If x<min_x Then min_x=x
 					If x>max_x Then max_x=x
 					
-					Local y#=surf.vert_coords.Peek((v*3)+1) ' surf.VertexY(v)
+					Local y#=surf.vert_data.VertexY(v) 'vert_coords.Peek((v*3)+1) ' surf.VertexY(v)
 					If y<min_y Then min_y=y
 					If y>max_y Then max_y=y
 					
-					Local z#=-surf.vert_coords.Peek((v*3)+2) ' surf.VertexZ(v)
+					Local z#=-surf.vert_data.VertexZ(v) 'vert_coords.Peek((v*3)+2) ' surf.VertexZ(v)
 					If z<min_z Then min_z=z
 					If z>max_z Then max_z=z
 				
@@ -1667,6 +1833,67 @@ Class TMesh Extends TEntity
 
 
 	End 
+	
+	'' SetNormalMapping
+	'' -- creates tangent normal for shaders
+	'' -- stores in color channel
+	Method SetNormalMapping(single_surf:TSurface=Null)
+		
+		For Local surf:TSurface = Eachin surf_list
+			
+			Local tangent:Vector = New Vector(0.0,0.0,1.0)
+			Local t2:Vector = New Vector()
+			
+			If single_surf <> Null And surf<>single_surf Then Continue ''if we only want one surface
+			
+			For Local tri:Int = 0 To surf.no_tris-1
+				
+				Local v0:Int = surf.TriangleVertex(tri,0)
+				Local v1:Int = surf.TriangleVertex(tri,1)
+				Local v2:Int = surf.TriangleVertex(tri,2)
+				
+				Local v2v0:Vector = surf.GetVertexCoords(v0)
+				Local v2v1:Vector = surf.GetVertexCoords(v1)
+				Local vert2:Vector = surf.GetVertexCoords(v2)
+				
+				Local c2c0:Vector = New Vector(surf.VertexU(v0),surf.VertexV(v0),0.0)
+				Local c2c1:Vector = New Vector(surf.VertexU(v1),surf.VertexV(v1),0.0)
+				Local c2:Vector = New Vector(surf.VertexU(v2),surf.VertexV(v2),0.0)
+
+				v2v0 = v2v0.Subtract(vert2)
+				v2v1 = v2v1.Subtract(vert2)
+				
+				c2c0 = c2c0.Subtract(c2)
+				c2c1 = c2c1.Subtract(c2)
+				
+				Local cp:Float = c2c0.x * c2c1.y - c2c0.y * c2c1.x
+				
+				If Abs(cp) > 0.00001 ''divide by 0 error
+					
+					Local sca:Float = 1.0/cp ''scale to uv
+					
+					t2 = v2v1.Multiply(c2c0.y)
+					tangent = (v2v0.Multiply(c2c1.y).Add( t2 )).Multiply(sca)
+      				''bitangent = (Edge1 * -Edge2uv.x + Edge2 * Edge1uv.x) * sca
+					
+					tangent = tangent.Normalize()
+					
+				Endif
+				
+				''may need to smooth tangent normal, but would have to use a map to accumulate each iteration then avg
+				
+				''set color to tangent normal, find bitangent n cross t in shader
+				surf.VertexColorFloat(v0,tangent.x,tangent.y,tangent.z,0.0)
+				surf.VertexColorFloat(v1,tangent.x,tangent.y,tangent.z,0.0)
+				surf.VertexColorFloat(v2,tangent.x,tangent.y,tangent.z,0.0)
+				
+			Next
+			
+		Next
+		
+	End
+	
+	
 	
 	Method Update(cam:TCamera)
 		

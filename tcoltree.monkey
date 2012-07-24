@@ -73,9 +73,9 @@ Class TColTree
 					'do vert coords first
 					For Local i:=0 To no_verts-1
 						
-						c_col_tree.tri_verts[i+total_verts_count].x = surf.vert_coords.Peek(i*3+0)
-						c_col_tree.tri_verts[i+total_verts_count].y = surf.vert_coords.Peek(i*3+1)
-						c_col_tree.tri_verts[i+total_verts_count].z = -surf.vert_coords.Peek(i*3+2) ' negate z vert coords
+						c_col_tree.tri_verts[i+total_verts_count].x = surf.vert_data.VertexX(i) 'surf.vert_coords.Peek(i*3+0)
+						c_col_tree.tri_verts[i+total_verts_count].y = surf.vert_data.VertexY(i) 'surf.vert_coords.Peek(i*3+1)
+						c_col_tree.tri_verts[i+total_verts_count].z = -surf.vert_data.VertexZ(i) '-surf.vert_coords.Peek(i*3+2) ' negate z vert coords
 						
 					Next
 				
@@ -381,7 +381,9 @@ Class MeshCollider
 		
 		't.m.Transpose() ''the orig c++ code uses different type of matrix
 		't = t.Transpose()
-		t.v = t.m.Multiply(t.v.Negate() ) ''transform transpose
+		
+		't.v = t.m.Multiply(t.v.Negate() ) ''transform transpose ''**THIS WORKED v0.20
+
 
 		Local line2:Line '= New Line(li.o, li.d)
 		line2 = t.Multiply(li) 'line2)

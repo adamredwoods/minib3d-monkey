@@ -137,7 +137,7 @@ Class TLight Extends TEntity
 		
 	End 
 	
-	Function CreateLight:TLight(l_type=1,parent_ent:TEntity=Null)
+	Function CreateLight:TLight(l_type:Int=1,parent_ent:TEntity=Null)
 
 		If no_lights >= max_lights Then Return ' no more lights available, return
 

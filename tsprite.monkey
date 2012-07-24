@@ -136,15 +136,16 @@ Class TSprite Extends TMesh
 		
 		Local surf:TSurface=sprite.CreateSurface()
 		
-		'' create a smaller buffer so we dont have to resize
-		surf.vert_coords=FloatBuffer.Create(12)
-		surf.vert_tex_coords0=FloatBuffer.Create(8)
-		surf.vert_tex_coords1=FloatBuffer.Create(8)
-		surf.vert_norm=FloatBuffer.Create(12)
-		surf.vert_col=FloatBuffer.Create(16)		
-		surf.vert_array_size=4
+		'' --create a smaller buffer so we dont have to resize
+		surf.vert_data=VertexDataBuffer.Create(4)
+		'surf.vert_coords=FloatBuffer.Create(12)
+		'surf.vert_tex_coords0=FloatBuffer.Create(8)
+		'surf.vert_tex_coords1=FloatBuffer.Create(8)
+		'surf.vert_norm=FloatBuffer.Create(12)
+		'surf.vert_col=FloatBuffer.Create(16)		
+		surf.vert_array_size=5
 		surf.tris=ShortBuffer.Create(12)
-		surf.tri_array_size=4
+		surf.tri_array_size=5
 
 		surf.AddVertex(-1,-1,0, 0, 1)
 		surf.AddVertex(-1, 1,0, 0, 0)
@@ -453,7 +454,9 @@ Class TBatchSprite Extends TSprite
 		End
 		
 		Function CreateBatchMesh:TBatchSpriteMesh( batchid:Int )
-
+			
+			If batchid < total_batch Then Return mainsprite[batchid+1]
+			
 			While total_batch < batchid Or total_batch =0
 			
 				total_batch +=1

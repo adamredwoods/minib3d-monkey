@@ -327,7 +327,7 @@ Class Quaternion
 	
 	Method RotateVector:Vector(vec:Vector)
 
-		Local ax#,ay#,az#,aw#, vec2:Vector
+		Local ax#,ay#,az#,aw#, vec2:Vector = New Vector
 	
 		ax = -(x * vec.x) - (y * vec.y) - (z * vec.z)
 		ay =  (w * vec.x) + (y * vec.z) - (z * vec.y)

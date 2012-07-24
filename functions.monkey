@@ -102,7 +102,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=Animate">Online Help</a>
 #End 
-Function Animate(ent:TEntity,mode=1,speed#=1.0,seq=0,trans=0)
+Function Animate(ent:TEntity,mode=1,speed#=1.0,seq%=0,trans%=0)
 	ent.Animate(mode,speed,seq,trans)
 End 
 
@@ -176,7 +176,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=BrushTexture">Online Help</a>
 #End 
-Function BrushTexture(brush:TBrush,tex:TTexture,frame=0,index=0)
+Function BrushTexture(brush:TBrush,tex:TTexture,frame:Int=0,index:Int=0)
 	brush.BrushTexture(tex,frame,index)
 End 
 
@@ -295,8 +295,8 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=Collisions">Online Help</a>
 #End 
-Function Collisions(src_no,dest_no,method_no,response_no=0)
-	TCollisionPair.Collisions(src_no,dest_no,method_no,response_no=0)
+Function Collisions(src_no,dest_no,method_no,response_no:Int=0)
+	TCollisionPair.Collisions(src_no,dest_no,method_no,response_no)
 End 
 	
 #rem
@@ -445,6 +445,11 @@ bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=CreateCube">O
 Function CreateCube:TMesh(parent:TEntity=Null)
 	Return TMesh.CreateCube(parent)
 End 
+
+
+Function CreateGrid:TMesh(x_seg:Int, y_seg:Int, parent:TEntity=Null)
+	Return TMesh.CreateGrid(x_seg, y_seg,parent)
+End
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=CreateMesh">Online Help</a>
@@ -602,7 +607,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityOrder">Online Help</a>
 #End 
-Function EntityOrder(ent:TEntity,order)
+Function EntityOrder(ent:TEntity,order%)
 	ent.EntityOrder(order)
 End 
 
@@ -623,14 +628,14 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityPickMode">Online Help</a>
 #End 
-Function EntityPickMode(ent:TEntity,pick_mode,obscurer=True)
+Function EntityPickMode(ent:TEntity,pick_mode%,obscurer?=True)
 	ent.EntityPickMode(pick_mode,obscurer)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityPitch">Online Help</a>
 #End 
-Function EntityPitch#(ent:TEntity,glob=False)
+Function EntityPitch#(ent:TEntity,glob?=False)
 	Return ent.EntityPitch(glob)
 End 
 
@@ -644,19 +649,19 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityRoll">Online Help</a>
 #End 
-Function EntityRoll#(ent:TEntity,glob=False)
+Function EntityRoll#(ent:TEntity,glob?=False)
 	Return ent.EntityRoll(glob)
 End 
 
-Function EntityScaleX:Float(ent:TEntity,glob=False)
+Function EntityScaleX:Float(ent:TEntity,glob?=False)
 	Return ent.EntityScaleX(glob)
 End 
 
-Function EntityScaleY:Float(ent:TEntity,glob=False)
+Function EntityScaleY:Float(ent:TEntity,glob?=False)
 	Return ent.EntityScaleY(glob)
 End 
 
-Function EntityScaleZ:Float(ent:TEntity,glob=False)
+Function EntityScaleZ:Float(ent:TEntity,glob?=False)
 	Return ent.EntityScaleZ(glob)
 End 
 
@@ -670,14 +675,14 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityTexture">Online Help</a>
 #End 
-Function EntityTexture(ent:TEntity,tex:TTexture,frame=0,index=0)
+Function EntityTexture(ent:TEntity,tex:TTexture,frame%=0,index%=0)
 	TMesh(ent).EntityTexture(tex,frame,index)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityType">Online Help</a>
 #End 
-Function EntityType(ent:TEntity,type_no,recursive=False)
+Function EntityType(ent:TEntity,type_no%,recursive?=False)
 	ent.EntityType(type_no,recursive)
 End 
 
@@ -691,35 +696,35 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityX">Online Help</a>
 #End 
-Function EntityX#(ent:TEntity,glob=False)
+Function EntityX#(ent:TEntity,glob?=False)
 	Return ent.EntityX(glob)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityY">Online Help</a>
 #End 
-Function EntityY#(ent:TEntity,glob=False)
+Function EntityY#(ent:TEntity,glob?=False)
 	Return ent.EntityY(glob)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityYaw">Online Help</a>
 #End 
-Function EntityYaw#(ent:TEntity,glob=False)
+Function EntityYaw#(ent:TEntity,glob?=False)
 	Return ent.EntityYaw(glob)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityZ">Online Help</a>
 #End 
-Function EntityZ#(ent:TEntity,glob=False)
+Function EntityZ#(ent:TEntity,glob?=False)
 	Return ent.EntityZ(glob)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=ExtractAnimSeq">Online Help</a>
 #End 
-Function ExtractAnimSeq(ent:TEntity,first_frame,last_frame,seq=0)
+Function ExtractAnimSeq(ent:TEntity,first_frame%,last_frame%,seq%=0)
 	Return ent.ExtractAnimSeq(first_frame,last_frame,seq)
 End 
 
@@ -740,7 +745,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=FitMesh">Online Help</a><p>
 #End 
-Function FitMesh:TMesh(mesh:TMesh,x#,y#,z#,width#,height#,depth#,uniform=False)
+Function FitMesh:TMesh(mesh:TMesh,x#,y#,z#,width#,height#,depth#,uniform%=False)
 	mesh.FitMesh(x,y,z,width,height,depth,uniform)
 End 
 
@@ -775,7 +780,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=GetBrushTexture">Online Help</a>
 #End 
-Function GetBrushTexture:TTexture(brush:TBrush,index=0)
+Function GetBrushTexture:TTexture(brush:TBrush,index%=0)
 	Return TTexture.GetBrushTexture(brush,index)
 End 
 
@@ -912,14 +917,14 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadTexture">Online Help</a>
 #End 
-Function LoadTexture:TTexture(file$,flags=1)
+Function LoadTexture:TTexture(file$,flags%=1)
 	Return TTexture.LoadTexture(file,flags)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadSprite">Online Help</a>
 #End 
-Function LoadSprite:TSprite(tex_file$,tex_flag=1,parent:TEntity=Null)
+Function LoadSprite:TSprite(tex_file$,tex_flag%=1,parent:TEntity=Null)
 	Return TSprite.LoadSprite(tex_file,tex_flag,parent)
 End 
 
@@ -1130,7 +1135,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=RotateEntity">Online Help</a>
 #End 
-Function RotateEntity(ent:TEntity,x#,y#,z#,glob=False)
+Function RotateEntity(ent:TEntity,x#,y#,z#,glob%=False)
 	ent.RotateEntity(x,y,z,glob)
 End 
 
@@ -1158,7 +1163,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=ScaleEntity">Online Help</a>
 #End 
-Function ScaleEntity(ent:TEntity,x#,y#,z#,glob=False)
+Function ScaleEntity(ent:TEntity,x#,y#,z#,glob%=False)
 	ent.ScaleEntity(x,y,z,glob)
 End 
 
@@ -1343,14 +1348,14 @@ End
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=VectorPitch">Online Help</a>
 #End 	
 Function VectorPitch#(vx#,vy#,vz#)
-	Return TVector.VectorPitch(vx,vy,vz)
+	Return Vector.VectorPitch(vx,vy,vz)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=VectorYaw">Online Help</a>
 #End 	
 Function VectorYaw#(vx#,vy#,vz#)
-	Return TVector.VectorYaw(vx,vy,vz)
+	Return Vector.VectorYaw(vx,vy,vz)
 End 
 
 #rem
@@ -1426,28 +1431,28 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=VertexTexCoords">Online Help</a>
 #End 
-Function VertexTexCoords(surf:TSurface,vid,u#,v#,w#=0.0,coord_set=0)
+Function VertexTexCoords(surf:TSurface,vid,u#,v#,w#=0.0,coord_set%=0)
 	Return surf.VertexTexCoords(vid,u,v,w,coord_set)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=VertexU">Online Help</a>
 #End 
-Function VertexU#(surf:TSurface,vid,coord_set=0)
+Function VertexU#(surf:TSurface,vid,coord_set%=0)
 	Return surf.VertexU(vid,coord_set)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=VertexV">Online Help</a>
 #End 
-Function VertexV#(surf:TSurface,vid,coord_set=0)
+Function VertexV#(surf:TSurface,vid,coord_set%=0)
 	Return surf.VertexV(vid,coord_set)
 End 
 
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=VertexW">Online Help</a>
 #End 
-Function VertexW#(surf:TSurface,vid,coord_set=0)
+Function VertexW#(surf:TSurface,vid,coord_set%=0)
 	Return surf.VertexW(vid,coord_set)
 End 
 

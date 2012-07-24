@@ -99,7 +99,7 @@ Class TModelObj
 				
 			If Line[0] = "#" Then
 			
-				If DEBUG Then DebugLog(".Obj Comment : " + Line) 
+				If DEBUG Then Dprint(".Obj Comment : " + Line) 
 				
 			Else
 				
@@ -166,10 +166,10 @@ Class TModelObj
 						
 						'reuse existing surfaces						
 						If currMtl.meshSurface 
-							If DEBUG Then  DebugLog "--mtlmatch "+currMtl.name
+							If DEBUG Then  Dprint "--mtlmatch "+currMtl.name
 
 						Else
-							If DEBUG Then  DebugLog "--mtlnew "
+							If DEBUG Then  Dprint "--mtlnew "
 
 							currMtl.meshSurface = mesh.CreateSurface()
 							
@@ -302,21 +302,21 @@ Class TModelObj
 		Wend
 		
 		If DEBUG
-			DebugLog "VertexCount : " + VC
-			DebugLog "NormalsCount : " + VN
-			DebugLog "TexCoordsCount : " + VT
-			DebugLog "Faces : " + FC + " Tris : "+TRI
-			DebugLog "Surfs : " + SC
-			DebugLog "Surfs real : " + CountSurfaces(mesh) 
+			Dprint  "VertexCount : " + VC
+			Dprint  "NormalsCount : " + VN
+			Dprint "TexCoordsCount : " + VT
+			Dprint "Faces : " + FC + " Tris : "+TRI
+			Dprint "Surfs : " + SC
+			Dprint "Surfs real : " + CountSurfaces(mesh) 
 			
 			For Local V:TObjMtl = Eachin matlibs.Values()
-				DebugLog "Mtl names:"+ V.name
+				Dprint "Mtl names:"+ V.name
 			Next
 			
 			For Local sf:TSurface = Eachin mesh.surf_list
 				Print "real no_verts "+sf.no_verts+" :: no_tris "+sf.no_tris
 			Next
-			DebugLog "--------------------------"
+			Dprint "--------------------------"
 		Endif
 	
 		
@@ -351,7 +351,7 @@ Class TModelObj
 			fdata[s] = New TFaceData
 			Local D2:String[] = CustomSplit( data1[i], "/" ) 
 			
-			'If DEBUG Then DebugLog " "+D2[0] +"/ "+D2[1]+"/ "+D2[2]
+			'If DEBUG Then Dprint " "+D2[0] +"/ "+D2[1]+"/ "+D2[2]
 			
 			fdata[s].vi = Int(D2[0])
 			fdata[s].ti = Int(D2[1])
@@ -444,7 +444,7 @@ Class TModelObj
 				MatLib[CMI].brush.name = MatLib[CMI].name
 				is_brush = 1
 				
-				If DEBUG Then DebugLog("Matname : " + MatLib[CMI].name)
+				If DEBUG Then Dprint("Matname : " + MatLib[CMI].name)
 			Endif
 			
 			'Colours
@@ -466,17 +466,17 @@ Class TModelObj
 				
 				MatLib[CMI].brush.BrushColorFloat( f[0] , f[1], f[2]) 
 				
-				If DEBUG Then  DebugLog("MatColor : " +  (f[0] * 255) +","+(f[1] * 255)+","+(f[2] * 255))
+				If DEBUG Then  Dprint("MatColor : " +  (f[0] * 255) +","+(f[1] * 255)+","+(f[2] * 255))
 			Endif
 			
 			If tag[0..2] = "d " And is_brush
 				MatLib[CMI].brush.BrushAlpha( Float(Line[2..]) )
-				If DEBUG Then  DebugLog("MatAlpha : " + Float(Line[2..]) ) 
+				If DEBUG Then  Dprint("MatAlpha : " + Float(Line[2..]) ) 
 			Endif
 			
 			If tag[0..3] = "tr " And is_brush
 				MatLib[CMI].brush.BrushAlpha( Float(Line[2..])) 
-				If DEBUG Then  DebugLog("MatAlpha : " + Float(Line[2..]) ) 
+				If DEBUG Then  Dprint("MatAlpha : " + Float(Line[2..]) ) 
 			Endif 
 			
 			If tag[0..7] = "map_kd " And is_brush
@@ -490,7 +490,7 @@ Class TModelObj
 				If MatLib[CMI].texture.TextureHeight() > 1
 				
 					MatLib[CMI].brush.BrushTexture( MatLib[CMI].texture) 
-					If DEBUG Then  DebugLog("MatTexture : " + texfile[0] ) 
+					If DEBUG Then  Dprint("MatTexture : " + texfile[0] ) 
 					
 				Else
 					If DEBUG Then Print "**TModelObj: texture file not found"
@@ -537,7 +537,7 @@ Class TObjNormal
 		nx = f[0]
 		ny = f[1]
 		nz = f[2]
-		'DebugLog ("X:"+nx+" Y:"+ny + " Z:"+nz)
+		'Dprint ("X:"+nx+" Y:"+ny + " Z:"+nz)
 		
 	End Method
 End 
@@ -547,7 +547,7 @@ Class TObjTexCoord
 	
 	Method GetValues(data:String)
 	
-		'DebugLog "OrigUV : " + data
+		'Dprint "OrigUV : " + data
 		Local f:Float[2]
 		For Local i:Int = 0 To 1
 			'Print "Before : " + data
@@ -563,7 +563,7 @@ Class TObjTexCoord
 		u = f[0]
 		v = f[1]
 		
-		'DebugLog ("X:"+u+" Y:"+v)
+		'Dprint ("X:"+u+" Y:"+v)
 	End Method	
 	
 End	
@@ -588,7 +588,7 @@ Class TObjVertex
 			x = f[0]
 			y = f[1]
 			z = f[2]
-			'DebugLog ("X:"+x+" Y:"+y + " Z:"+z)
+			'Dprint ("X:"+x+" Y:"+y + " Z:"+z)
 					
 	End Method	
 End 

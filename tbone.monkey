@@ -163,9 +163,12 @@ Class TBone Extends TEntity
 
 		' store local position/rotation values. will be needed to maintain bone positions when positionentity etc is called
 		'Local eul:Float[] = Quaternion.QuatToEuler(quat.x,quat.y,quat.z,quat.w)
-		rx=-mat.GetYaw() '-eul[0]
-		ry=mat.GetPitch() 'eul[1]
-		rz=mat.GetRoll() 'eul[2]
+		Local mx# = mat.grid[2][0]
+		Local my# = mat.grid[2][1]
+		Local mz# = mat.grid[2][2]
+		rx=-ATan2( mx,mz ) '-eul[0]
+		ry=-ATan2( my, Sqrt( mx*mx+mz*mz ) ) 'eul[1]
+		rz=ATan2( mat.grid[0][1],mat.grid[1][1] )
 		
 		px=pos.x
 		py=pos.y

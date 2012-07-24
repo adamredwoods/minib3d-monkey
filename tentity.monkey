@@ -479,8 +479,8 @@ Class TEntity
 		no_seqs=no_seqs+1
 		
 		' expand anim_seqs array
-		anim_seqs_first=anim_seqs_first[..no_seqs+1]
-		anim_seqs_last=anim_seqs_last[..no_seqs+1]
+		anim_seqs_first=anim_seqs_first.Resize(no_seqs+1)
+		anim_seqs_last=anim_seqs_last.Resize(no_seqs+1)
 	
 		' update anim_seqs array
 		anim_seqs_first[no_seqs]=anim_seqs_last[0]
@@ -544,8 +544,8 @@ Class TEntity
 		no_seqs=no_seqs+1
 	
 		' expand anim_seqs array
-		anim_seqs_first=anim_seqs_first[..no_seqs+1]
-		anim_seqs_last=anim_seqs_last[..no_seqs+1]
+		anim_seqs_first=anim_seqs_first.Resize(no_seqs+1)
+		anim_seqs_last=anim_seqs_last.Resize(no_seqs+1)
 	
 		' if seq specifed then extract anim sequence from within existing sequnce
 		Local offset=0
@@ -705,7 +705,7 @@ Class TEntity
 		Local tf:Int = brush.tex[i].no_frames-1
 		Local nframe:Int = tf, bframe:Int = 0
 		
-		If loop
+		If loop And tf
 			nframe = frame Mod tf; bframe = frame - (-frame Mod tf)
 		Endif
 		
@@ -767,13 +767,17 @@ Class TEntity
 	End 
 	
 	Method PaintEntity(bru:TBrush)
-	
-		brush = bru.Copy()
 
 		If TShader(bru) = bru
 			
-			DebugLog "TBrush: shader paint"
+			If Not brush Then brush = bru
+			
+			'Dprint "TBrush: shader paint"
 			shader_brush = TShader(bru) '.Copy()
+			
+		Else
+		
+			brush = bru.Copy()
 			
 		Endif
 
@@ -782,18 +786,23 @@ Class TEntity
 	
 	'' does not paint with a copy
 	Method PaintEntityGlobal(bru:TBrush)
-	
-		brush = bru
 
 		If TShader(bru) = bru
+		
+			If Not brush Then brush = bru
 			
-			DebugLog "TBrush: shader paint"
+			'Dprint "TBrush: shader paint global"
 			shader_brush = TShader(bru) '.Copy()
+			
+		Else
+			
+			brush = bru
 			
 		Endif
 
 		
 	End
+	
 	
 	Method EntityOrder(order_no)
 	

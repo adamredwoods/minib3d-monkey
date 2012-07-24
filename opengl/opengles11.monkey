@@ -1,18 +1,56 @@
 Import mojo
 Import opengl.gles11
-Import trender
+Import opengl.databuffer
+Import minib3d.trender
+Import minib3d.opengl.tpixmapgl
 Import minib3d
 
-#MINIB3D_DRIVER="gles11"
-#OPENGL_DEPTH_BUFFER_ENABLED="true"
 
-Const VBO_MIN_TRIS=10	' if USE_VBO=True and vbos are supported by hardware, then surface must also have this minimum no. of tris before vbo is used for surface (vbos work best with surfaces with high amount of tris)
+#If TARGET="xna"
+	#Error "Need glfw, ios, android, or mingw target"
+#Endif
+#Print "minib3d OpenglES11"
+
+#OPENGL_GLES20_ENABLED="false"
+#OPENGL_DEPTH_BUFFER_ENABLED="true"
+#MINIB3D_DRIVER="opengl11"
+
+
+
+Const VBO_MIN_TRIS=1	' if USE_VBO=True and vbos are supported by hardware, then surface must also have this minimum no. of tris before vbo is used for surface (vbos work best with surfaces with high amount of tris)
+
 
 'flags
 Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
-Const USE_GL20 = 4 	' future use for opengl 2.0 support
+Const MAX_TEXTURES=8
 
+
+Extern
+
+''this is highly experimental-- won't work in opengl2.0, only in opengl1.1
+
+#if TARGET = "glfw" Or TARGET = "mingw" Or TARGET = "ios"
+	Function RestoreMojo2D() = "app->GraphicsDevice()->BeginRender();//"
+	
+	'Class DataBuffer Extends databuffer.DataBuffer
+		'Method ReadPointer()
+	'End
+
+#elseif TARGET = "android"
+	Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().Flush(); MonkeyGame.app.GraphicsDevice().BeginRender( (GL10) null );//"
+#end
+
+Public
+
+
+	
+Function SetRender(flags:Int=0)
+
+	TRender.render = New OpenglES11
+	TRender.render.GraphicsInit(flags)
+	
+End
 
 Class OpenglES11 Extends TRender
 	
@@ -24,12 +62,15 @@ Class OpenglES11 Extends TRender
 
 	Global last_texture:TTexture ''used to preserve texture states
 	Global last_sprite:TSurface ''used to batch sprite state switching
-
+	Global last_tex_count:Int =8
+	
 	Global disable_depth:Bool = False '' used for EntityFx 64 - disable depth testing
 	
 	' enter gl consts here for each available light
 	Global gl_light:Int[] = [GL_LIGHT0,GL_LIGHT1,GL_LIGHT2,GL_LIGHT3,GL_LIGHT4,GL_LIGHT5,GL_LIGHT6,GL_LIGHT7] ''move const to trender
 	Global light_no:Int, old_no_lights:Int
+	
+	
 	
 	Method New()
 		
@@ -43,7 +84,7 @@ Class OpenglES11 Extends TRender
 	'End
 	
 	
-Method GetVersion:Float()
+	Method GetVersion:Float()
 		Local st:String
 		
 		Local s:String = glGetString(GL_VERSION)
@@ -164,14 +205,14 @@ Method GetVersion:Float()
 			If mesh.anim
 			
 				' get anim_surf
-				anim_surf2 = mesh.anim_surf[surf.surf_id] ''(edit 2012)
+				anim_surf2 = mesh.anim_surf[surf.surf_id] ''assign anim surface
 				
 				If vbo
 				
 					' update vbo
 					If anim_surf2.reset_vbo<>False
 						UpdateVBO(anim_surf2)
-					Else If anim_surf2.vbo_id[0]=0 ' no vbo - unknown reason
+					Else If anim_surf2.vbo_id[0]=0 ' no vbo - lost context
 						anim_surf2.reset_vbo=-1
 						UpdateVBO(anim_surf2)
 					Endif
@@ -313,54 +354,78 @@ Method GetVersion:Float()
 				
 			Endif
 		
-	
-			If vbo
 			
-				If mesh.anim_render
-					glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[0])
-					glVertexPointer(3,GL_FLOAT,0,0)
-				Else
-					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-					glVertexPointer(3,GL_FLOAT,0,0)
+			glEnableClientState(GL_NORMAL_ARRAY)
+			glEnableClientState(GL_COLOR_ARRAY)
+			
+			If vbo
+				
+				''static mesh
+				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+				If Not (mesh.anim_render Or surf.vbo_dyn)
+					glEnableClientState(GL_VERTEX_ARRAY)		
+					glVertexPointer(3,GL_FLOAT, VertexDataBuffer.SIZE, VertexDataBuffer.POS_OFFSET)
 				Endif
-							
+				
+				glNormalPointer(GL_FLOAT,VertexDataBuffer.SIZE, VertexDataBuffer.NORMAL_OFFSET)
+				glColorPointer(4,GL_FLOAT,VertexDataBuffer.SIZE, VertexDataBuffer.COLOR_OFFSET)
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,surf.vbo_id[5])
 					
-				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[3])
-				glNormalPointer(GL_FLOAT,0,0)
+				'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) 
+				'glNormalPointer(GL_FLOAT,VertexDataBuffer.NORMAL_OFFSET,0)
 				
-				If(fx&2)
-					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
-					glColorPointer(4,GL_FLOAT,0,0)
-				Endif
+				'If(fx&2)
+					'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) 
+					'glColorPointer(4,GL_FLOAT,VertexDataBuffer.COLOR_OFFSET,0)
+				'Endif
 
 			Else
 		
+				Print "*** Non-VBO disabled"
+		'' interleaved offset doesn't work with DataBuffers, possible TODO for legacy targets
+#rem		
 				glBindBuffer(GL_ARRAY_BUFFER,0) ' reset - necessary for when non-vbo surf follows vbo surf
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
 			
 				If mesh.anim_render
-					glVertexPointer(3,GL_FLOAT,0,anim_surf2.vert_coords.buf)
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,anim_surf2.vert_data.buf) 'anim_surf2.vert_coords.buf)
 				Else
-					glVertexPointer(3,GL_FLOAT,0,surf.vert_coords.buf)
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf) 'surf.vert_coords.buf)
 				Endif
 				
-				If(fx&2) glColorPointer(4,GL_FLOAT,0,surf.vert_col.buf)
+				Local pp:Int = Int(DataBuffer(surf.vert_data.buf).ReadPointer())
 				
-				glNormalPointer(GL_FLOAT,0,surf.vert_norm.buf)
-			
+				glNormalPointer(GL_FLOAT,VertexDataBuffer.SIZE,pp+VertexDataBuffer.NORMAL_OFFSET) 'surf.vert_norm.buf)
+				glColorPointer(4,GL_FLOAT,VertexDataBuffer.SIZE,pp+VertexDataBuffer.COLOR_OFFSET) 'surf.vert_col.buf)
+#end			
 			Endif
 			
 			
 			Endif ''end sprite_skip_state--------------------------------------
 			
+		
+			''mesh animation/batch animation
+			If vbo And (mesh.anim_render Or surf.vbo_dyn Or anim_surf2)
 			
-			''single case for batch animation
-			If vbo And skip_sprite_state And (mesh.anim_render Or surf.vbo_dyn)
-			
-					glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[0])
+				''vertex animation
+				If anim_surf2 And anim_surf2.vert_anim
+					glEnableClientState(GL_VERTEX_ARRAY)
+					glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[4])
 					glVertexPointer(3,GL_FLOAT,0,0)
-
+				
+				'' mesh animation, using animsurf2	
+				Elseif mesh.anim_render
+					glEnableClientState(GL_VERTEX_ARRAY)
+					glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[0])
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.POS_OFFSET)
+				
+				'' dynamic mesh, usually batch sprites	
+				Elseif surf.vbo_dyn
+					glEnableClientState(GL_VERTEX_ARRAY)
+					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.POS_OFFSET)
+				
+				Endif
 			Endif
 					
 					
@@ -393,7 +458,21 @@ Method GetVersion:Float()
 			'If surf.brush<>Null
 				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
+			
+			''disable any extra textures from last pass
+			If tex_count < last_tex_count 
+				For Local i:Int = tex_count To MAX_TEXTURES-1
+				
+					'glActiveTexture(GL_TEXTURE0+i)
+					'glClientActiveTexture(GL_TEXTURE0+i)
+					'glDisableClientState(GL_TEXTURE_COORD_ARRAY)
+					'glDisable(GL_TEXTURE_2D)
+				Next
 
+			Endif
+			last_tex_count = tex_count
+			
+			
 			For Local ix=0 To tex_count-1			
 	
 				If surf.brush.tex[ix]<>Null Or ent.brush.tex[ix]<>Null
@@ -440,15 +519,15 @@ Method GetVersion:Float()
 						
 					Else
 					
-					''texture bind
-					
-					If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
+						''texture bind
 						
-					glActiveTexture(GL_TEXTURE0+ix)
-					glClientActiveTexture(GL_TEXTURE0+ix)
-
-					
-					glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
+						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
+							
+						glActiveTexture(GL_TEXTURE0+ix)
+						glClientActiveTexture(GL_TEXTURE0+ix)
+	
+						
+						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
 	
 					
 					Endif ''end preserve texture states---------------------------------
@@ -471,7 +550,7 @@ Method GetVersion:Float()
 					' mipmapping texture flag
 					If tex_flags&8<>0
 						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR)
+						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
 					Else
 						If tex_smooth
 							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
@@ -570,20 +649,24 @@ Method GetVersion:Float()
 
 					If vbo
 						If tex_coords=0
-							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[1])
-							glTexCoordPointer(2,GL_FLOAT,0,0)
+							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) '1
+							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET)
 						Else
-							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[2])
-							glTexCoordPointer(2,GL_FLOAT,0,0)
+							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) '2
+							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2)
 						Endif
 					Else
+					
+					''interleaved data does not work with databuffers (no adddress offset)
+#rem
 						If tex_coords=0
 							'glBindBuffer(GL_ARRAY_BUFFER,0) 'already reset above
-							glTexCoordPointer(2,GL_FLOAT,0,surf.vert_tex_coords0.buf)
+							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf.PeekByte(VertexDataBuffer.TEXCOORDS_OFFSET))
 						Else
 							'glBindBuffer(GL_ARRAY_BUFFER,0)
-							glTexCoordPointer(2,GL_FLOAT,0,surf.vert_tex_coords1.buf)
+							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf.PeekByte(VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2))
 						Endif
+#end
 					Endif
 
 			
@@ -657,7 +740,8 @@ Method GetVersion:Float()
 					' reset texture matrix
 					glMatrixMode(GL_TEXTURE)
 					glLoadIdentity()
-	
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY)
+					
 					'glDisable(GL_TEXTURE_CUBE_MAP)
 					'glDisable(GL_TEXTURE_GEN_S)
 					'glDisable(GL_TEXTURE_GEN_T)
@@ -665,7 +749,7 @@ Method GetVersion:Float()
 				
 				Next
 				glDisable(GL_TEXTURE_2D)
-				glDisableClientState(GL_TEXTURE_COORD_ARRAY)
+				
 				
 			Endif
 			
@@ -737,6 +821,8 @@ Method GetVersion:Float()
 	
 	Method GraphicsInit:Int(flags:Int=0)
 		
+		TRender.render = New OpenglES11
+		
 #If CONFIG="debug"		
 		Print "**OPENGL VERSION:"+GetVersion()
 #Endif
@@ -749,6 +835,10 @@ Method GetVersion:Float()
 		
 		width = DeviceWidth()
 		height = DeviceHeight()
+		
+		''get the TPixmapManager set
+		TPixmapGL.Init()
+		
 		
 		If Not (flags & DISABLE_VBO)
 			vbo_enabled=True 'THardwareInfo.VBOSupport
@@ -823,7 +913,8 @@ Method GetVersion:Float()
 		Endif
 
 		If surf.reset_vbo=-1 Then surf.reset_vbo=255
-	
+
+#rem	
 		If surf.reset_vbo&1
 			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 			If surf.vbo_dyn =False
@@ -862,18 +953,53 @@ Method GetVersion:Float()
 			Endif
 			
 		Endif
-		'If GetGLError() Then Print "vertcol"	
+		'If GetGLError() Then Print "vertcol"
+#end
+		
+		''surf.vert_anim array should be null until it is set by BoneToVertexAnimation
+		
+		If surf.reset_vbo&1 Or surf.reset_vbo&2 Or surf.reset_vbo&4 Or surf.reset_vbo&8
+			
+			
+			If surf.vbo_dyn And Not surf.vert_anim
+				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+				If surf.reset_vbo <> 255
+					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf)
+				Else
+					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
+				Endif
+				
+			Elseif surf.vbo_dyn And surf.vert_anim And surf.reset_vbo&1
+				
+				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
+				If surf.reset_vbo <> 255
+					''update just anim data
+					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].vert_buffer.buf )
+				Else
+					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
+					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].vert_buffer.buf,GL_DYNAMIC_DRAW)
+				Endif
+				
+			Else
+
+				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+				glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_STATIC_DRAW)
+			Endif
+			
+		Endif
 		
 		If surf.reset_vbo&16
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,surf.vbo_id[5])
 			If surf.reset_vbo <> 255
-				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0,surf.no_tris*3*2,surf.tris.buf)
+				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0,surf.no_tris*6,surf.tris.buf)
 			Else
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER,surf.no_tris*3*2,surf.tris.buf,GL_STATIC_DRAW)
+				glBufferData(GL_ELEMENT_ARRAY_BUFFER,surf.no_tris*6,surf.tris.buf,GL_STATIC_DRAW)
 			Endif
 			
 		Endif
-		'If GetGLError() Then Print "verttris"
+		
+		If GetGLError() Then Print "verttris"
+
 		
 		surf.reset_vbo=False
 		
@@ -950,11 +1076,13 @@ Method GetVersion:Float()
 		glBindTexture GL_TEXTURE_2D,tex.gltex[0]
 		
 		Local mipmap:Int= 0, mip_level:Int=0
+		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
+		
 		If tex.flags&8 Then mipmap=True
 
 			Repeat
 			
-				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,tex.pixmap.pixels
+				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pix.pixels
 				
 				If( glGetError()<>GL_NO_ERROR )
 					Error "** out of texture memory **"
@@ -964,7 +1092,12 @@ Method GetVersion:Float()
 				If width>1 width *= 0.5
 				If height>1 height *= 0.5
 
-				If tex.resize_smooth Then tex.pixmap=tex.pixmap.ResizePixmap(width,height) Else tex.pixmap=tex.pixmap.ResizePixmapNoSmooth(width,height)
+				If tex.resize_smooth
+					tex.pixmap=pix.ResizePixmap(width,height)
+				Else
+					tex.pixmap=pix.ResizePixmapNoSmooth(width,height)
+				Endif
+				
 				mip_level+=1
 				
 			Forever
@@ -1000,8 +1133,8 @@ Method GetVersion:Float()
 			
 			' if spotlight then set exponent to 10.0 (controls fall-off of spotlight - roughly matches B3D)
 			If light.light_type=3
-				Local exponent#[]=[10.0]
-				glLightfv(gl_light[light_no-1],GL_SPOT_EXPONENT,[10.0])
+				'Local exponent#[]=[10.0]
+				glLightfv(gl_light[light_no-1],GL_SPOT_EXPONENT,[light.spot_exp])
 			Endif	
 		
 		Endif
@@ -1011,7 +1144,7 @@ Method GetVersion:Float()
 		glMatrixMode(GL_MODELVIEW)
 		glPushMatrix()
 
-		glLoadMatrixf(light.mat.ToArray() )
+		glMultMatrixf(light.mat.ToArray() )
 		
 		Local z#=1.0
 		Local w#=0.0
@@ -1098,8 +1231,8 @@ Method GetVersion:Float()
 			glFogf(GL_FOG_MODE,GL_LINEAR)
 			glFogf(GL_FOG_START,cam.fog_range_near)
 			glFogf(GL_FOG_END,cam.fog_range_far)
-			Local rgb#[]=[cam.fog_r,cam.fog_g,cam.fog_b,1.0]
-			glFogfv(GL_FOG_COLOR,rgb)
+
+			glFogfv(GL_FOG_COLOR,[cam.fog_r,cam.fog_g,cam.fog_b,1.0])
 		Else
 			glDisable(GL_FOG)
 		Endif

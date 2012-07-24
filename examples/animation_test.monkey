@@ -32,7 +32,7 @@ Class Game Extends App
 	
 	Method OnCreate()
 	
-		SetRender(New OpenglES11)	
+		SetRender()	
 		SetUpdateRate 30
 		
 	End
@@ -130,7 +130,7 @@ Class Game Extends App
 		cam.TurnEntity cu,cr,0
 
 		For Local zz:Int=0 To 3
-			zombie[zz].AlignToVector(cube.EntityX(1) - zombie[0].EntityX(1), 0,cube.EntityZ(1) - zombie[0].EntityZ(1), 3,0.10)
+			zombie[zz].AlignToVector(cube.EntityX(1) - zombie[zz].EntityX(1), 0,cube.EntityZ(1) - zombie[zz].EntityZ(1), 3,0.10)
 		Next	
 	
 		

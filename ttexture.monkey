@@ -1,11 +1,7 @@
 Import minib3d
 Import monkeyutility
 
-#If MINIB3D_DRIVER="gles20"
-	Import opengl.gles20
-#Else
-	Import opengl.gles11
-#Endif
+
 
 ''NOTES:
 ''- may need  a method to release main texture memory from LoadImageData(), but keep in videomemory? what if we lose context (on pause)?
@@ -34,6 +30,7 @@ Class TTexture
 	Field frame_startx:Int, frame_starty:Int
 	
 	Field gltex:Int[] = New Int[1]
+	Field tex_id:Int '' for targets to use
 	Field no_mipmaps:Int
 	
 	Field cube_pixmap:TPixmap[] 
@@ -54,8 +51,8 @@ Class TTexture
 		
 		TRender.render.DeleteTexture(gltex)
 		tex_link.Remove()
-		pixmap=New TPixmap
-		cube_pixmap=New TPixmap[7]
+		pixmap=Null
+		'cube_pixmap=New TPixmap[7]
 		gltex[0]=0
 	
 	End

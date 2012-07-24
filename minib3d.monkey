@@ -20,9 +20,22 @@ Please see readme.txt for more details
 
 'Strict
 
-#MINIB3D_DRIVER="default"
 
 Import mojo
+
+#MINIB3D_DRIVER=""
+
+''to choose opengles20, must specify it
+#If MINIB3D_DRIVER=""
+	#if TARGET="glfw" Or TARGET="ios" Or TARGET="android" Or TARGET="mingw"
+		Import minib3d.opengl.opengles11
+	#Elseif TARGET="html5"
+		Import minib3d.opengl.opengles20
+	#Elseif TARGET="xna"
+		Import minib3d.xna
+	#endif
+#endif
+
 
 
 '' global
