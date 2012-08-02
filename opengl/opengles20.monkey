@@ -1161,7 +1161,7 @@ Class OpenglES20 Extends TRender
 		''
 		
 		TRender.render.ClearErrors()	
-
+		
 		' if mask flag is true, mask pixmap
 		If tex.flags&4
 			tex.pixmap.MaskPixmap(0,0,0)
@@ -1209,13 +1209,13 @@ Class OpenglES20 Extends TRender
 		If tex.flags&8 Then mipmap=True
 		
 		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
-
+		
 			Repeat
 				glPixelStorei GL_UNPACK_ALIGNMENT,1
 #If TARGET<>"html5"
-				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pix.pixels
+				glTexImage2D (GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pix.pixels)
 #Else
-				glTexImage2D2 (GL_TEXTURE_2D, mip_level, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pix.pixels)
+				glTexImage2D3 (GL_TEXTURE_2D, mip_level, GL_RGBA, GL_RGBA, GL_UNSIGNED_BYTE, pix.pixels)
 #Endif
 
 				Local err:Int = glGetError()

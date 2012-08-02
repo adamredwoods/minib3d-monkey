@@ -31,6 +31,10 @@ Extern
 	
 	Function HTMLMaskPixmap:Int(image:Int, r:Int, g:Int, b:Int)
 	
+	''special hack
+	Function glTexImage2D3:Void( target, level, internalformat, format, type, pixels:Int )="gl.texImage2D"
+	Function glTexSubImage2D3:Void( target, level, xoffset, yoffset, format, type, pixels:Int )="gl.texSubImage2D"
+	
 Public
 
 
