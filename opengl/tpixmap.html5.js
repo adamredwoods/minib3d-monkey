@@ -1,5 +1,5 @@
 
-var preLoadTextures = new PreLoadTextures();
+var _preLoadTextures = new PreLoadTextures();
 
 
 function PreLoadTextures() {
@@ -8,7 +8,7 @@ function PreLoadTextures() {
 	this.totalloaded=0;
 	this.loading=false;
 	this.loaded=false;
-	//print ("setup");
+	//print("/// setup");
 }
 
 //return true if loading
@@ -16,10 +16,10 @@ PreLoadTextures.prototype.Loader = function(file) {
 
 	if (file[0] == this.old_file[0]) {
 		if (this.loading) {
-			//print( "test xx"+this.totalloaded );
+			//print( "html5 checkloading "+this.totalloaded );
 			return this.CheckLoading() ;
 		}
-		//print ("done "+this.loading);
+		//print ("loading done "+this.loading);
 		return 0; //not currently loading anything
 	} else {
 		if (!this.loading) this.old_file = file.slice(0); this.totalloaded=0;
@@ -30,7 +30,7 @@ PreLoadTextures.prototype.Loader = function(file) {
 	this.loading = true;
 	var base = this;
 	
-	//print ("laoding2"+this.loading);
+	//print ("loading start "+this.loading);
 	
     for (var i = 0; i < file.length; ++i) {
 		// Create an image tag.
@@ -43,27 +43,33 @@ PreLoadTextures.prototype.Loader = function(file) {
 		// Remember the image.
 		this.preloadedimages.push(image);
 	}
-    
+	
 	return 1;
 };
 
 PreLoadTextures.prototype.CheckLoading = function() {
-//print ("here "+this.preloadedimages.length);
+	//print ("CheckLoading list length "+this.preloadedimages.length);
 
-	if (this.preloadedimages.length==0) return 0;
+	if (this.preloadedimages.length<1) return 0;
 	
 	this.totalloaded =0;
 	for (i=0; i<this.preloadedimages.length-1; i++) {	
-		if (!this.preloadedimages[i].complete) return 1;
+		
+		if (!this.preloadedimages[i].complete) {
+			//print ("CheckLoading still loading");
+			return 1;
+		}		
 		this.totalloaded++;
 	}
+	//print ("CheckLoading all done");
 	return 0;
 	
 };
 	
 PreLoadTextures.prototype.LoadImageData = function(file, info) {
 	//check cache
-	//print ( "preloader len "+this.preloadedimages.length);
+	var nn = this.preloadedimages.length;
+	//print ( "///preloader len "+nn);
 	for (i=0; i<this.preloadedimages.length; ++i) {
 		if (this.preloadedimages[i].filename == file) {
 			//print( "cache hit "+this.preloadedimages[i].filename);

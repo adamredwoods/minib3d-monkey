@@ -28,7 +28,7 @@ Class Game Extends App
 
 	Field init_gl:Bool = False
 	
-
+	Field zombie_tex:TTexture
 	
 	Method OnCreate()
 	
@@ -39,6 +39,10 @@ Class Game Extends App
 
 	Method Init()
 		
+		If Not TPixmap.PreLoadPixmap(["Zombie.jpg","mojo_font.png"])	
+			Return
+		Endif
+		
 		If init_gl Then Return
 		init_gl = True
 
@@ -46,6 +50,8 @@ Class Game Extends App
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,80)
 		cam.PositionEntity 0,4,-10
+		
+		
 		
 		zombie[0]=LoadAnimMesh("zombie_b3d_base64.txt")
 		TAnimation.NormaliseWeights(zombie[0])
@@ -89,6 +95,8 @@ Class Game Extends App
 	End
 	
 	Method OnUpdate()
+		
+		If Not init_gl Then Init(); Return
 		
 		' control camera
 		Local cr:Float = KeyDown(KEY_LEFT)-KeyDown(KEY_RIGHT)
@@ -166,7 +174,6 @@ Class Game Extends App
 	End
 	
 	Method OnRender()
-		Init()
 
 		RenderWorld()
 		renders=renders+1

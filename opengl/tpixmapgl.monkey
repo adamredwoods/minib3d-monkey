@@ -46,6 +46,13 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 	
 	End
 	
+	Method PreLoadPixmap:Int(file$[])
+		
+		Return TPixmap.PreLoadPixmapSynch(file)
+	
+	End
+	
+	
 	Method LoadPixmap:TPixmap(f$)
 	
 		Local p:TPixmapGL = New TPixmapGL

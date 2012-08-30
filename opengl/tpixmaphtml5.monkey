@@ -19,9 +19,9 @@ Import "tpixmap.html5.js"
 
 Extern
 
-	Function PreLoadTextures:Int(file$[]) = "preLoadTextures.Loader"
+	Function PreLoadTextures:Int(file$[]) = "_preLoadTextures.Loader"
 		
-	Function LoadImageData:Int(file$, info:Int[]) = "preLoadTextures.LoadImageData"
+	Function LoadImageData:Int(file$, info:Int[]) = "_preLoadTextures.LoadImageData"
 	
 	Function CreateImageData:Int(w:Int, h:Int)
 	
@@ -56,7 +56,7 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 	
 	
 	'' asynchronous! cache files
-	Function PreLoadPixmap:Int(file$[])
+	Method PreLoadPixmap:Int(file$[])
 
 		If loaded And file[0] = old_file[0]
 			Return 1
@@ -66,9 +66,9 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 		
 		'' html5
 			
-		loading = PreLoadTextures(file )
+		loading = Bool(PreLoadTextures(file ))
 		
-		If loading = 0
+		If loading = False
 			loaded = True
 			Return 1
 		Endif

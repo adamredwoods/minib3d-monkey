@@ -33,6 +33,8 @@ Class Game Extends App
 	
 	Method OnCreate()
 		SetUpdateRate 30
+		
+		'TShaderGLSL.LoadDefaultShader(New FastBrightShader)
 	End
 
 	Method Init()

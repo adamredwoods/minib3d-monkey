@@ -15,6 +15,7 @@ Interface TPixmapManager
 	
 	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
 
+	Method PreLoadPixmap:Int(file$[])
 	
 End
 
@@ -35,6 +36,15 @@ Class TPixmap
 	
 	
 	Function PreLoadPixmap:Int(file$[])
+		
+		If manager
+			Return manager.PreLoadPixmap(file)
+		Endif
+	
+	End
+	
+	''load files synchronously
+	Function PreLoadPixmapSynch:Int(file$[])
 		
 		If loaded And file[0] = old_file[0]
 			Return 1

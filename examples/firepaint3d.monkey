@@ -1,6 +1,6 @@
 ' Original firepaint3d.bb program by Mark Sibly
 
-Import minib3d
+Import minib3d.opengl.opengles20
 
 
 Function Main()
@@ -36,20 +36,30 @@ Class Game Extends App
 
 	
 	Global reload_all:Bool=False
+	Global init_global:Int = 0
 	
 	Method OnResume()
 		reload_all = True
 		
 	End
 	
-	Method OnCreate()
+	Method Init:Int()
 		
-		SetRender()
-		SetUpdateRate 30
+		If init_global Then Return 1
 		
 		''use to preload images for html5
-		TPixmap.PreLoadPixmap(["blitzlogo.png","stars.png","bluspark.png"])
+		
+		If Not TPixmap.PreLoadPixmap(["blitzlogo.png","stars.png","bluspark.png"])	
+			Return 0
+		Endif
+		
+		init_global = 1
+		
+		''--- try this other shader for faster mobile performance (opengles2.0 only)		
+		'TShaderGLSL.LoadDefaultShader(New FastBrightShader)
 
+		
+		
 		AmbientLight 0,0,0
 		
 		pivot=CreatePivot()
@@ -90,10 +100,20 @@ Class Game Extends App
 
 		' used by fps code
 		old_ms=Millisecs()
+		
+	End
+	
+	Method OnCreate()
+		
+		SetRender()
+		SetUpdateRate 30
+
 	End
 
 	Method OnUpdate()
-
+		
+		If Not Init() Then Return
+		
 		If reload_all
 			Graphics3DInit()
 			ReloadAllSurfaces()
@@ -102,6 +122,7 @@ Class Game Extends App
 			reload_all = False
 		Endif
 
+		If KeyDown(KEY_ESCAPE) Then Error ""
 
 		elapsed=Millisecs()-time	
 		time=time+elapsed
@@ -168,7 +189,8 @@ Class Game Extends App
 	End
 	
 	Method OnRender()
-
+		
+		If Not Init() Then Return
 		
 		RenderWorld
 		renders=renders+1
