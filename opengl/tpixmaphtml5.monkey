@@ -175,12 +175,14 @@ End
 Class PreloadManager Implements IPreloadManager
 	
 	Field data:HTMLImage[]
+	Field load_ok:Bool[]
 	Field w:Int[], h:Int[]
 	Field total:Int
 	Field preloader:TPixmapPreloader
 	
 	Method AllocatePreLoad:Void(size:Int)
 		data = New HTMLImage[size]
+		load_ok = New Bool[size]
 		w = New Int[size]
 		h = New Int[size]
 		total = size
@@ -205,7 +207,7 @@ Class PreloadManager Implements IPreloadManager
 			
 			If id>0
 				p.pixels = data[id-1]
-				
+		
 				Local info:Int[] = GetHTMLImageInfo(p.pixels)
 				p.width = info[0]
 				p.height = info[1]
@@ -235,8 +237,9 @@ Class PreloadManager Implements IPreloadManager
 		''update sync events here
 		For Local i:Int=0 To total-1
 			'If data[i] Then Print "i "+i+" :"+Int(CheckIsLoaded(data[i]))
-			If data[i] And (CheckIsLoaded(data[i]) )
+			If data[i] And CheckIsLoaded(data[i]) And Not load_ok[i]
 				''callback
+				load_ok[i]=True
 				preloader.IncLoader()
 				
 			Endif
