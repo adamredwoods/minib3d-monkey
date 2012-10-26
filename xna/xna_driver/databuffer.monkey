@@ -3,7 +3,9 @@ Import "native/databuffer.${LANG}"
 Extern
 
 ' minib3d compatibility
+' -- now using brl.databuffer (v66)
 
+#rem
 Class DataBuffer
 
 	Method Size()
@@ -22,7 +24,7 @@ Class DataBuffer
 
 	Function Create:DataBuffer( size )="DataBuffer.Create"
 End
-
+#end
 
 Function LoadImageData:DataBuffer( path$,info[]=[] )="DataBuffer.LoadImageData"
 

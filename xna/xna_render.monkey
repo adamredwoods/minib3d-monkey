@@ -17,12 +17,12 @@ Notes:
 Hardare caps		-	http://msdn.microsoft.com/en-us/library/ff604995.aspx
 
 vbos - xna must use vbo, as data is loaded in via byte buffer (yes, in xna)
-lights - no point or spotlight without HLSL
+lights - no point or spotlight or multiple light without HLSL
 
 #end 
 
 
-#PREFER_PERPIXEL_LIGHNING="true"
+#XNA_PERPIXEL_LIGHNING=True
 
 
 Interface IRender
@@ -119,7 +119,8 @@ Public
 	End
 	
 	Method Reset:Void()
-	
+		
+		''clear mojo state
 		EndMojoRender()
 		
 		TRender.alpha_pass = 0
@@ -166,20 +167,24 @@ Public
 				' draw tris
 				Local passes:= _xna.CurrentEffect.Effect.CurrentTechnique.Passes
 				For Local pass:= Eachin passes
+
+
 					pass.Apply()
-					
+
 					' draw tris
 					If mesh.anim
 						
-						Local mesh:= _meshes.Get(mesh.anim_surf[surf.surf_id].vbo_id[0])
-						mesh.Bind()
-						mesh.Render()
+						Local meshx:= _meshes.Get(mesh.anim_surf[surf.surf_id].vbo_id[0])
+						meshx.Bind()
+						meshx.Render()
 					
 					Else
-						Local mesh:= _meshes.Get(surf.vbo_id[0])
-						mesh.Bind()
-						mesh.Render()
+						
+						Local meshx:= _meshes.Get(surf.vbo_id[0])
+						meshx.Bind()
+						meshx.Render()
 					End
+
 				End 
 
 			Next 
@@ -188,11 +193,16 @@ Public
 			temp_list = _alpha_list
 			
 		Next	''end alpha loop
+
 			
 		temp_list = Null	
 	End
 
 	Method Finish:Void()
+	
+		'' clear some states as we return to mojo
+		_device.SamplerState(0, _xna._st_cU_cV)
+		
 	End
 	
 	Method EnableStates:Void()
@@ -267,6 +277,7 @@ Public
 		If Not( IsPowerOfTwo(width) Or IsPowerOfTwo(height) ) Then 
 			mipmap=False
 			' TODO: no wrap addressing mode and no DXT compression on nonpower of two textures.
+			tex.flags |= (16|32) 'clamp u,v
 		End 
 		
 		If tex.gltex[0] = 0 Then 
@@ -387,7 +398,7 @@ Private
 		If surf.brush.tex[0] Then cur_tex = surf.brush.tex[0]
 		
 		If cur_tex
-			
+		
 			Local id:Int = cur_tex.gltex[0]
 			Local set_id:Int = cur_tex.coords
 			
@@ -533,6 +544,7 @@ Private
 	Field _st_cU_cV				:XNASamplerState
 	Field _st_wU_cV				:XNASamplerState
 	Field _st_cU_wV				:XNASamplerState
+	Field _st_wU_wV				:XNASamplerState
 	
 	' effects
 	Field _lastEffect			:IEffectContainer
@@ -571,7 +583,7 @@ Public
 		_st_cU_cV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
 		_st_wU_cV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Wrap , TextureAddressMode_Clamp)
 		_st_cU_wV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
-		
+		_st_wU_wV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Wrap, TextureAddressMode_Wrap)
 		
 	End
 
@@ -631,21 +643,17 @@ Public
 	Method SetStates(ent:TEntity, surf:TSurface )
 		
 		Local new_sampler_state:XNASamplerState 
-		
-		If tex_flags&16<>0 Then ' clamp u flag
-			If tex_flags&32<>0' clamp v flag
-				new_sampler_state = _st_cU_cV
-			Else
-				new_sampler_state = _st_cU_wV
-			End 
-		Else If tex_flags&32<>0' clamp v flag
-			If tex_flags&16<>0' clamp u flag
-				new_sampler_state = _st_cU_cV
-			Else						
-				new_sampler_state = _st_wU_cV 
-			Endif
+		 
+		If tex_flags&16 And tex_flags&32 Then ' clamp u clamp v flag
+			new_sampler_state = _st_cU_cV
+		Elseif tex_flags&16 'clamp u flag
+			new_sampler_state = _st_cU_wV
+		Elseif tex_flags&32 'clamp v flag
+			new_sampler_state = _st_wU_cV
+		Else						
+			new_sampler_state = _st_wU_wV ''only use wrap with power-of-two textures
 		End
-		
+	
 		' ' preserve sampler state
 		If new_sampler_state <> _lastSamplerState Then 
 			_device.SamplerState(0, new_sampler_state)
@@ -735,6 +743,7 @@ Public
 		
 	End
 	
+	
 	Method Update(ent:TEntity, surf:TSurface, cam:TCamera)
 	
 		' combine surface brush values with main brush values
@@ -763,7 +772,14 @@ Public
 		SetStates(ent, surf)
 	End 
 	
+	
+	Method IsPowerOfTwo?(x)
+	    Return (x <> 0) And ((x & (x - 1)) = 0)
+	End
+	
 End
+
+
 
 
 
@@ -872,64 +888,6 @@ Class EffectContainer Implements IEffectContainer
 	Method Update(cam:TCamera, ent:TEntity, e:IEffectContainer)
 	
 		Return 
-		#rem
-		If Not _updateLight Then
-			_updateLight = True
-			
-			_effect.DirectionalLight0.Enabled = e.Effect().DirectionalLight0.Enabled
-			_effect.DirectionalLight0.Direction(0,-1,-1) ' todo: implement getter in xna
-			_effect.DirectionalLight0.DiffuseColor(1,1,1);
-			
-			_effect.DirectionalLight1.Enabled = e.Effect().DirectionalLight1.Enabled
-			_effect.DirectionalLight1.Direction(0,-1,-1) ' todo: implement getter in xna
-			_effect.DirectionalLight1.DiffuseColor(1,1,1);
-			
-			_effect.DirectionalLight2.Enabled = e.Effect().DirectionalLight2.Enabled
-			_effect.DirectionalLight2.Direction(0,-1,-1) ' todo: implement getter in xna
-			_effect.DirectionalLight2.DiffuseColor(1,1,1);
-		End
-		
-		If ent And _updateWorld Then 
-		
-			_updateWorld = False
-			
-			' entity Transform
-			'_effect.World(
-					'ent.EntityX(True), ent.EntityY(True), ent.EntityZ(True), 
-					'ent.EntityPitch(True), ent.EntityYaw(True), ent.EntityRoll(True),
-					'ent.EntityScaleX(True), ent.EntityScaleY(True), ent.EntityScaleZ(True))
-			
-			_effect.WorldMatrix(ent.mat.ToArray())
-		End 
-		
-		If cam And _updateView Then 
-		
-			_updateView = False
-			
-			' set view matrix
-			'_effect.View(
-				'cam.EntityX(True), cam.EntityY(True), cam.EntityZ(True), 
-				'cam.EntityPitch(True), cam.EntityYaw(True), cam.EntityRoll(True), 
-				'cam.EntityScaleX(True), cam.EntityScaleY(True), -cam.EntityScaleZ(True))
-				
-			_effect.ViewMatrix(cam.mod_mat.ToArray())
-			
-			' set projection
-			'_effect.Projection(cam.fov_y, cam.aspect, cam.range_near , cam.range_far)
-			_effect.ProjectionMatrix(cam.proj_mat.ToArray())
-		
-			'fog
-			If cam.fog_mode>0
-				_effect.FogEnabled = True
-				_effect.FogStart = cam.fog_range_near
-		        _effect.FogEnd = cam.fog_range_far
-		        _effect.FogColor(cam.fog_r,cam.fog_g,cam.fog_b)
-			Else
-				_effect.FogEnabled = False 
-			Endif
-			
-		End 
-		#end
 	End
 End 
 
@@ -944,10 +902,10 @@ Class BasicEffect Extends EffectContainer
 	Method New(effect:XNABasicEffect)
 		_effect = effect
 		
-#if PREFER_PERPIXEL_LIGHNING="true"
+#if XNA_PERPIXEL_LIGHNING=1
 		Local e:= XNABasicEffect(_effect)
 		e.PreferPerPixelLighting = True
-#End 
+#Endif 
 
 	End 
 	
@@ -997,6 +955,7 @@ Class BasicEffect Extends EffectContainer
 		Else
 			effect.TextureEnabled = True
 			Local texture:= textures[0]
+
 			' preserve texture states
 			If texture And texture <> _lastTexture And XNARender._textures Then
 				_lastTexture = texture
@@ -1046,9 +1005,9 @@ Class EnvironmentMapEffect Extends EffectContainer
 		
 		' set textures
 		For Local i= 0 Until tex_count
-			Local tex_flags  = textures[0].flags
-			Local texture := textures[0]
-			
+			Local tex_flags  = textures[i].flags
+			Local texture := textures[i]
+	
 			If tex_flags&128 Then ' this layer is cubemap
 				If texture And _lastCubeTexture <> texture Then ' preserve texture states
 					_lastCubeTexture = texture

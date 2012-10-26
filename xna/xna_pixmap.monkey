@@ -80,6 +80,7 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 		Local ratiow:Float = width/Float(neww)
 		Local ratioh:Float = height/Float(newh)
 		
+		
 		If ratiow<1.0 And ratioh<1.0 Then enlarge = 1
 			
 		Local newpix:TPixmapXNA = CreatePixmap(neww, newh)

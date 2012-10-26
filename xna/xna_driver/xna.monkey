@@ -620,7 +620,9 @@ End
 #end
 
 Extern	
-	Function EndMojoRender:Void() = "gxtkApp.game.app.GraphicsDevice().EndRender"
+	'Function EndMojoRender:Void() = "gxtkApp.game.app.GraphicsDevice().EndRender"
+	Function EndMojoRender:Void(target:Object = Null) = "gxtkApp.game.app.GraphicsDevice().device.SetRenderTarget"
+	
 
 
 #End
