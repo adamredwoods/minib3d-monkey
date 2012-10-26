@@ -21,8 +21,9 @@ lights - no point or spotlight without HLSL
 
 #end 
 
-#MINIB3D_DRIVER="xna"
+
 #PREFER_PERPIXEL_LIGHNING="true"
+
 
 Interface IRender
 	Method GetVersion:Float() 
@@ -79,6 +80,8 @@ Private
 	
 	Global _textures:= New IntMap<XNATexture> ' Todo Resourcemanager
 	Global _texturedata:= New XNATextureData[2] ''use texture.gltex[] index
+	Global _depthEnable:Bool = True
+	
 	Field _meshes:= New IntMap<XNAMesh>
 	Field _lights:TLight[3]
 	Field _last_texture:TTexture
@@ -102,7 +105,8 @@ Public
 	End
 
 	Method GraphicsInit(flags:Int=0)
-	
+		
+		''need to set tpixmap class
 		TPixmapXNA.Init()
 		
 		Reset()
@@ -115,8 +119,12 @@ Public
 	End
 	
 	Method Reset:Void()
+	
+		EndMojoRender()
+		
 		TRender.alpha_pass = 0
 		_xna.Reset()
+		
 	End
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
@@ -280,7 +288,7 @@ Public
 		
 		Repeat
 
-			t.SetData(mip_level, pix.pixels, 0, pix.pixels.Size)
+			t.SetData(mip_level, pix.pixels, 0, pix.pixels.Length)
 			
 			If Not mipmap Or (width=1 And height =1) Then Exit
 			If width>1 width *= 0.5
@@ -330,12 +338,15 @@ Public
 	End
 
 	Method UpdateCamera(cam:TCamera)
-	
-		' viewport
-		_device.Viewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 		
-		' clear buffers
-		_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, cam.cls_color=True, cam.cls_zbuffer=True, False )
+		'If (_device)
+			' viewport
+			_device.Viewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+		
+			' clear buffers
+			_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, cam.cls_color=True, cam.cls_zbuffer=True, False )
+		
+		'Endif
 		
 		' set view matrix
 		'_xna.View (	cam.EntityX(True), 		cam.EntityY(True), 		cam.EntityZ(True), 
@@ -428,7 +439,7 @@ Private
 			' get anim_surf
 			Local anim_surf2:= mesh.anim_surf[surf.surf_id] 
 			
-			If vbo
+			If vbo And anim_surf2
 			
 				' update vbo
 				If anim_surf2.reset_vbo<>0
@@ -511,9 +522,12 @@ Private
 	
 	' states
 	Field _rasterizerStates		:XNARasterizerState[]
+	Field _depthStencil			:XNADepthStencilState
 	Field _depthStencilDefault	:XNADepthStencilState
 	Field _depthStencilNone		:XNADepthStencilState
 	Field _depthStencilNoWrite	:XNADepthStencilState
+	Field _depthStencilNoDepth	:XNADepthStencilState
+	
 	Field _blendStates			:XNABlendState[] 
 	Field _lastSamplerState		:XNASamplerState 	
 	Field _st_cU_cV				:XNASamplerState
@@ -545,13 +559,20 @@ Public
 		_rasterizerStates 	= [XNARasterizerState.CullNone, XNARasterizerState.CullCounterClockwise,XNARasterizerState.CullClockwise ]
 		_depthStencilDefault = XNADepthStencilState._Default
 		_depthStencilNone 	= XNADepthStencilState.None
+		
 		_depthStencilNoWrite	= XNADepthStencilState.Create ''may need a new state based on default
 		_depthStencilNoWrite.DepthBufferWriteEnable = False
+		
+		_depthStencilNoDepth	= XNADepthStencilState.Create ''is same as "none"
+		_depthStencilNoDepth.DepthBufferEnable = False
+		_depthStencilNoDepth.DepthBufferWriteEnable = False
 		
 		_blendStates 		= [XNABlendState.AlphaBlend, XNABlendState.AlphaBlend, XNABlendState.Premultiplied, XNABlendState.Additive, XNABlendState.Opaque]
 		_st_cU_cV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
 		_st_wU_cV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Wrap , TextureAddressMode_Clamp)
 		_st_cU_wV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
+		
+		
 	End
 
 	Method Reset()
@@ -646,20 +667,18 @@ Public
 			surf.alpha_enable=True
 		Endif
 		
-		'' fx flag 64 - disable depth testing (new 2012)
-		If _fx&64 Then 
-			_device.DepthStencilState = _depthStencilNone 
-		Else
-			_device.DepthStencilState = _depthStencilDefault
-		End 
+		
 
 		' take into account auto fade alpha
 		_alpha=_alpha-ent.fade_alpha
 
 		
 		' if surface contains alpha info, enable blending
-		If ent.alpha_order<>0.0 Or surf.alpha_enable=True
-			_device.DepthStencilState = _depthStencilNoWrite 
+		''and  fx flag 64 - disable depth testing
+		If (ent.alpha_order<>0.0 Or surf.alpha_enable=True)
+			_device.DepthStencilState = _depthStencilNoWrite
+		Elseif _fx&64
+			_device.DepthStencilState = _depthStencilNoDepth
 		Else
 			_device.DepthStencilState = _depthStencilDefault
 		Endif	

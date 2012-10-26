@@ -1,4 +1,5 @@
 Import minib3d
+Import monkeybuffer
 Import monkeyutility
 
 Class TSurface

@@ -1,6 +1,5 @@
 Import mojo
 Import opengl.gles11
-Import opengl.databuffer
 Import minib3d.trender
 Import minib3d.opengl.tpixmapgl
 Import minib3d
@@ -9,10 +8,11 @@ Import minib3d
 #If TARGET="xna"
 	#Error "Need glfw, ios, android, or mingw target"
 #Endif
-#Print "minib3d OpenglES11"
 
-#OPENGL_GLES20_ENABLED="false"
-#OPENGL_DEPTH_BUFFER_ENABLED="true"
+#Print "miniB3D OpenglES11"
+
+#OPENGL_GLES20_ENABLED=False
+#OPENGL_DEPTH_BUFFER_ENABLED=True
 #MINIB3D_DRIVER="opengl11"
 
 
@@ -32,11 +32,6 @@ Extern
 
 #if TARGET = "glfw" Or TARGET = "mingw" Or TARGET = "ios"
 	Function RestoreMojo2D() = "app->GraphicsDevice()->BeginRender();//"
-	
-	'Class DataBuffer Extends databuffer.DataBuffer
-		'Method ReadPointer()
-	'End
-
 #elseif TARGET = "android"
 	Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().Flush(); MonkeyGame.app.GraphicsDevice().BeginRender( (GL10) null );//"
 #end
@@ -44,13 +39,14 @@ Extern
 Public
 
 
-	
+
 Function SetRender(flags:Int=0)
 
 	TRender.render = New OpenglES11
 	TRender.render.GraphicsInit(flags)
 	
-End
+End	
+
 
 Class OpenglES11 Extends TRender
 	
@@ -76,12 +72,6 @@ Class OpenglES11 Extends TRender
 		
 	End
 	
-	''
-	'' -- This is a hack to get around the odd placement of LoadImageData (should be in databuffers.monkey)
-	''	
-	'Method LoadImageData_:DataBuffer( f:String,info:Int[] )
-		'Return LoadImageData(f,info)
-	'End
 	
 	
 	Method GetVersion:Float()
@@ -117,9 +107,8 @@ Class OpenglES11 Extends TRender
 		last_sprite = Null ''used to preserve last surface states
 		TRender.alpha_pass = 0
 		
-		'Print "....begin render...."
-		
 	End
+	
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
 		
@@ -130,7 +119,7 @@ Class OpenglES11 Extends TRender
 		Local name$=ent.EntityName()
 	
 		Local fog=False
-		If glIsEnabled(GL_FOG)=GL_TRUE Then fog=True ' if fog enabled, we'll enable it again at end of each surf loop in case of fx flag disabling it
+		If glIsEnabled(GL_FOG)=True Then fog=True ' if fog enabled, we'll enable it again at end of each surf loop in case of fx flag disabling it
 	
 		glDisable(GL_ALPHA_TEST)
 
@@ -207,7 +196,7 @@ Class OpenglES11 Extends TRender
 				' get anim_surf
 				anim_surf2 = mesh.anim_surf[surf.surf_id] ''assign anim surface
 				
-				If vbo
+				If vbo And anim_surf2
 				
 					' update vbo
 					If anim_surf2.reset_vbo<>False
@@ -459,7 +448,7 @@ Class OpenglES11 Extends TRender
 				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
 			
-			''disable any extra textures from last pass
+			''disable any extra textures from last pass ''-- what is this and why do i have this here?
 			If tex_count < last_tex_count 
 				For Local i:Int = tex_count To MAX_TEXTURES-1
 				
@@ -1051,13 +1040,18 @@ Class OpenglES11 Extends TRender
 		
 	End
 	
+
+	
 	Method BindTexture:TTexture(tex:TTexture,flags:Int)
 		''
 		'' --PIXMAP MUST BE POWER OF TWO
 		''
 		
 		TRender.render.ClearErrors()	
-
+		
+		''retrieve bind flags from stack
+		If tex.bind_flags <>-1 Then flags = tex.bind_flags
+		
 		' if mask flag is true, mask pixmap
 		If tex.flags&4
 			tex.pixmap.MaskPixmap(0,0,0)
@@ -1111,9 +1105,14 @@ Class OpenglES11 Extends TRender
 	
 	Method UpdateLight(cam:TCamera, light:TLight)
 		
+		If light.remove_light
+			DisableLight(light)
+			Return
+		Endif
+		
 		light_no=light_no+1
 		If light_no>light.no_lights Then light_no=1
-
+		
 		If light.Hidden()=True
 			glDisable(gl_light[light_no-1])
 			Return
@@ -1183,9 +1182,14 @@ Class OpenglES11 Extends TRender
 		
 	End
 	
+	
 	Method DisableLight(light:TLight)
 		
+		light.light_link.Remove()
+		
 		glDisable(gl_light[light.no_lights])
+		
+		light = Null	
 		
 	End
 	

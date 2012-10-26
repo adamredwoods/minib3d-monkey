@@ -5,75 +5,48 @@
 ''
 Import minib3d
 Import monkeyutility
+'Import minib3d.monkeybuffer
 
 
 
-
-Interface TPixmapManager
+Interface IPixmapManager
 
 	Method LoadPixmap:TPixmap(f$)
-	
 	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
-
-	Method PreLoadPixmap:Int(file$[])
 	
 End
 
-
-
-
+Interface IPreloadManager
+		
+	Method AllocatePreLoad:Void(size:Int)
+	Method PreLoadData:Void(f$, id:Int)
+	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, file:String)
+	Method SetPreloader:Void(preloader_class:TPixmapPreloader)
+	Method Update:Void()
+	
+End
+	
 
 Class TPixmap
 	
-	Global manager:TPixmapManager ''Use this to Load & Create pixmaps, this is set by render driver
+	Global manager:IPixmapManager ''Use this to Load & Create pixmaps, this is set by render driver
+	Global preloader:TPixmapPreloader 
 	
 	Field width:Int, height:Int
 	
-	Global loading:Bool = False, loaded:Bool = False
-	Global old_file:String[1]
-	Global cur_file:Int=0
-	Global pixmap_preload:TPixmap[]
 	
 	
+	'' PreLoadPixmap(file$[])
+	'' -- returns 1 for finished load from given array
+	'' -- GetNumberLoaded() contains number of files loaded
 	Function PreLoadPixmap:Int(file$[])
-		
-		If manager
-			Return manager.PreLoadPixmap(file)
-		Endif
-	
+		Return preloader.PreLoad(file)
 	End
 	
-	''load files synchronously
-	Function PreLoadPixmapSynch:Int(file$[])
-		
-		If loaded And file[0] = old_file[0]
-			Return 1
-		Elseif file[0] <> old_file[0]
-			loaded = False
-			cur_file = -1
-			loading = True
-			pixmap_preload = New TPixmap[file.Length()]
-		Endif
-		
-		If loading Then cur_file +=1
-		
-		''run many times for other targets
-		loading = True
-					
-		pixmap_preload[cur_file] = LoadPixmap(file[cur_file])
-		
-		old_file = file
-		
-		If cur_file = file.Length()-1
-			loaded = True
-			loading = False
-			Return 1
-		Endif
-		
-		Return 0
-		
+	Function GetNumberLoaded:Int()
+		Return preloader.GetNumberLoaded()
 	End
-	
+		
 	
 	Function LoadPixmap:TPixmap(f$)
 		Return manager.LoadPixmap(f)
@@ -81,8 +54,9 @@ Class TPixmap
 
 	
 	Function CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
-		Return manager.CreatePixmap(w, h, format)
+		Return manager.CreatePixmap(w,h,format)
 	End
+	
 	
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int) Abstract
 	''averages pixels
@@ -105,3 +79,109 @@ Class TPixmap
 
 	
 End
+
+
+
+
+
+Class TPixmapPreloader
+	
+	Field manager:IPreloadManager
+	
+	Field loading:Bool = False, loaded:Int = 0, total:Int =0
+	Field old_file:String[1]
+	Field cur_file:Int=0
+	'Field imagebuffer:IPixmapBuffer[]
+	
+	Method New(m:IPreloadManager)
+		manager = m
+		manager.SetPreloader(Self)
+	End
+
+	Method CheckAllLoaded()
+		
+		If loaded = total Then loading = False
+		
+	End
+	
+	
+	Method GetNumberLoaded:Int()
+		Return loaded
+	End
+	
+	
+	Method IncLoader:Void()
+		loaded += 1
+		CheckAllLoaded()
+	End
+
+	Method PreLoad:Int(file$[])
+		
+		If Not manager Then Error "**ERROR: no preload manager"
+		
+		''use for async events
+		manager.Update()
+		
+'Print "loading "+Int(loading)+" "+old_file[0]+"="+file[0]		
+		If file[0] <> old_file[0]
+		
+			loaded = 0
+			cur_file = 0
+			loading = True
+			total = file.Length()
+			manager.AllocatePreLoad(total) 'New IBuffer[total]
+			
+			old_file = file
+			
+		Elseif ((Not loading) And (file[0] = old_file[0]))
+			Return 1
+		Endif
+		
+		If cur_file >= total Then Return 0
+		If loading Then cur_file +=1	
+
+'Print "curfile "+cur_file		
+
+		'imagebuffer[cur_file] = New TImageBuffer(Self)
+		
+		''make sure the paths are correct
+		Local new_file$ = FixDataPath(file[cur_file-1])
+		'If Not new_file.StartsWith("monkey://") Then new_file = "monkey://data/"+new_file
+		
+		'(New AsyncDataLoader(new_file, imagebuffer[cur_file])).Start()
+		manager.PreLoadData(new_file, cur_file )
+
+		
+		Return 0
+	
+	End
+	
+	Method GetPixmapPreLoad:Void(p:TPixmap, file$)
+		
+		Local id:Int = GetID(file)
+		manager.SetPixmapFromID(p, id, file)
+	
+	End
+	
+	
+	Method GetID:Int(file$)
+		
+		If loaded = 0
+	
+			Return 0
+					
+		Else
+
+			For Local i:Int=0 To total-1
+				If file = old_file[i] Then Return i+1
+			Next
+			
+		Endif
+		
+		Return 0
+		
+	End
+
+	
+End
+

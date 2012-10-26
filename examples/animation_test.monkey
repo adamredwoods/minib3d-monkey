@@ -39,11 +39,13 @@ Class Game Extends App
 
 	Method Init()
 		
+		If init_gl Then Return
+		
 		If Not TPixmap.PreLoadPixmap(["Zombie.jpg","mojo_font.png"])	
 			Return
 		Endif
 		
-		If init_gl Then Return
+		
 		init_gl = True
 
 		

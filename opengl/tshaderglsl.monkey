@@ -92,7 +92,7 @@ Class ShaderUniforms
 		lightflag = glGetUniformLocation(shader_id, "lightflag")
 		fogflag = glGetUniformLocation(shader_id, "fogflag")
 		
-		''shadows
+		''shadows.... todo
 		
 		lightpMatrix = glGetUniformLocation(shader_id, "lightpMatrix")
 		lightvMatrix = glGetUniformLocation(shader_id, "lightvMatrix")
@@ -104,8 +104,10 @@ Class ShaderUniforms
 			tex_scale[i] = glGetUniformLocation(shader_id, "texScale["+i+"]")
 			tex_rotation[i] = glGetUniformLocation(shader_id, "texRotation["+i+"]")
 			tex_blend[i] = glGetUniformLocation(shader_id, "texBlend["+i+"]")
-			texfx_normal[i] = glGetUniformLocation(shader_id, "texfxNormal["+i+"]")
+			''texfx_normal[i] = glGetUniformLocation(shader_id, "texfxNormal["+i+"]")
 		Next
+		texfx_normal[0] = glGetUniformLocation(shader_id, "texfxNormal[0]")
+		texfx_normal[1] = glGetUniformLocation(shader_id, "texfxNormal[1]")
 		
 		If vertcoords <0
 			Dprint "**uniform assignment error: vertcoords does not exist"
@@ -122,6 +124,10 @@ End
 Class TShaderGLSL Extends TShader
 
 	Field u:ShaderUniforms
+	
+	''set these global according to the shader
+	Global MAX_LIGHTS = 0
+	Global MAX_TEXTURES =0
 	
 	''internal use
 	

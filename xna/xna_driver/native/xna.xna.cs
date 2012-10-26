@@ -62,7 +62,8 @@ public class XNAGraphicsDevice
 	
     public XNAGraphicsDevice()
     {
-        _device = gxtkApp.game.app.graphics.device;
+        //_device = gxtkApp.game.app.graphics.device;
+		_device = gxtkApp.game.app.GraphicsDevice().device;
         _effect = new BasicEffect(_device);
         _effect.VertexColorEnabled = false;
         _effect.PreferPerPixelLighting = false;
@@ -680,7 +681,7 @@ public class XNATextureCube : XNATextureBase
         _textureCube = tex;
     }
 
-    public void SetData(int face, DataBuffer data, int start, int count)
+    public void SetData(int face, BBDataBuffer data, int start, int count)
     {
         _textureCube.SetData<byte>((CubeMapFace)face, data._data, start, count);
     }
@@ -707,7 +708,7 @@ public class XNATexture : XNATextureBase
         _texture2d = (Texture2D)_texture;
     }
 	
-	public void SetData(int level, DataBuffer data, int start, int count)
+	public void SetData(int level, BBDataBuffer data, int start, int count)
     {
 		int w = _texture2d.Width;
 		int h = _texture2d.Height;
@@ -835,7 +836,7 @@ public class XNAMesh
 	
 
 	
-    public void SetVertices(DataBuffer data, int count, int flags)
+    public void SetVertices(BBDataBuffer data, int count, int flags)
     {
         _vCnt = count;
         //if (flags == 0) // Shawn Hargreaves said:  For dynamic geometry, you should use DrawUserPrimitives //or dynamicvertexbuffer
@@ -886,7 +887,7 @@ public class XNAMesh
         }
     }
 
-    public void SetIndices(DataBuffer data, int count, int flags)
+    public void SetIndices(BBDataBuffer data, int count, int flags)
     {
         // use short[] istead of DataBuffer in miniB3d, 
 		// then data is not needed to be copied

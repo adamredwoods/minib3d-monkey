@@ -9,16 +9,24 @@ Import monkeyutility
 '' - ReloadAllTextures:: only doing first frame for now until anim_frames get sorted out
 '' - textures kept in memory for android OnResume()
 
+'' -- since we are not guaranteed a context outside of OnRender() we use a texture bind stack to bind textures during RenderWorld()
+
+Class TextureStack Extends Stack<TTexture>
+	
+End
 
 Class TTexture
 
 	Global render:TTextureDriver '' reserved for future use for target extendability
+	
+	Global tex_bind_stack:TextureStack = New TextureStack ''texture bind stack, runs in OnRender()
 	
 	Global tex_list:List<TTexture> = New List<TTexture>
 	Field tex_link:list.Node<TTexture>
 
 	Field file$,flags:Int,blend:Int=2,coords:Int
 	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
+	Field bind_flags:Int = -1
 	
 	Field width:Int,height:Int ' returned by Name/Width/Height commands
 	
@@ -49,12 +57,16 @@ Class TTexture
 	
 	Method FreeTexture()
 		
-		TRender.render.DeleteTexture(gltex)
+		PushBindTexture(Self, -255)
+	
+	End
+	
+	Method FreeTexture_()
+		'TRender.render.DeleteTexture(gltex)
 		tex_link.Remove()
 		pixmap=Null
 		'cube_pixmap=New TPixmap[7]
 		gltex[0]=0
-	
 	End
 	
 	''CreateTexture()
@@ -62,8 +74,6 @@ Class TTexture
 	Function CreateTexture:TTexture(width,height,flags=9,frames=1,tex:TTexture=Null)
 	
 		'If flags&128 Then Return CreateCubeMapTexture(width,height,flags,tex)
-		
-		TRender.render.ClearErrors()
 		
 		If tex=Null
 			tex=New TTexture
@@ -88,7 +98,7 @@ Class TTexture
 		tex.width=pixmap.width
 		tex.height=pixmap.height
 		
-		TRender.render.BindTexture(tex,flags)
+		PushBindTexture(tex,flags)
 		
 		Return tex
 
@@ -120,7 +130,7 @@ Class TTexture
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 		
-		TRender.render.BindTexture(tex,flags)
+		PushBindTexture(tex,flags)
 		
 		Return tex
 	
@@ -212,13 +222,22 @@ Class TTexture
 			tex.v_pos = tex.frame_starty*tex.frame_vstep
 		Endif
 	
-		TRender.render.BindTexture(tex,flags)
+		PushBindTexture(tex, flags)
 		
 		Return tex
 	
 	End
 	
- 
+	
+	
+	''due to openGL context begin available only guaranteed in OnRender(), use this to queue texture binds
+	Function PushBindTexture(tex:TTexture, flags:Int)
+		
+		tex.bind_flags =flags
+		tex_bind_stack.Push(tex)
+		
+	End
+	
 
 #rem
 	''no cube maps in gl es 1.x

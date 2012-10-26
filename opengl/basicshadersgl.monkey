@@ -78,13 +78,16 @@ End
 
 Class FullShader Extends TShaderGLSL
 	
-	Const VERTP:String = "/*generic opengl 1.1 shader*/ ~n"+
-	"#ifdef GL_ES ~n#define LOWP lowp ~n#define MEDP mediump~n  precision mediump float; ~n#else~n #define LOWP~n #define MEDP~n #endif ~n"+
+	''notes:
+	''LOWP, MEDP are causing matrix problems on android
+	
+	Const VERTP:String = "/*generic opengl 2.0 shader*/ ~n"+
+	"#ifdef GL_ES ~n#define LOWP ~n#define MEDP ~n  precision mediump float; ~n#else~n #define LOWP~n #define MEDP~n #endif ~n"+
 	"attribute vec2 aTexcoords0, aTexcoords1;attribute vec3 aVertcoords;attribute vec3 aNormals;attribute LOWP vec4 aColors;uniform mat4 pMatrix, vMatrix, mMatrix;"+
 	"/*light*/ uniform LOWP float lightType[2];uniform mat4 lightMatrix[2];uniform MEDP vec3 lightSpot[2]; /*x=outercutoff,y=innercutoff,z=spot exponent*/ "+
 	"/*color*/ uniform LOWP vec4 basecolor; uniform LOWP float colorflag, lightflag; "+
-	"/*texture*/ uniform MEDP vec2 texPosition[5],  texScale[5]; uniform MEDP vec2 texRotation[5]; uniform MEDP float texflag; uniform int texfxNormal[5];"+
-	"uniform mat4 lightpMatrix, lightvMatrix; uniform MEDP vec3 scaleInv; uniform int fogflag; uniform vec2 fogRange; "+
+	"/*texture*/ uniform MEDP vec2 texPosition[5],  texScale[5]; uniform MEDP vec2 texRotation[5]; uniform MEDP float texflag; uniform highp int texfxNormal[2];"+
+	"uniform MEDP vec3 scaleInv; uniform int fogflag; uniform vec2 fogRange; "+
 	"varying vec2 texcoord[4]; varying vec4 normal; varying LOWP vec4 vertcolor;"+
 	"varying vec4 lightVec, halfVec; varying float fogBlend; varying vec3 nmLight;"+
 	"const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const float LOG2 = 1.442695;vec4 lightPos[5]; ~n"+
@@ -123,10 +126,10 @@ Class FullShader Extends TShaderGLSL
 		
 		
 		
-	Const FRAGP:String = "#ifdef GL_ES ~n#define LOWP lowp ~n#define MEDP mediump ~n precision mediump float; ~n#else ~n#define LOWP ~n#define MEDP ~n#endif ~n"+
+	Const FRAGP:String = "#ifdef GL_ES ~n#define LOWP ~n#define MEDP ~n precision mediump float; ~n#else ~n#define LOWP ~n#define MEDP ~n#endif ~n"+
 	"varying vec2 texcoord[4]; varying vec4 normal;varying LOWP vec4 vertcolor;varying vec4 lightVec, halfVec; /*using z component for light att  ;spotlight coefficient packed into halfvec.w*/"+
 	"varying float fogBlend;varying vec3 nmLight;uniform mat4 mMatrix;"+
-	"/*texture*/ uniform MEDP float texflag; uniform sampler2D uTexture[5];uniform LOWP vec2 texBlend[5];uniform int texfxNormal[5];"+
+	"/*texture*/ uniform MEDP float texflag; uniform sampler2D uTexture[5];uniform LOWP vec2 texBlend[5];uniform highp int texfxNormal[2];"+
 	"/*light*/uniform LOWP float lightflag;uniform LOWP vec4 lightColor[2];uniform vec4 lightAtt[2];uniform mat4 lightMatrix[2];uniform LOWP float lightType[2];uniform MEDP vec3 lightSpot[2];"+
 	"/*material*/"+
 	"uniform LOWP vec4 ambientcolor;uniform float shininess;uniform LOWP float flags;uniform vec4 fogColor;"+
@@ -169,12 +172,15 @@ Class FullShader Extends TShaderGLSL
 	"gl_FragColor = vec4(  mix( ((finalcolor.xyz * light.xyz +specular.xyz) + (finalcolor.xyz * ambient.xyz) ), fogColor.xyz, fogBlend), finalcolor.w );"+	
 	"}"
 	'Field uniform:Int[5]
-	
+
 	Global init_id:Int=0		
 	Global global_uniforms:ShaderUniforms
 	
 	Method New()
-			
+	
+		MAX_TEXTURES = 4
+		MAX_LIGHTS = 1
+		
 		name ="FullShader"
 		
 		If( init_id=0 And shader_id=0 And CompileShader(VERTP,GL_VERTEX_SHADER) And CompileShader(FRAGP,GL_FRAGMENT_SHADER) )
@@ -222,7 +228,10 @@ Class FastBrightShader Extends TShaderGLSL
 	Global global_uniforms:ShaderUniforms
 	
 	Method New()
-			
+		
+		MAX_TEXTURES = 2
+		MAX_LIGHTS = 0
+		
 		name ="FastBrightShader"
 		
 		If( init_id=0 And shader_id=0 And CompileShader(VERTP,GL_VERTEX_SHADER) And CompileShader(FRAGP,GL_FRAGMENT_SHADER) )
@@ -319,7 +328,8 @@ Class GlowShader Extends TShaderGLSL Implements IShaderEntity
 		fbo2.EndFBO()
 		Local dist2:Float
 		Local dist# = Sqrt(cam.EntityDistanceSquared(ent)) '*2.0 / (cam.range_far - cam.range_near)
-
+		
+		'' dist = the hypotenuse. we need the distance of the other side of the triangle, or the distance to the plane.
 
 		'fbo.Clear(1)
 		'fbo.BeginFBO()

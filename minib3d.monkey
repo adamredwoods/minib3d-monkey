@@ -24,6 +24,8 @@ Please see readme.txt for more details
 Import mojo
 
 #MINIB3D_DRIVER=""
+#MINIB3D_DEBUG_MODEL=0
+
 
 ''to choose opengles20, must specify it
 #If MINIB3D_DRIVER=""

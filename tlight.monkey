@@ -25,6 +25,8 @@ Class TLight Extends TEntity
 	
 	Global ambient_red:Float=0.1,ambient_green:Float=0.1,ambient_blue:Float=0.1
 	
+	Field remove_light:Bool = False
+	
 	Method New()
 
 		
@@ -129,11 +131,7 @@ Class TLight Extends TEntity
 	
 		If no_lights>0 Then no_lights=no_lights-1
 		
-		TRender.render.DisableLight(Self)
-		
-		light_link.Remove()
-			
-		Super.FreeEntity()
+		remove_light = true
 		
 	End 
 	

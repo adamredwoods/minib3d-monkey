@@ -1,13 +1,15 @@
 Import minib3d
-Import opengl.databuffer
 
 
-
-''-- also create this function
+''
+''-- also create this function if extending trender
+''
 'Function SetRender(flags:Int=0)
 '	TRender.render = New OpenglES11
 '	TRender.render.Graphicsinit(flags)
 'End
+
+
 
 Class TRender
 
@@ -202,7 +204,11 @@ Print ent.classname
 	
 	
 	Function  RenderWorld:Void()
-	
+		
+		''process texture binds
+		BindTextureStack()
+		
+		
 		If Not TCamera.cam_list Or render = Null Then Return
 		
 		For Local cam:TCamera=Eachin TCamera.cam_list
@@ -237,9 +243,9 @@ Print ent.classname
 	
 	Method RenderCamera:Void(cam:TCamera, skip:Int=0)
 		
-		
 		Reset() ''reset render pass
 		
+
 		'' use skip to render without updating camera
 		'' would be useful for FSAA, FBOs, or a render layer system
 		If (Not skip)
@@ -277,7 +283,7 @@ Print ent.classname
 				If mesh.Hidden()=True Or mesh.brush.alpha=0.0 Then Continue
 				
 				''cam layer mode
-				If (mesh.is_cam_layer Or cam.is_cam_layer) And mesh.cam_layer <> cam Then Continue
+				If (mesh.is_cam_layer And mesh.cam_layer <> cam) Or (cam.is_cam_layer And mesh.cam_layer <> cam)  Then Continue
 				
 				' get new bounds
 				mesh.GetBounds()
@@ -285,7 +291,8 @@ Print ent.classname
 				' Perform frustum cull
 				
 				Local inview:Int =cam.EntityInFrustum(mesh)
-	
+'Print "// mesh "+mesh.classname+" "+inview	
+'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
 				If inview
 				
 					If mesh.auto_fade=True Then mesh.AutoFade(cam)
@@ -320,7 +327,7 @@ Print ent.classname
 		' Draw everything in alpha render list
 		
 		render_alpha_list.Sort() ''sorting alpha_order
-		TRender.alpha_pass = 1 ''skip non-alpha surface pass
+		'TRender.alpha_pass = 1 ''skip non-alpha surface pass ''ACTUALLY this may help hardware z-ordering
 		
 		For mesh = Eachin render_alpha_list
 
@@ -341,7 +348,46 @@ Print ent.classname
 	
 	Method ReloadSurfaces:Int()
 		
-		Return 0
+		Local mesh:TMesh
+		
+		For Local ent:TEntity = Eachin TMesh.entity_list
+		
+			mesh = TMesh(ent)
+			If mesh
+			
+				For Local surf:TSurface=Eachin mesh.surf_list
+					
+					surf.vbo_id[0]=0
+					surf.reset_vbo = -1
+					UpdateVBO(surf)
+				
+				Next
+				
+			Endif
+		
+		Next
+		
+		Return 1
+	End
+	
+	''
+	''due to openGL context begin available only guaranteed in OnRender(), use this to queue texture binds
+	''
+	Function BindTextureStack()
+	
+		For Local tex:TTexture = Eachin TTexture.tex_bind_stack
+			If tex.bind_flags = -255
+				''remove texture
+				TRender.render.DeleteTexture(tex.gltex)	
+				tex.FreeTexture_()
+			Else
+				TRender.render.BindTexture(tex,tex.bind_flags)
+			Endif
+			
+			tex.bind_flags = -1
+		Next
+		TTexture.tex_bind_stack.Clear()
+		
 	End
 	
 End
@@ -355,7 +401,7 @@ Class RenderAlphaList Extends List<TMesh>
 	
 	''draw furthest (highest alpha_order) first, so sort from great to least
 	Method Compare( left:TMesh,right:TMesh )
-		If left.alpha_order > right.alpha_order Return -1 ''double check, i flipped these
+		If left.alpha_order > right.alpha_order Return -1 
 		Return left.alpha_order < right.alpha_order
 	End
 	

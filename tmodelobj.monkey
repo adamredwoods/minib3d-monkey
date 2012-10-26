@@ -6,7 +6,7 @@ Import minib3d
 '' - if vertexcache has different tex or norm index, then create a new vertex (ie. vertex with multiple tex or normal coords)
 Class TModelObj
 
-#If CONFIG="debug"
+#If MINIB3D_DEBUG_MODEL=1
 	Const DEBUG:Int =1
 #else
 	Const DEBUG:Int =0
@@ -57,7 +57,7 @@ Class TModelObj
 		
 		Local StreamLine:Int=0
 		If stream.length =0 
-			Print "**TModelObj: Error file not found "+url
+			Print "**File not found "+url
 			Return Null 
 		Endif
 		

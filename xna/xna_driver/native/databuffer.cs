@@ -1,7 +1,7 @@
 
-public class DataBuffer
+public class DataBufferHelper
 {
-
+	/*
     public byte[] _data;
     int _length;
 
@@ -75,22 +75,24 @@ public class DataBuffer
     {
         return new DataBuffer(length);
     }
-	
-	public static DataBuffer LoadImageData(string path, int[] info)
+	*/
+	public static void LoadImageData(BBDataBuffer buffer, string path, int[] info)
 	{
 		var texture = MonkeyData.LoadTexture2D(path, gxtkApp.game.Content);
-		if (texture==null) {info[0]=0; return new DataBuffer(0);}
+		if (texture==null) {info[0]=0; return; } //new BBDataBuffer(0);}
 		
         int size = texture.Width * texture.Height * 4;
 
 		info[0] = texture.Width;
 		info[1] = texture.Height;
 		
-		var buffer = new DataBuffer(size);
+		//** assume new buffer since it a cast instance
+		//buffer = new BBDataBuffer();
+		buffer._New(size);
         texture.GetData<byte>(buffer._data, 0, size);
 
-		
-        return buffer;
+		//buffer = buffer2;
+        //return buffer;
 	}
 }
 

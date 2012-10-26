@@ -1,4 +1,4 @@
-
+/*
 var _preLoadTextures = new PreLoadTextures();
 
 
@@ -97,13 +97,52 @@ PreLoadTextures.prototype.LoadImageData = function(file, info) {
 	
 	return image;
 };
+*/
+
+/*
+function PreLoadImage() {
+	this.id = -1;
+	this.image = document.createElement("img");
+}*/
+
+
+function LoadImageData(file, idx) {
+	
+	//load asynchronously
+	//var preimage = new PreLoadImage();
+	var image = document.createElement("img");
+	var base = this;
+	//isLoaded[0] =0;
+	
+	image.onload = function() {
+		image.id = idx;
+		//print("idload "+idx);
+		
+	};
+
+//print (idx+" "+file);		
+	//image.filename = file;
+	image.id =-1;
+	image.src = file;
+
+	
+	return image;
+};
+
+
+function CheckIsLoaded(image) {
+	if (image.id>-1) return true;
+	return false;
+}
 
 function CreateImageData(w, h) {
-	var image = document.createElement("img");
+	//var preimage = new PreLoadImage;
+	image.image = document.createElement("img");
 	//white 1x1 image gif
 	image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAP7//wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
 
-	return HTMLResizePixmap(image,w,h,false);
+	image= HTMLResizePixmap(image,w,h,false);
+	return image;
 }
 
 function HTMLResizePixmap(image,w,h, smooth) {
@@ -123,7 +162,8 @@ function HTMLResizePixmap(image,w,h, smooth) {
 	ctx.drawImage(image, 0, 0, w, h);
 	
 	//return ctx.getImageData(0,0,w,h);
-	return canvas;
+	image = canvas;
+	return image;
 
 }
 
@@ -145,5 +185,16 @@ function HTMLMaskPixmap(image, r,g,b) {
 	}
 	
 	ctx.putImageData(imageData,0,0);
+	//image = canvas;
 	return canvas;
+}
+
+
+
+function GetImageInfo( image ) {
+
+	//print("image w/h "+image.width+" "+image.height);
+	
+	return [image.width, image.height];
+	
 }

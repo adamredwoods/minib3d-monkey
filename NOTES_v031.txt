@@ -1,0 +1,5 @@
+
+- updated for monkey v66
+- re-arranged preloading/buffer loading (future-proofing)
+- uses #MINIB3D_DEBUG_MODEL = "true" to debug models instead of hardcoding
+

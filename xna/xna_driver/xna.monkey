@@ -3,7 +3,8 @@
 ' Author: Sascha Schmidt
 
 Import mojo
-Import minib3d.xna.xna_driver.databuffer
+'Import minib3d.xna.xna_driver.databuffer
+Import brl.databuffer
 
 #if TARGET="xna"
 
@@ -618,6 +619,8 @@ Class XNAMeshIndexBuffer
 End 
 #end
 
+Extern	
+	Function EndMojoRender:Void() = "gxtkApp.game.app.GraphicsDevice().EndRender"
 
 
 #End

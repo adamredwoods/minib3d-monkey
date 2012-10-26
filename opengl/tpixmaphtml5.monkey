@@ -1,11 +1,10 @@
-
 ''
 '' TPixmap
 '' for monkey
 ''
 Import minib3d
 Import minib3d.monkeyutility
-
+Import minib3d.monkeybuffer
 
 
 #If TARGET="html5"
@@ -18,31 +17,44 @@ Import minib3d.monkeyutility
 Import "tpixmap.html5.js"
 
 Extern
-
-	Function PreLoadTextures:Int(file$[]) = "_preLoadTextures.Loader"
-		
-	Function LoadImageData:Int(file$, info:Int[]) = "_preLoadTextures.LoadImageData"
 	
-	Function CreateImageData:Int(w:Int, h:Int)
+	Class HTMLImage
+	End
+	
+	'Function PreLoadTextures:Int(file$[]) = "_preLoadTextures.Loader"
+		
+	Function LoadImageDataHTML:HTMLImage(file$, id:Int) = "LoadImageData"
+	
+	Function CreateImageData:HTMLImage(w:Int, h:Int)
 	
 	Function GetImagePixel:Int(x:Int, y:Int)
 	
-	Function HTMLResizePixmap:Int(image:Int, w:Int, h:Int, smooth:Bool)
+	Function HTMLResizePixmap:HTMLImage(image:HTMLImage, w:Int, h:Int, smooth:Bool)
 	
-	Function HTMLMaskPixmap:Int(image:Int, r:Int, g:Int, b:Int)
+	Function HTMLMaskPixmap:HTMLImage(image:HTMLImage, r:Int, g:Int, b:Int)
 	
-	''special hack
-	Function glTexImage2D3:Void( target, level, internalformat, format, type, pixels:Int )="gl.texImage2D"
-	Function glTexSubImage2D3:Void( target, level, xoffset, yoffset, format, type, pixels:Int )="gl.texSubImage2D"
+	Function GetHTMLImageInfo:Int[]( p:HTMLImage ) = "GetImageInfo"
+	
+	Function CheckIsLoaded:Bool( p:HTMLImage ) = "CheckIsLoaded"
+	'Function ClearHTMLPreLoad:Void() = "Clear"
+	
+	''special
+	Function glTexImage2D3:Void( target, level, internalformat, format, type, pixels:HTMLImage )="gl.texImage2D"
+	Function glTexSubImage2D3:Void( target, level, xoffset, yoffset, format, type, pixels:HTMLImage )="gl.texSubImage2D"
+	
+	'' this does not work (arraybuffer->image.src) in html5 (yet)
+	'Function ConvertDataToPixmapHTML:HTMLImage( from_:DataBuffer, path$ ) = "DataToPixmap"
+	
+	
 	
 Public
 
 
-Class TPixmapGL Extends TPixmap Implements TPixmapManager
+Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	Const DEBUG:Int=TRender.DEBUG
 	
-	Field pixels:Int ''uses monkey int to hold javascript object	
+	Field pixels:HTMLImage ''used to hold javascript object	
 	Field format:Int, pitch:Int
 	
 	Field tex_id:Int[1]
@@ -51,58 +63,40 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 	Function Init()
 	
 		If Not manager Then manager = New TPixmapGL
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
 	
 	End
 	
 	
-	'' asynchronous! cache files
+	'' asynchronous only!
 	Method PreLoadPixmap:Int(file$[])
 
-		If loaded And file[0] = old_file[0]
-			Return 1
-		Elseif file[0] <> old_file[0]
-			loaded = False
-		Endif
-		
-		'' html5
-			
-		loading = Bool(PreLoadTextures(file ))
-		
-		If loading = False
-			loaded = True
-			Return 1
-		Endif
-		
-		old_file = file
-		
-		Return 0
+		Return preloader.PreLoadBuffer(file)
 		
 	End
 	
 	
 	Method LoadPixmap:TPixmap(f$)
 	
-		Local p:TPixmapGL = New TPixmapGL
+		Local p:TPixmapGL = New TPixmapGL 
 		
 		Local info:Int[3]
-		p.pixels = LoadImageData( f,info ) '' will use cached files
-		p.width = info[0]
-		p.height = info[1]
+		
+		preloader.GetPixmapPreLoad( p, f )
+
 		p.format = PF_RGBA8888
 		
-		'If info[1] Then p.pitch = p.pixels.Size()/4 / info[1]
+		If p.width Then p.pitch = p.width
 		
-		If Not info[0] And Not info[1] Then Dprint "**Image Not Found:"+f
-		
-		If DEBUG Then Dprint "..file load "+f
-		
+		If (Not p.width And Not p.height) Or (Not p.pixels) Then Dprint "Image Not Found: "+f
+
 		Return p
 		
 	End
 	
 	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
 		
-		Local p:TPixmapGL = New TPixmapGL
+		Local p:TPixmapGL = New TPixmapGL 
 		
 		p.pixels= CreateImageData(w,h)
 		p.width = w
@@ -139,26 +133,7 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 	
 	Method GetPixel:Int(x:Int,y:Int,rgba:Int=0)
 
-Return 0
-
-		''will repeat edge pixels
-		
-		If x<0
-			x=0
-		Elseif x>width-1
-			x=width-1
-		Endif
-		If y<0
-			y=0
-		Elseif y>height-1
-			y=height-1
-		Endif
-		
-		If rgba<0
-			'Return pixels.PeekInt( (x Shl 2)+y*(width Shl 2)) '(x*4+y*width*4)
-		Endif
-		
-		'Return pixels.PeekByte((x Shl 2)+y*(width Shl 2)+rgba) '(x*4+y*width*4+rgba)
+		Return 0
 
 	End
 	
@@ -195,5 +170,81 @@ Return
 
 	
 End
+
+
+Class PreloadManager Implements IPreloadManager
+	
+	Field data:HTMLImage[]
+	Field w:Int[], h:Int[]
+	Field total:Int
+	Field preloader:TPixmapPreloader
+	
+	Method AllocatePreLoad:Void(size:Int)
+		data = New HTMLImage[size]
+		w = New Int[size]
+		h = New Int[size]
+		total = size
+	End
+	
+	Method PreLoadData:Void(f$, id:Int)
+		''we can do this with buffers, when available
+		'' then also expand this class as the Buffer Callback
+		
+		If id<1 Then Return
+		
+		f=f.Replace("monkey://","")
+		data[id-1] = LoadImageDataHTML(f, id-1)
+		
+		
+	End
+	
+	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
+		
+		Local p:TPixmapGL = TPixmapGL(pixmap)
+		If p
+			
+			If id>0
+				p.pixels = data[id-1]
+				
+				Local info:Int[] = GetHTMLImageInfo(p.pixels)
+				p.width = info[0]
+				p.height = info[1]
+			
+				''clear buffer if need be here
+			
+			
+			''NOT ALLOWED in HTML5, MUST PRELOAD	
+			'Else
+				'Local info:Int[2]
+				'p.pixels = LoadImageData(f, info)
+				'p.width = info[0]
+				'p.height = info[1]
+			Endif
+			
+		Endif
+		
+	End
+	
+	Method SetPreloader:Void(m:TPixmapPreloader)
+	
+		preloader = m
+		
+	End
+
+	Method Update:Void()
+		''update sync events here
+		For Local i:Int=0 To total-1
+			'If data[i] Then Print "i "+i+" :"+Int(CheckIsLoaded(data[i]))
+			If data[i] And (CheckIsLoaded(data[i]) )
+				''callback
+				preloader.IncLoader()
+				
+			Endif
+		Next	
+	End
+	
+End
+
+
 
 #Endif

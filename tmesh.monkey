@@ -1054,7 +1054,7 @@ Class TMesh Extends TEntity
 				
 				Local s1v:Int = surf1.CountVertices()		
 				For Local v:Int=0 To s1v-1
-	
+
 					Local vx#=surf1.VertexX(v)
 					Local vy#=surf1.VertexY(v)
 					Local vz#=surf1.VertexZ(v)

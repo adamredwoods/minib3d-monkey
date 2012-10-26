@@ -248,7 +248,7 @@ Class TAnimation
 	
 		''each key, interpolate all vert_anims
 		
-		Local vx:Float, vy:Float ,vz:Float
+		Local vx:Float, vy:Float ,vz:Float, has_animation:Bool=False
 		
 		Local mesh:TMesh = TMesh(ent)
 		If Not ent Then Return
@@ -262,7 +262,9 @@ Class TAnimation
 		For Local surf:TSurface=Eachin mesh.surf_list
 
 			anim_surf = mesh.anim_surf[surf.surf_id]		
+			If Not anim_surf Then Continue
 			
+			has_animation = True
 			anim_surf.vbo_dyn = True
 			
 			'Local vanim:Int=0, pack:Int=0, pack_id:Int=0, get_next_pack:Int=1
@@ -293,7 +295,7 @@ Class TAnimation
 			
 		Next
 		
-		mesh.anim_render=True
+		If has_animation Then mesh.anim_render=True
 		
 	End
 	
@@ -301,7 +303,8 @@ Class TAnimation
 	
 	Function VertexDeform:Void(ent:TMesh)
 
-		Local ovx:Float,ovy:Float,ovz:Float ' original vertex positions
+		'Local ovx:Float,ovy:Float,ovz:Float ' original vertex positions
+		Local ov:Vector = New Vector ' original vertex positions
 		Local x:Float=0,y:Float=0,z:Float=0
 
 		Local bone:TBone
@@ -313,7 +316,7 @@ Class TAnimation
 		For Local surf:TSurface=Eachin ent.surf_list
 
 			Local anim_surf:TSurface = ent.anim_surf[surf.surf_id]
-
+			If Not anim_surf Then Continue
 		
 			' mesh shape will be changed, update reset_vbo flag (1=vertices move)
 			anim_surf.reset_vbo = anim_surf.reset_vbo|1
@@ -340,14 +343,16 @@ Class TAnimation
 						' get original vertex position					
 						
 						'Local j:Int = vid3*4
-						ovx=surf.vert_data.VertexX(vid) 'surf.vert_coords.buf.PeekFloat(j+0) 'VertexX(vid)
-						ovy=surf.vert_data.VertexY(vid) 'surf.vert_coords.buf.PeekFloat(j+4) 'VertexY(vid)
-						ovz=surf.vert_data.VertexZ(vid) 'surf.vert_coords.buf.PeekFloat(j+8) 'VertexZ(vid)
-						
+						'ovx=surf.vert_data.VertexX(vid) 'surf.vert_coords.buf.PeekFloat(j+0) 'VertexX(vid)
+						'ovy=surf.vert_data.VertexY(vid) 'surf.vert_coords.buf.PeekFloat(j+4) 'VertexY(vid)
+						'ovz=surf.vert_data.VertexZ(vid) 'surf.vert_coords.buf.PeekFloat(j+8) 'VertexZ(vid)
+
+						surf.vert_data.GetVertCoords(ov, vid)
+
 						' transform vertex position with transform mat
-						x= ( bone.tform_mat.grid[0][0]*ovx + bone.tform_mat.grid[1][0]*ovy + bone.tform_mat.grid[2][0]*ovz + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight)*ovx
-						y= ( bone.tform_mat.grid[0][1]*ovx + bone.tform_mat.grid[1][1]*ovy + bone.tform_mat.grid[2][1]*ovz + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight)*ovy
-						z= ( bone.tform_mat.grid[0][2]*ovx + bone.tform_mat.grid[1][2]*ovy + bone.tform_mat.grid[2][2]*ovz + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight)*ovz
+						x= ( bone.tform_mat.grid[0][0]*ov.x + bone.tform_mat.grid[1][0]*ov.y + bone.tform_mat.grid[2][0]*ov.z + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight)*ovx
+						y= ( bone.tform_mat.grid[0][1]*ov.x + bone.tform_mat.grid[1][1]*ov.y + bone.tform_mat.grid[2][1]*ov.z + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight)*ovy
+						z= ( bone.tform_mat.grid[0][2]*ov.x + bone.tform_mat.grid[1][2]*ov.y + bone.tform_mat.grid[2][2]*ov.z + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight)*ovz
 						
 					Endif
 						
@@ -360,9 +365,9 @@ Class TAnimation
 						tweight += weight
 						
 						' transform vertex position with transform mat
-						x+= ( bone.tform_mat.grid[0][0]*ovx + bone.tform_mat.grid[1][0]*ovy + bone.tform_mat.grid[2][0]*ovz + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight2-weight)*ovx
-						y+= ( bone.tform_mat.grid[0][1]*ovx + bone.tform_mat.grid[1][1]*ovy + bone.tform_mat.grid[2][1]*ovz + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight2-weight)*ovy
-						z+= ( bone.tform_mat.grid[0][2]*ovx + bone.tform_mat.grid[1][2]*ovy + bone.tform_mat.grid[2][2]*ovz + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight2-weight)*ovz
+						x+= ( bone.tform_mat.grid[0][0]*ov.x + bone.tform_mat.grid[1][0]*ov.y + bone.tform_mat.grid[2][0]*ov.z + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight2-weight)*ovx
+						y+= ( bone.tform_mat.grid[0][1]*ov.x + bone.tform_mat.grid[1][1]*ov.y + bone.tform_mat.grid[2][1]*ov.z + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight2-weight)*ovy
+						z+= ( bone.tform_mat.grid[0][2]*ov.x + bone.tform_mat.grid[1][2]*ov.y + bone.tform_mat.grid[2][2]*ov.z + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight2-weight)*ovz
 						
 						' BONE 3
 						
@@ -373,9 +378,9 @@ Class TAnimation
 							tweight +=weight
 
 							' transform vertex position with transform mat
-							x+= ( bone.tform_mat.grid[0][0]*ovx + bone.tform_mat.grid[1][0]*ovy + bone.tform_mat.grid[2][0]*ovz + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight3-weight2-weight)*ovx
-							y+= ( bone.tform_mat.grid[0][1]*ovx + bone.tform_mat.grid[1][1]*ovy + bone.tform_mat.grid[2][1]*ovz + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight3-weight2-weight)*ovy
-							z+= ( bone.tform_mat.grid[0][2]*ovx + bone.tform_mat.grid[1][2]*ovy + bone.tform_mat.grid[2][2]*ovz + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight3-weight2-weight)*ovz
+							x+= ( bone.tform_mat.grid[0][0]*ov.x + bone.tform_mat.grid[1][0]*ov.y + bone.tform_mat.grid[2][0]*ov.z + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight3-weight2-weight)*ovx
+							y+= ( bone.tform_mat.grid[0][1]*ov.x + bone.tform_mat.grid[1][1]*ov.y + bone.tform_mat.grid[2][1]*ov.z + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight3-weight2-weight)*ovy
+							z+= ( bone.tform_mat.grid[0][2]*ov.x + bone.tform_mat.grid[1][2]*ov.y + bone.tform_mat.grid[2][2]*ov.z + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight3-weight2-weight)*ovz
 										
 							' BONE 4
 							
@@ -386,9 +391,9 @@ Class TAnimation
 								tweight +=weight
 								
 								' transform vertex position with transform mat
-								x+= ( bone.tform_mat.grid[0][0]*ovx + bone.tform_mat.grid[1][0]*ovy + bone.tform_mat.grid[2][0]*ovz + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight4-weight3-weight2-weight)*ovx
-								y+= ( bone.tform_mat.grid[0][1]*ovx + bone.tform_mat.grid[1][1]*ovy + bone.tform_mat.grid[2][1]*ovz + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight4-weight3-weight2-weight)*ovy
-								z+= ( bone.tform_mat.grid[0][2]*ovx + bone.tform_mat.grid[1][2]*ovy + bone.tform_mat.grid[2][2]*ovz + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight4-weight3-weight2-weight)*ovz
+								x+= ( bone.tform_mat.grid[0][0]*ov.x + bone.tform_mat.grid[1][0]*ov.y + bone.tform_mat.grid[2][0]*ov.z + bone.tform_mat.grid[3][0] ) * weight '+ (1.0-weight4-weight3-weight2-weight)*ovx
+								y+= ( bone.tform_mat.grid[0][1]*ov.x + bone.tform_mat.grid[1][1]*ov.y + bone.tform_mat.grid[2][1]*ov.z + bone.tform_mat.grid[3][1] ) * weight '+ (1.0-weight4-weight3-weight2-weight)*ovy
+								z+= ( bone.tform_mat.grid[0][2]*ov.x + bone.tform_mat.grid[1][2]*ov.y + bone.tform_mat.grid[2][2]*ov.z + bone.tform_mat.grid[3][2] ) * weight '+ (1.0-weight4-weight3-weight2-weight)*ovz
 					
 							Endif
 					
@@ -434,6 +439,9 @@ Class TAnimation
 		For Local surf:TSurface=Eachin mesh.surf_list
 			
 			anim_surf = mesh.anim_surf[surf.surf_id]
+			
+			If Not anim_surf Then Continue
+			
 				
 			For Local vid=0 Until anim_surf.no_verts
 
@@ -499,6 +507,7 @@ Class TAnimation
 		For Local surf:TSurface=Eachin mesh.surf_list
 			
 			anim_surf = mesh.anim_surf[surf.surf_id]
+			If Not anim_surf Then Continue
 			
 			For Local vid:Int =0 Until anim_surf.no_verts
 			
@@ -542,6 +551,8 @@ Class TAnimation
 			'surf.vert_anim = surf.vert_anim.Resize(maxkeys+1)
 			
 			Local anim_surf:TSurface = mesh.anim_surf[surf.surf_id]
+			If Not anim_surf Then Continue
+			
 			anim_surf.vert_anim = New TVertexAnim[maxkeys+1]
 		Next
 
@@ -570,6 +581,7 @@ Class TAnimation
 			
 			Local vx:Float, vy:Float, vz:Float
 			Local sid:Int
+			Local ov:Vector = New Vector
 						
 			
 			For surf = Eachin mesh.surf_list
@@ -577,6 +589,8 @@ Class TAnimation
 				Local pack:Int=0, pack_id:Int=0
 				Local no_anim_verts:Int=0
 				Local org_surf:TSurface = mesh.anim_surf[surf.surf_id]
+				
+				If Not org_surf Then Continue
 				
 				org_surf.vert_anim[i] = New TVertexAnim ''new set of anim keys per surface			
 				org_surf.vert_anim[i].vert_buffer = FloatBuffer.Create(surf.no_verts*3)
@@ -590,7 +604,8 @@ Class TAnimation
 					'surf.vert_anim[i].vert_buffer.Poke(j3+0, mesh.anim_surf[sid].vert_coords.Peek(j3+0))
 					'surf.vert_anim[i].vert_buffer.Poke(j3+1, mesh.anim_surf[sid].vert_coords.Peek(j3+1))
 					'surf.vert_anim[i].vert_buffer.Poke(j3+2, mesh.anim_surf[sid].vert_coords.Peek(j3+2))
-					org_surf.vert_anim[i].vert_buffer.PokeVertCoords(j,org_surf.vert_data.VertexX(j), org_surf.vert_data.VertexY(j), org_surf.vert_data.VertexZ(j))
+					org_surf.vert_data.GetVertCoords(ov, j)
+					org_surf.vert_anim[i].vert_buffer.PokeVertCoords(j,ov.x, ov.y, ov.z)
 					'surf.vert_anim[i].vert_buffer[j3+0]= mesh.anim_surf[sid].vert_data.VertexX(j)
 					'surf.vert_anim[i].vert_buffer[j3+1]= mesh.anim_surf[sid].vert_data.VertexY(j)
 					'surf.vert_anim[i].vert_buffer[j3+2]= mesh.anim_surf[sid].vert_data.VertexZ(j)
@@ -609,7 +624,7 @@ Class TAnimation
 		Next
 		
 		
-		''set new anim=2 number
+		''set new anim=2 number for vert animation
 		mesh.anim = 2
 
 	End

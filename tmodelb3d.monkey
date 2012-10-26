@@ -4,8 +4,8 @@ Import minib3d
 
 Class TModelB3D
 	
-#If CONFIG="debug"
-	Const DEBUGMODEL:Int =1
+#If MINIB3D_DEBUG_MODEL=1
+	Const DEBUGMODEL:Int =1 ''1
 #else
 	Const DEBUGMODEL:Int =0
 #Endif
@@ -28,7 +28,7 @@ Class TModelB3D
 		Local file:Base64 = Base64.Load(f_name)
 		
 		If file.Size() <=1
-			Dprint "File not found"
+			Print "**File not found: "+f_name
 			Return New TMesh
 		Endif
 		
@@ -559,14 +559,18 @@ Class TModelB3D
 						new_tag=file.ReadTag()
 														
 					Wend
+					
+					If DEBUGMODEL Then Print "no_verts:"+v_surf.no_verts
 
 				Case TRIS
-							
+					
+					Local e:Bool = False
 					Local old_tr_brush_id=tr_brush_id
 					tr_brush_id=file.ReadInt()
-	
+					e=file.Eof()
+					
 					' don't create new surface if tris chunk has same brush as chunk immediately before it
-					If (prev_tag<>TRIS Or tr_brush_id<>old_tr_brush_id)
+					If (prev_tag<>TRIS Or tr_brush_id<>old_tr_brush_id) And Not e
 					
 						' no further tri data for this surf - trim verts
 						If prev_tag=TRIS Then TrimVerts(surf)
@@ -587,12 +591,18 @@ Class TModelB3D
 					tr_sz=12
 						
 					new_tag=file.ReadTag()
-	
+					
+					
+					''check for EOF in case of corrupt file
 					While NewTag(new_tag)<>True And file.Eof()<>True
 					
 						tr_vid0=file.ReadInt()
+						e=file.Eof()
 						tr_vid1=file.ReadInt()
+						e=file.Eof()
 						tr_vid2=file.ReadInt()
+						
+						If e Then Exit
 				
 						' Find out minimum and maximum vertex indices - used for TrimVerts func after
 						' (TrimVerts used due to .b3d format not being an exact fit with Blitz3D itself)
@@ -605,7 +615,7 @@ Class TModelB3D
 						If tr_vid2>surf.vmax Then surf.vmax=tr_vid2
 				
 						surf.AddTriangle(tr_vid0,tr_vid1,tr_vid2)
-			
+
 						new_tag=file.ReadTag()
 
 					Wend

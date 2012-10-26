@@ -5,11 +5,17 @@
 ''
 Import minib3d
 Import minib3d.monkeyutility
+Import minib3d.monkeybuffer
 
+Import "xna_driver/native/databuffer.cs"
 
+Extern
+	
+	Function LoadImageData:Void(buffer:DataBuffer, f$, info:Int[]) = "DataBufferHelper.LoadImageData"
+	
+Public
 
-
-Class TPixmapXNA Extends TPixmap Implements TPixmapManager
+Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 
 	Field pixels:DataBuffer
 	Field format:Int, pitch:Int
@@ -20,43 +26,23 @@ Class TPixmapXNA Extends TPixmap Implements TPixmapManager
 	Function Init()
 	
 		If Not manager Then manager = New TPixmapXNA
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
 	
 	End
 	
-	
-	Method PreLoadPixmap:Int(file$[])
 		
-		Return TPixmap.PreLoadPixmapSynch(file)
-	
-	End
-	
 	
 	Method LoadPixmap:TPixmap(f$)
 	
 		Local p:TPixmapXNA = New TPixmapXNA
 		
-		Local info:Int[3]
+		preloader.GetPixmapPreLoad(p, f)
 		
-		If loaded = False
-	
-			p.pixels = LoadImageData( f,info )
-			
-		Elseif loaded=True
-
-			For Local i:Int=0 To old_file.Length()-1
-				If f = old_file[i] Then Return pixmap_preload[i]
-			Next
-			p.pixels = LoadImageData( f,info )
-			
-		Endif
-		
-		p.width = info[0]
-		p.height = info[1]
 		p.format = PF_RGBA8888
 		
-		If info[1] Then p.pitch = p.pixels.Size()/4 / info[1]
+		If p.height Then p.pitch = GetBufferLength(p.pixels)/4.0 / p.height
 		
-		If Not info[0] And Not info[1] Then Dprint "Image Not Found: "+f
+		If Not p.width And Not p.height Then Dprint "Image Not Found: "+f
 
 		Return p
 		
@@ -66,7 +52,7 @@ Class TPixmapXNA Extends TPixmap Implements TPixmapManager
 		
 		Local p:TPixmapXNA = New TPixmapXNA
 		
-		p.pixels= DataBuffer.Create(w*h*4)
+		p.pixels= CreateDataBuffer(w*h*4)
 		p.width = w
 		p.height = h
 		p.format = format
@@ -238,7 +224,92 @@ Class TPixmapXNA Extends TPixmap Implements TPixmapManager
 
 	End
 	
-
-	
+		
 End
 
+
+Class PreloadManager Implements IPreloadManager
+	
+	Field data:DataBuffer[]
+	Field w:Int[], h:Int[]
+	Field total:Int
+	Field preloader:TPixmapPreloader
+	
+	Method AllocatePreLoad:Void(size:Int)
+		data = New DataBuffer[size]
+		w = New Int[size]
+		h = New Int[size]
+		total = size
+	End
+	
+	Method PreLoadData:Void(f$, id:Int)
+		''we can do this with buffers, when available
+		'' then also expand this class as the Buffer Callback
+		
+		If id<1 Then Return
+		Local info:Int[2]
+		
+		data[id-1] = New DataBuffer()
+		LoadImageData(data[id-1], f, info)
+		w[id-1] = info[0]
+		h[id-1] = info[1]
+		
+		''callback
+		preloader.IncLoader()
+		
+	End
+	
+	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
+		
+		Local p:TPixmapXNA = TPixmapXNA(pixmap)
+		If p
+			
+			If id>0
+				p.pixels = data[id-1]
+				p.width = w[id-1]
+				p.height = h[id-1]
+				''clear buffer if need be here
+				
+			Else
+				Local info:Int[2]
+				
+				p.pixels = New DataBuffer()
+				LoadImageData(p.pixels,f, info)
+				
+				p.width = info[0]
+				p.height = info[1]
+			Endif
+			
+		Endif
+		
+	End
+	
+	Method SetPreloader:Void(m:TPixmapPreloader)
+	
+		preloader = m
+		
+	End
+	
+	Method Update:Void()
+		''update sync events here
+	End
+	
+''todo later....
+#rem	
+	Method FromDataBuffer:Void(buf:DataBuffer, info[])
+		
+		If Not buf Then Return
+		
+		''move data from buf to pixels
+		pixels = New DataBuffer(buf.Length())
+		ConvertDataToPixmap( buf, pixels, info)
+	
+		''free it
+		buf.Discard()
+		
+''Print "pixmapgl size "+info[0]+" "+info[1]
+
+	End
+#end
+	
+End

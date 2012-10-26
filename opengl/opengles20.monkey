@@ -1,8 +1,12 @@
+''OPENGL2.0 minib3d engine
+''
+''NOTES:
+'' -- problems with FireFox if we do not send color vertex info (and shader has uniform for it)
+
 Import mojo
 Import opengl.gles20
 
 Import minib3d.trender
-Import minib3d.tshader
 Import minib3d.opengl.tshaderglsl
 Import minib3d.opengl.tpixmapgl
 Import minib3d.opengl.basicshadersgl
@@ -13,22 +17,23 @@ Import minib3d.opengl.framebuffergl
 #If TARGET="xna"
 	#Error "Need glfw, ios, android, or mingw target"
 #Endif
-#Print "minib3d OpenglES20"
+
+#Print "miniB3D OpenglES20"
 
 #OPENGL_GLES20_ENABLED="true"
 #OPENGL_DEPTH_BUFFER_ENABLED="true"
 #MINIB3D_DRIVER="opengl20"
-#ANDROID_NATIVE_GL_ENABLED="true"
-
-''NOTES:
-'' -- problems with FireFox if we do not send color vertex info (and shader has uniform for it)
-
-
+#ANDROID_NATIVE_GL_ENABLED=True ''*************************PROBLEMATIC only used on Android 2.2*****************************
 
 #If TARGET="html5"
 	Extern
-		Function glTexImage2D2( target:Int,level:Int,internalformat:Int,width:Int,height:Int,border:Int,format:Int,type:Int,pixels:Int )="_glTexImage2D2"
+		'Function glTexImage2D2( target:Int,level:Int,internalformat:Int,width:Int,height:Int,border:Int,format:Int,type:Int,pixels:Int )="_glTexImage2D2"
+		Global CheckWebGL:Int = "window.WebGLRenderingContext"
+		
 	Public
+#Else
+	Global CheckWebGL:Int =1
+
 #Endif
 
 
@@ -41,8 +46,8 @@ Const VBO_MIN_TRIS=1
 Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
 Const USE_GL20 = 4 	' future use for opengl 2.0 support
-Const MAX_TEXTURES = 4
-Const MAX_LIGHTS = 3
+'Const MAX_TEXTURES = 4 ''set by shader
+'Const MAX_LIGHTS = 3 ''set by shader
 
 Function SetRender(flags:Int=0)
 
@@ -79,6 +84,8 @@ Class OpenglES20 Extends TRender
 	Field v_matrix:Matrix = New Matrix
 	Field fog_flag:Int
 	
+	Global total_errors:Int=0
+	
 	Const DEGREESTORAD:Float = PI/180.0
 	
 	Method New()
@@ -91,8 +98,11 @@ Class OpenglES20 Extends TRender
 	Method GetVersion:Float()
 		Local webgl:String, st:String
 		
-		Local s:String = glGetString(GL_VERSION)
+		If Not CheckWebGL Then Error "** WebGL not found. Please upgrade or check browser options."
 		
+		Local s:String = glGetString(GL_VERSION)
+Print s	
+	
 		webgl = s.Split(" ")[0]
 		
 		Local num:Int=0
@@ -127,10 +137,25 @@ Class OpenglES20 Extends TRender
 		last_shader = -1
 		cam_matrix_upload=0
 		
-		light = TLight.light_list.ToArray()
-
+		ResetLights()
 		
 		'Print "....begin render...."
+		
+	End
+	
+	Method ResetLights:Void()
+		
+		light = New TLight[8]
+		
+		Local i:Int=0
+		For Local li:TLight = Eachin TLight.light_list
+			light[i] = li
+			i+=1
+			If i>8 Then Exit
+		Next
+		For Local j:Int = i To 8-1
+			light[j] = Null
+		Next
 		
 	End
 	
@@ -154,8 +179,10 @@ Class OpenglES20 Extends TRender
 		Local shader:TShaderGLSL
 		shader = TShaderGLSL(TShader.g_shader)
 		
+		If Not shader.u Then Return
 		If Not shader.active Then Return '' a brush shader can be deactive, but a global shader cannot
 		
+		''set shader brush if one
 		If TShaderGLSL(ent.shader_brush) And (Not shader.override) And ent.shader_brush.active
 
 			shader = TShaderGLSL(ent.shader_brush)
@@ -176,6 +203,7 @@ Class OpenglES20 Extends TRender
 		
 		
 		Local anim_surf2:TSurface
+		Local surf:TSurface
 		Local ccc:Int=0 ''counter for debugging
 		Local lightflag:Int=1 ''for opengl2.0 shader
 		
@@ -187,8 +215,7 @@ Class OpenglES20 Extends TRender
 		''run through surfaces twice, sort alpha surfaces for second pass
 		For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs
 		
-		For Local surf:TSurface =Eachin temp_list
-			ccc +=1
+		For surf = Eachin temp_list
 
 			'If GetGLError() Then Print "*render start"
 
@@ -202,22 +229,13 @@ Class OpenglES20 Extends TRender
 				
 			Endif
 			
-		
-					
-'Print "***classname: "+ent.classname+" : "+name		
-'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Size()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
-'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_sprite_state)
-'Print "   mesh.anim:"+mesh.anim
-'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
-		
-
 			
-			Local vbo:Int=False
+			Local vbo:Int=True
 			
 			''ALWAYS use VBOs for opengl20, unless android api8
-			If vbo_enabled
-				vbo=True
-			Else
+			If Not vbo_enabled
+				vbo=False
+				
 				' if surf no longer has required no of tris then free vbo
 				If surf.vbo_id[0]<>0 
 					glDeleteBuffer(surf.vbo_id[0])
@@ -248,7 +266,7 @@ Class OpenglES20 Extends TRender
 				' get anim_surf
 				anim_surf2 = mesh.anim_surf[surf.surf_id]
 				
-				If vbo
+				If vbo And anim_surf2
 				
 					' update vbo
 					If anim_surf2.reset_vbo<>False
@@ -272,6 +290,12 @@ Class OpenglES20 Extends TRender
 				last_surf = surf
 			Endif
 
+'Print "***classname: "+ent.classname+" : "+name		
+'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
+'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_sprite_state)
+'Print "   mesh.anim:"+mesh.anim
+'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
+		
 
 			''enable shader and check for last_state
 			
@@ -282,25 +306,26 @@ Class OpenglES20 Extends TRender
 			
 				glUseProgram(shader.shader_id)
 				last_shader = shader.shader_id
-		
+			
 				'Print shader.name
-							
+								
 				''shader light info, for all lights
-				For Local li:Int = 0 To MAX_LIGHTS-1
-					If light.Length > li
-						
+				For Local li:Int = 0 To shader.MAX_LIGHTS-1
+					If light[li]
 						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
 						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, light[li].mat.ToArray()  )
 						If shader.u.light_att[li]<>-1 Then glUniform4fv( shader.u.light_att[li], 1,[ light[li].const_att,light[li].lin_att,light[li].quad_att,light[li].actual_range ]  )
 						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ light[li].red, light[li].green, light[li].blue, 1.0 ]  )
 						If shader.u.light_spot[li]<>-1 Then glUniform3fv( shader.u.light_spot[li], 1,[ Cos(light[li].outer_ang), Cos(light[li].inner_ang), light[li].spot_exp ]  )
-						
 					Else
-						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ 1.0, 1.0, 1.0, 1.0 ]  )
-						
-					Endif
+						''nullify other lights
+						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], 0.0 )
+						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ 0.0, 0.0, 0.0, 1.0 ]  )
+					Endif	
 				Next
 				
+				
+					
 				If cam.fog_mode >0
 					If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, cam.fog_mode )
 					If shader.u.fog_color<> -1 Then glUniform4fv( shader.u.fog_color, 1, [cam.fog_r,cam.fog_g,cam.fog_b,1.0])
@@ -308,11 +333,11 @@ Class OpenglES20 Extends TRender
 				Endif
 				
 			Endif
-			
-			'' Update uniforms for current shader
-			''needs to be after UseProgram()
+		
+			'' Update additional uniforms for current shader
+			'' needs to be after UseProgram()
 			shader.Update()
-				
+			
 			
 			Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
 			Local ambient_red#,ambient_green#,ambient_blue#
@@ -408,29 +433,12 @@ Class OpenglES20 Extends TRender
 			Endif
 			
 
-			
-			
-
 			'Local ambient#[]=[ambient_red,ambient_green,ambient_blue,1.0]	
-			'glLightModelfv(GL_LIGHT_MODEL_AMBIENT,ambient)
-
 			Local no_mat#[]=[0.0,0.0,0.0,0.0]
 			Local mat_diffuse#[]=[red,green,blue,alpha]
 			Local mat_shininess#[]=[100.0] ' upto 128
 			
-			''GL_FRONT_AND_BACK needed for opengl es 1.x
-			
-			'glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,mat_diffuse) ''combine diffuse & ambient?
-			'glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,mat_ambient)
-			'glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,mat_specular)
-			'glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,mat_shininess)
-			
-			'glColor4f(1.0,0.0,0.0, alpha)		
-
-			
-
-
-			
+		
 			
 			'' --------------------------------------
 			If skip_sprite_state = False
@@ -466,6 +474,7 @@ Class OpenglES20 Extends TRender
 			Endif
 			
 			'' fx flag 32 - force alpha
+			''
 			
 			'' fx flag 64 - disable depth testing (new 2012)
 			If fx&64
@@ -481,8 +490,9 @@ Class OpenglES20 Extends TRender
 				disable_depth = False
 				
 			Endif
-					
 			
+					
+			If DEBUG And GetGLError() Then Print "*pre vbos"
 			
 			If vbo
 				
@@ -572,6 +582,8 @@ Class OpenglES20 Extends TRender
 				Endif
 							
 			Endif
+			
+			If Not vbo And DEBUG Then Print "*no vbos"
 					
 			If DEBUG And GetGLError() Then Print "*vbos"					
 					
@@ -589,7 +601,7 @@ Class OpenglES20 Extends TRender
 			
 			''disable any extra textures from last pass
 			If tex_count < last_tex_count 
-				For Local i:Int = tex_count To MAX_TEXTURES-1
+				For Local i:Int = tex_count To shader.MAX_TEXTURES-1
 				
 					glActiveTexture(GL_TEXTURE0+i)
 					glBindTexture(GL_TEXTURE_2D, 0)
@@ -639,23 +651,22 @@ Class OpenglES20 Extends TRender
 						
 	
 					''preserve texture states--------------------------------------
-					If (surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
-					    (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix])
+					If ((surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
+					    (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix]))
 						
 						'' skip texture Bind
 						
-					Else
+					Else		
+						'' do texture bind
 					
-					''texture bind
-					
-					If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
-					
-					glActiveTexture(GL_TEXTURE0+ix)
-					'glClientActiveTexture(GL_TEXTURE0+ix)
-			
-					glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
-					
-					If shader.u.texture[ix] <>-1 Then glUniform1i(shader.u.texture[ix], ix)
+						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
+						
+						glActiveTexture(GL_TEXTURE0+ix)
+						'glClientActiveTexture(GL_TEXTURE0+ix)
+				
+						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
+						
+						If shader.u.texture[ix] <>-1 Then glUniform1i(shader.u.texture[ix], ix)
 					
 					Endif ''end preserve texture states---------------------------------
 
@@ -801,7 +812,9 @@ Class OpenglES20 Extends TRender
 			
 			'' turn off textures if no textures
 			If tex_count = 0
-			
+				
+				last_texture = Null
+				
 				'glDisable(GL_TEXTURE_2D)
 				
 				glActiveTexture(GL_TEXTURE0)			
@@ -822,6 +835,7 @@ Class OpenglES20 Extends TRender
 				If shader.u.m_matrix <>-1 Then glUniformMatrix4fv( shader.u.m_matrix, 1, False, TSprite(mesh).mat_sp.ToArray() )
 				'vp_matrix.Multiply4(TSprite(mesh).mat_sp)
 			Endif
+		
 
 			''camera matrices
 			''view matrix
@@ -975,7 +989,12 @@ Class OpenglES20 Extends TRender
 	
 	Function GetGLError:Int()
 		Local gle:Int = glGetError()
-		If gle<>GL_NO_ERROR Then Print "*glerror: "+gle; Return 1
+		If gle<>GL_NO_ERROR
+			total_errors +=1
+			If total_errors>50 Then Error "Max 50 Opengl Errors" ''kill errors for HTML5 console
+			Print "*glerror: "+gle
+			Return 1
+		Endif
 		Return 0
 	End
 	

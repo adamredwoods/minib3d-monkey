@@ -5,7 +5,10 @@
 ''
 Import minib3d
 Import minib3d.monkeyutility
+Import minib3d.monkeybuffer
 
+
+'Alias DataBuffer = databuffer.DataBuffer
 
 #If OPENGL_GLES20_ENABLED="true" Or TARGET="html5"
 
@@ -22,17 +25,36 @@ Import minib3d.monkeyutility
 	Import tpixmaphtml5
 
 #Else
+
+''todo later.....
+
+#rem
+#If TARGET="android"
+	Import "tpixmap.java"
+	Extern
+		Function ConvertDataToPixmap( from_:DataBuffer, to_:DataBuffer, info:Int[] ) = "TPixmapJava.DataToPixmap"
+	Public
+#ElseIf TARGET="ios"
+	Import "tpixmap.cpp"
+#Else
+	Import "tpixmap.cpp"
 	
+	Extern
+
+		'Function LoadImageData:DataBuffer( from_:DataBuffer, path$,info[]=[] )
+		Function ConvertDataToPixmap( from_:DataBuffer, to_:DataBuffer, info:Int[] ) = "DataToPixmap"
 	
-Import opengl.databuffer
-
-'Extern
-	'Function LoadImageData:DataBuffer( path$,info[]=[] )
-'Public
+	Public
+#end
 
 
+#end
 
-Class TPixmapGL Extends TPixmap Implements TPixmapManager
+
+
+
+
+Class TPixmapGL Extends TPixmap Implements IPixmapManager
 
 	Field pixels:DataBuffer
 	Field format:Int, pitch:Int
@@ -41,14 +63,9 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 	
 	
 	Function Init()
-	
-		If Not manager Then manager = New TPixmapGL
-	
-	End
-	
-	Method PreLoadPixmap:Int(file$[])
 		
-		Return TPixmap.PreLoadPixmapSynch(file)
+		If Not manager Then manager = New TPixmapGL
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
 	
 	End
 	
@@ -58,37 +75,26 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 		Local p:TPixmapGL = New TPixmapGL
 		
 		Local info:Int[3]
-		
-		If loaded = False
 	
-			p.pixels = LoadImageData( f,info )
-			
-		Elseif loaded=True
-
-			For Local i:Int=0 To old_file.Length()-1
-				If f = old_file[i] Then Return pixmap_preload[i]
-			Next
-			p.pixels = LoadImageData( f,info )
-			
-		Endif
+		'p.FromDataBuffer( preloader.GetDataBuffer(f) , info )
+		preloader.GetPixmapPreLoad(p, f)
 		
-		p.width = info[0]
-		p.height = info[1]
 		p.format = PF_RGBA8888
 		
-		If info[1] Then p.pitch = p.pixels.Size()/4 / info[1]
+		If p.height Then p.pitch = GetBufferLength(p.pixels)/4.0 / p.height
 		
-		If Not info[0] And Not info[1] Then Dprint "Image Not Found: "+f
+		If Not p.width And Not p.height Then Dprint "Image Not Found: "+f
 
 		Return p
 		
 	End
 	
+
 	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
 		
 		Local p:TPixmapGL = New TPixmapGL
 		
-		p.pixels= DataBuffer.Create(w*h*4)
+		p.pixels= CreateDataBuffer(w*h*4)
 		p.width = w
 		p.height = h
 		p.format = format
@@ -104,6 +110,7 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 		
 		Return p
 	End
+	
 	
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
 	
@@ -258,7 +265,96 @@ Class TPixmapGL Extends TPixmap Implements TPixmapManager
 
 	End
 	
+	'Method GetImageType:String(buf:DataBuffer)
+		
+		'Return buf.PeekString(6,4) ''jfif = jpeg
+		'Return buf.PeekString(0,4) ''png
+		
+	'End
+End
 
+
+
+
+Class PreloadManager Implements IPreloadManager
+	
+	Field data:DataBuffer[]
+	Field w:Int[], h:Int[]
+	Field total:Int
+	Field preloader:TPixmapPreloader
+	
+	Method AllocatePreLoad:Void(size:Int)
+		data = New DataBuffer[size]
+		w = New Int[size]
+		h = New Int[size]
+		total = size
+	End
+	
+	Method PreLoadData:Void(f$, id:Int)
+		''we can do this with buffers, when available
+		'' then also expand this class as the Buffer Callback
+		
+		If id<1 Then Return
+		Local info:Int[2]
+		
+		data[id-1] = LoadImageData(f, info)
+		w[id-1] = info[0]
+		h[id-1] = info[1]
+		
+		''callback
+		preloader.IncLoader()
+		
+	End
+	
+	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
+		
+		Local p:TPixmapGL = TPixmapGL(pixmap)
+		If p
+			
+			If id>0
+				p.pixels = data[id-1]
+				p.width = w[id-1]
+				p.height = h[id-1]
+				''clear buffer if need be here
+				
+			Else
+				Local info:Int[2]
+				p.pixels = LoadImageData(f, info)
+				p.width = info[0]
+				p.height = info[1]
+			Endif
+			
+		Endif
+		
+	End
+	
+	Method SetPreloader:Void(m:TPixmapPreloader)
+	
+		preloader = m
+		
+	End
+	
+	Method Update:Void()
+		''update sync events here
+	End
+	
+''todo later....
+#rem	
+	Method FromDataBuffer:Void(buf:DataBuffer, info[])
+		
+		If Not buf Then Return
+		
+		''move data from buf to pixels
+		pixels = New DataBuffer(buf.Length())
+		ConvertDataToPixmap( buf, pixels, info)
+	
+		''free it
+		buf.Discard()
+		
+''Print "pixmapgl size "+info[0]+" "+info[1]
+
+	End
+#end
 	
 End
 

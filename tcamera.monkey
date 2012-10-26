@@ -232,10 +232,10 @@ Class TCamera Extends TEntity
 		
 	End
 	
-	Method CameraProjMode(mode=1)
+	Method CameraProjMode(mode:Int=1)
 	
 		proj_mode=mode
-		
+				
 	End
 	
 	' Calls function in TPick
@@ -491,7 +491,7 @@ Class TCamera Extends TEntity
 			If radius<0 Then radius=-radius
 			
 		Endif
-		
+	
 		' is sphere in frustum
 
 		Local d#
@@ -528,13 +528,13 @@ Class TCamera Extends TEntity
 
 		'mod_mat = LoadIndentity()
 		mod_mat = mat.Inverse()
+		If eyedx Or eyedy Then mod_mat.Translate(-eyedx,-eyedy,0.0)
+		
 		view_mat = mod_mat
 		projview_mat.Overwrite(proj_mat ) 'Copy()
-		projview_mat.Multiply4(mod_mat)
-		
-		If eyedx Or eyedy Then mod_mat.Translate(-eyedx,-eyedy,0.0)
+		projview_mat.Multiply4(mod_mat)	
 
-		If cam Then ExtractFrustum() ''allows for skipping of frustum (used in camera project)
+		If cam Then ExtractFrustum() ''allows for skipping of frustum (used in camera projection)
 	
 	End
 	
@@ -544,11 +544,13 @@ Class TCamera Extends TEntity
 		'fov2=((fovy*Pi)/180.0)/2.0
 		fov2=fovy*0.5 '/2.0
 		
+		
 		top=zNear/(Cos(fov2)/Sin(fov2))
 		bottom=-top
 		right_=top*aspect
 		left_=-right_
-	
+		
+
 		accFrustum(left_,right_,bottom,top,zNear,zFar,pixdx,pixdy)
 	
 	End
@@ -612,10 +614,14 @@ Class TCamera Extends TEntity
 			proj_mat.grid[3][1] = -(top + bottom) / (top - bottom)
 			proj_mat.grid[3][2] = -(zFar + zNear) / (zFar - zNear)
 			proj_mat.grid[3][3] = 1.0
-
+			
+		Else If proj_mode = 3
+			
+			
+			
+	
 		Endif
-		
-		
+	
 	End
 	
 	
@@ -638,6 +644,9 @@ Class TCamera Extends TEntity
 			ch.cam_layer = Self
 			
 		Next
+		
+		''auto set camera to not clear color, but to clear depth
+		CameraClsMode(False, True)
 		
 	End
 	
