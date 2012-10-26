@@ -5,6 +5,7 @@
 ''
 Import minib3d
 Import monkeyutility
+Import mojo.data
 'Import minib3d.monkeybuffer
 
 
@@ -173,7 +174,7 @@ Class TPixmapPreloader
 		Else
 
 			For Local i:Int=0 To total-1
-				If file = old_file[i] Then Return i+1
+				If file = old_file[i] Then Return (i+1)
 			Next
 			
 		Endif

@@ -175,14 +175,21 @@ End
 Class PreloadManager Implements IPreloadManager
 	
 	Field data:HTMLImage[]
-	Field load_ok:Bool[]
+	Field load_complete:Bool[]
 	Field w:Int[], h:Int[]
 	Field total:Int
 	Field preloader:TPixmapPreloader
 	
+		
+	Method SetPreloader:Void(m:TPixmapPreloader)
+	
+		preloader = m
+		
+	End
+	
 	Method AllocatePreLoad:Void(size:Int)
 		data = New HTMLImage[size]
-		load_ok = New Bool[size]
+		load_complete = New Bool[size]
 		w = New Int[size]
 		h = New Int[size]
 		total = size
@@ -195,8 +202,8 @@ Class PreloadManager Implements IPreloadManager
 		If id<1 Then Return
 		
 		f=f.Replace("monkey://","")
-		data[id-1] = LoadImageDataHTML(f, id-1)
-		
+		data[id-1] = LoadImageDataHTML(f, id)
+
 		
 	End
 	
@@ -207,11 +214,12 @@ Class PreloadManager Implements IPreloadManager
 			
 			If id>0
 				p.pixels = data[id-1]
-		
+				
 				Local info:Int[] = GetHTMLImageInfo(p.pixels)
 				p.width = info[0]
 				p.height = info[1]
-			
+
+
 				''clear buffer if need be here
 			
 			
@@ -226,22 +234,18 @@ Class PreloadManager Implements IPreloadManager
 		Endif
 		
 	End
-	
-	Method SetPreloader:Void(m:TPixmapPreloader)
-	
-		preloader = m
-		
-	End
 
 	Method Update:Void()
 		''update sync events here
 		For Local i:Int=0 To total-1
 			'If data[i] Then Print "i "+i+" :"+Int(CheckIsLoaded(data[i]))
-			If data[i] And CheckIsLoaded(data[i]) And Not load_ok[i]
-				''callback
-				load_ok[i]=True
-				preloader.IncLoader()
-				
+			If data[i]
+				If CheckIsLoaded(data[i])  And Not load_complete[i]
+					''callback
+					load_complete[i]=True
+					preloader.IncLoader()
+					
+				Endif
 			Endif
 		Next	
 	End

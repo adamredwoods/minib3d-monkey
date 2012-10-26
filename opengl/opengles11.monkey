@@ -66,7 +66,7 @@ Class OpenglES11 Extends TRender
 	Global gl_light:Int[] = [GL_LIGHT0,GL_LIGHT1,GL_LIGHT2,GL_LIGHT3,GL_LIGHT4,GL_LIGHT5,GL_LIGHT6,GL_LIGHT7] ''move const to trender
 	Global light_no:Int, old_no_lights:Int
 	
-	
+	Field t_array:Float[16] ''temp array
 	
 	Method New()
 		
@@ -739,6 +739,7 @@ Class OpenglES11 Extends TRender
 				Next
 				glDisable(GL_TEXTURE_2D)
 				
+				last_texture = Null
 				
 			Endif
 			
@@ -750,9 +751,11 @@ Class OpenglES11 Extends TRender
 			glPushMatrix()
 	
 			If mesh.is_sprite=False
-				glMultMatrixf(ent.mat.ToArray() )
+				ent.mat.ToArray(t_array)
+				glMultMatrixf(t_array )
 			Else
-				glMultMatrixf(TSprite(mesh).mat_sp.ToArray() )
+				TSprite(mesh).mat_sp.ToArray(t_array)
+				glMultMatrixf(t_array )
 			Endif
 				
 
@@ -792,6 +795,8 @@ Class OpenglES11 Extends TRender
 		Next	''end alpha loop
 		
 		temp_list = Null
+		
+		glFlush()
 		
 		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
 		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
@@ -987,7 +992,7 @@ Class OpenglES11 Extends TRender
 			
 		Endif
 		
-		If GetGLError() Then Print "verttris"
+		If DEBUG And GetGLError() Then Print "*verttris"
 
 		
 		surf.reset_vbo=False
@@ -1204,12 +1209,14 @@ Class OpenglES11 Extends TRender
 		
 		''load MVP matrix
 		glMatrixMode(GL_MODELVIEW)
-		'glLoadIdentity()	
-		glLoadMatrixf(cam.mod_mat.ToArray() )
+		'glLoadIdentity()
+		cam.mod_mat.ToArray(t_array)	
+		glLoadMatrixf(t_array )
 		
 		glMatrixMode(GL_PROJECTION)
 		'glLoadIdentity()
-		glLoadMatrixf(cam.proj_mat.ToArray() )
+		cam.proj_mat.ToArray(t_array)
+		glLoadMatrixf(t_array )
 	
 		
 

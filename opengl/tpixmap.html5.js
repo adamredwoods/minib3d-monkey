@@ -119,9 +119,12 @@ function LoadImageData(file, idx) {
 		//print("idload "+idx);
 		
 	};
+	image.onerror = function() {
+		image.id=0;
+	};
 
 //print (idx+" "+file);		
-	//image.filename = file;
+	image.filename = file;
 	image.id =-1;
 	image.src = file;
 
@@ -136,8 +139,8 @@ function CheckIsLoaded(image) {
 }
 
 function CreateImageData(w, h) {
-	//var preimage = new PreLoadImage;
-	image.image = document.createElement("img");
+
+	var image = document.createElement("img");
 	//white 1x1 image gif
 	image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAP7//wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
 
@@ -194,6 +197,7 @@ function HTMLMaskPixmap(image, r,g,b) {
 function GetImageInfo( image ) {
 
 	//print("image w/h "+image.width+" "+image.height);
+	if (!image.width) return [0,0];
 	
 	return [image.width, image.height];
 	

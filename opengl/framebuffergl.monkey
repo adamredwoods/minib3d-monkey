@@ -12,6 +12,9 @@ Import minib3d.opengl.opengles20
 ''-- FBOs had a problem when capturing to a texture with its UV coordinates defined (would capture to area within an area). instead,
 ''   set proper UVs during FBO display, keep UVs 1.0 otherwise.
 
+Class FBOStack Extends Stack<FrameBuffer>
+	
+End
 
 Class FrameBufferGL Extends FrameBuffer
 
@@ -19,6 +22,7 @@ Class FrameBufferGL Extends FrameBuffer
 	
 	Global supportFBO:Int=0
 	Global framebuffer_active:FrameBufferGL = Null ''current active FBO, used for TRender
+	Global fboStack:FBOStack = New FBOStack
 	
 	Field fbufferID:Int
 	Field rbufferID:Int
@@ -28,11 +32,12 @@ Class FrameBufferGL Extends FrameBuffer
 	''ratios for texture vs device size
 	Field UVW:Float =1.0, UVH:Float = 1.0
 	
-	Global surf:TSurface '' quad surface to draw
+	Global gsurf:TSurface '' quad surface to draw
 	
 	Global quad_buf:FloatBuffer
 	Global temp_buf:FloatBuffer
 	Global temp_buf_id:Int[1]
+	
 	
 	Method Width:Int()
 		Return texture.width
@@ -111,6 +116,18 @@ Class FrameBufferGL Extends FrameBuffer
 			fbo.texture = tex ''need power-of-two size
 		Endif
 		
+				
+		fbo.depth_flag = depth
+		
+		''queue fbo creation to be done in OnRender()
+		fboStack.Push(fbo)
+		
+		Return fbo
+		
+	End
+	
+	
+	Function BindFBO:Void(fbo:FrameBufferGL)
 		''attach texture
 		fbo.fbufferID = glCreateFramebuffer()
 		
@@ -130,14 +147,15 @@ Class FrameBufferGL Extends FrameBuffer
 
 		glBindFramebuffer(GL_FRAMEBUFFER , fbo.fbufferID)
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, fbo.texture.gltex[0], 0)
+
 		
 		''attach depth renderbuffer
 		'' currently, rbufferID is global to minimize memory use
 		'' -- may have problem with setting smaller render buffers than screen
-		If (depth And Not fbo.rbufferID)
+		If (fbo.depth_flag And Not fbo.rbufferID)
 			fbo.rbufferID=glCreateRenderbuffer()
 		Endif
-		If (depth)
+		If (fbo.depth_flag)
 			glBindRenderbuffer(GL_RENDERBUFFER, fbo.rbufferID)
 			''GL_DEPTH_COMPONENT16 for html5
 			glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT16, fbo.texture.width,  fbo.texture.height) 
@@ -188,14 +206,14 @@ Class FrameBufferGL Extends FrameBuffer
 		''create quad surface
 		''** note quad verts are flipped since we draw from bottom left. plus, this keeps UV coords ok.
 		''** if we flip uv coords, then clamp doesn't work properly
-		If Not surf
-			surf = New TSurface()
-			surf.AddVertex(-1,1,0, 0, 1.0)'fbo.UVH)
-			surf.AddVertex(-1, -1,0, 0, 0)
-			surf.AddVertex( 1, -1,0, 1.0,0.0)'fbo.UVW, 0)
-			surf.AddVertex( 1,1,0, 1.0,1.0) 'fbo.UVW, fbo.UVH)
-			surf.AddTriangle(1,0,2)
-			surf.AddTriangle(2,0,3)
+		If Not gsurf
+			gsurf = New TSurface()
+			gsurf.AddVertex(-1,1,0, 0, 1.0)'fbo.UVH)
+			gsurf.AddVertex(-1, -1,0, 0, 0)
+			gsurf.AddVertex( 1, -1,0, 1.0,0.0)'fbo.UVW, 0)
+			gsurf.AddVertex( 1,1,0, 1.0,1.0) 'fbo.UVW, fbo.UVH)
+			gsurf.AddTriangle(1,0,2)
+			gsurf.AddTriangle(2,0,3)
 			'surf.AddTriangle(0,1,2)
 			'surf.AddTriangle(0,2,3)
 			
@@ -206,10 +224,9 @@ Class FrameBufferGL Extends FrameBuffer
 			
 			'Next
 			
-			surf.reset_vbo=-1
+			gsurf.reset_vbo=-1
 		Endif
-		
-		fbo.depth_flag = depth
+
 		
 		''clean exit
 		glBindTexture(GL_TEXTURE_2D, 0)
@@ -218,7 +235,7 @@ Class FrameBufferGL Extends FrameBuffer
 		
 		If DEBUG And OpenglES20.GetGLError() Then Print "**FBO Create error"
 		
-		Return fbo
+		'Return fbo
 		
 	End
 
@@ -249,7 +266,7 @@ Class FrameBufferGL Extends FrameBuffer
 		''-- use TShader to chain effects
 		''-- null displays normal, no altering
 		
-		If Not texture Or Not surf  Then Return
+		If Not texture Or Not gsurf  Then Return
 		
 		glBindBuffer(GL_ARRAY_BUFFER,0) ' reset - necessary for when non-vbo surf follows vbo surf
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
@@ -284,11 +301,11 @@ Class FrameBufferGL Extends FrameBuffer
 			
 		Endif
 		
-		If surf.reset_vbo<>0
-			OpenglES20(TRender.render).UpdateVBO(surf)
-		Else If surf.vbo_id[0]=0 ' no vbo - unknown reason
-			surf.reset_vbo=-1
-			OpenglES20(TRender.render).UpdateVBO(surf)
+		If gsurf.reset_vbo<>0
+			OpenglES20(TRender.render).UpdateVBO(gsurf)
+		Else If gsurf.vbo_id[0]=0 ' no vbo - unknown reason
+			gsurf.reset_vbo=-1
+			OpenglES20(TRender.render).UpdateVBO(gsurf)
 
 		Endif
 		
@@ -312,30 +329,30 @@ Class FrameBufferGL Extends FrameBuffer
 			'temp_buf.Poke(5,0.0)
 			'temp_buf.Poke(6,UVW)
 			'temp_buf.Poke(7,UVH)
-			surf.VertexTexCoords(0,0.0,UVH)
-			surf.VertexTexCoords(1,0.0,0.0)
-			surf.VertexTexCoords(2,UVW,0.0)
-			surf.VertexTexCoords(3,UVW,UVH)
+			gsurf.VertexTexCoords(0,0.0,UVH)
+			gsurf.VertexTexCoords(1,0.0,0.0)
+			gsurf.VertexTexCoords(2,UVW,0.0)
+			gsurf.VertexTexCoords(3,UVW,UVH)
 				
 			If shader.u.texcoords0<>-1
 
 				glEnableVertexAttribArray(shader.u.texcoords0)
-				'glBindBuffer(GL_ARRAY_BUFFER,temp_buf_id[0]) 'surf.vbo_id[1])	
+				'glBindBuffer(GL_ARRAY_BUFFER,temp_buf_id[0]) 'gsurf.vbo_id[1])	
 				'glBufferData(GL_ARRAY_BUFFER,( 32 ),temp_buf.buf,GL_DYNAMIC_DRAW)
-				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+				glBindBuffer(GL_ARRAY_BUFFER,gsurf.vbo_id[0])
 				glVertexAttribPointer( shader.u.texcoords0, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET )
 
 			Endif
 	
 			glEnableVertexAttribArray(shader.u.vertcoords)			
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+			glBindBuffer(GL_ARRAY_BUFFER,gsurf.vbo_id[0])
 			glVertexAttribPointer( shader.u.vertcoords, 3, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.POS_OFFSET )
 			
 			
 		
 			If shader.u.normals<>-1
 				glDisableVertexAttribArray(shader.u.normals)
-				'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[3]) 'normals
+				'glBindBuffer(GL_ARRAY_BUFFER,gsurf.vbo_id[3]) 'normals
 				'glEnableVertexAttribArray(shader.u.normals)
 				'glVertexAttribPointer( shader.u.normals, 3, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.NORMAL_OFFSET )
 			Endif
@@ -381,8 +398,8 @@ Class FrameBufferGL Extends FrameBuffer
 		'glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
 	
 	
-		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,surf.vbo_id[5]) 'tris
-		glDrawElements(GL_TRIANGLES,surf.no_tris*3,GL_UNSIGNED_SHORT, 0)
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,gsurf.vbo_id[5]) 'tris
+		glDrawElements(GL_TRIANGLES,gsurf.no_tris*3,GL_UNSIGNED_SHORT, 0)
 		
 		If DEBUG And OpenglES20.GetGLError() Then Dprint "*FBO Display error DrawElements"
 		

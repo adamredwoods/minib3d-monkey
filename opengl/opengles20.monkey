@@ -84,6 +84,8 @@ Class OpenglES20 Extends TRender
 	Field v_matrix:Matrix = New Matrix
 	Field fog_flag:Int
 	
+	Field t_array:Float[16] 'temp array
+	
 	Global total_errors:Int=0
 	
 	Const DEGREESTORAD:Float = PI/180.0
@@ -307,13 +309,14 @@ Print s
 				glUseProgram(shader.shader_id)
 				last_shader = shader.shader_id
 			
-				'Print shader.name
+				'Print shader.name+" "+(shader.MAX_LIGHTS)
 								
 				''shader light info, for all lights
 				For Local li:Int = 0 To shader.MAX_LIGHTS-1
 					If light[li]
 						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
-						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, light[li].mat.ToArray()  )
+						light[li].mat.ToArray(t_array)
+						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, t_array  )
 						If shader.u.light_att[li]<>-1 Then glUniform4fv( shader.u.light_att[li], 1,[ light[li].const_att,light[li].lin_att,light[li].quad_att,light[li].actual_range ]  )
 						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ light[li].red, light[li].green, light[li].blue, 1.0 ]  )
 						If shader.u.light_spot[li]<>-1 Then glUniform3fv( shader.u.light_spot[li], 1,[ Cos(light[li].outer_ang), Cos(light[li].inner_ang), light[li].spot_exp ]  )
@@ -829,10 +832,12 @@ Print s
 			''matrices
 			
 			If mesh.is_sprite=False
-				If shader.u.m_matrix <>-1 Then glUniformMatrix4fv( shader.u.m_matrix, 1, False, mesh.mat.ToArray() )
+				mesh.mat.ToArray(t_array)
+				If shader.u.m_matrix <>-1 Then glUniformMatrix4fv( shader.u.m_matrix, 1, False, t_array )
 				'vp_matrix.Multiply4(mesh.mat)
 			Else
-				If shader.u.m_matrix <>-1 Then glUniformMatrix4fv( shader.u.m_matrix, 1, False, TSprite(mesh).mat_sp.ToArray() )
+				TSprite(mesh).mat_sp.ToArray(t_array)
+				If shader.u.m_matrix <>-1 Then glUniformMatrix4fv( shader.u.m_matrix, 1, False, t_array )
 				'vp_matrix.Multiply4(TSprite(mesh).mat_sp)
 			Endif
 		
@@ -904,6 +909,7 @@ Print s
 		
 		temp_list = Null
 		
+		glFlush()
 		
 		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
 		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
@@ -1263,6 +1269,18 @@ Print s
 		
 	End	
 	
+	''overloading for framebuffers...
+	Method BindTextureStack()
+		
+		Super.BindTextureStack()
+		
+		For Local fbo:FrameBuffer = Eachin FrameBufferGL.fboStack
+			FrameBufferGL.BindFBO(FrameBufferGL(fbo))
+		Next
+		
+		FrameBufferGL.fboStack.Clear()
+		
+	End
 	
 	Method UpdateLight(cam:TCamera, light:TLight)
 		

@@ -6,7 +6,7 @@
 Import minib3d
 Import minib3d.monkeyutility
 Import minib3d.monkeybuffer
-
+Import mojo.data
 
 'Alias DataBuffer = databuffer.DataBuffer
 
@@ -319,6 +319,7 @@ Class PreloadManager Implements IPreloadManager
 				
 			Else
 				Local info:Int[2]
+				f = FixDataPath(f)
 				p.pixels = LoadImageData(f, info)
 				p.width = info[0]
 				p.height = info[1]

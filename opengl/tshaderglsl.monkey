@@ -126,8 +126,8 @@ Class TShaderGLSL Extends TShader
 	Field u:ShaderUniforms
 	
 	''set these global according to the shader
-	Global MAX_LIGHTS = 0
-	Global MAX_TEXTURES =0
+	Field MAX_LIGHTS = 1
+	Field MAX_TEXTURES =1
 	
 	''internal use
 	

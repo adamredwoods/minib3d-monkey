@@ -3,3 +3,5 @@
 - re-arranged preloading/buffer loading (future-proofing)
 - uses #MINIB3D_DEBUG_MODEL = "true" to debug models instead of hardcoding
 
+- with monkey V66, you can only load new shaders in OnCreate() or OnRender() [android]
+- with monkey V66, SetRender() must be in OnCreate()
