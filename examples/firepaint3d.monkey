@@ -49,7 +49,7 @@ Class Game Extends App
 		
 		''use to preload images for html5
 		
-		If Not TPixmap.PreLoadPixmap(["blitzlogo.png","stars.png","bluspark.png"])	
+		If Not TPixmap.PreLoadPixmap(["blitzlogo.png","stars.png","bluspark.png","mojo_font.png"])	
 			Return 0
 		Endif
 		

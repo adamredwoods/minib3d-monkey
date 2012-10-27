@@ -32,9 +32,10 @@ Class Game Extends App
 	Field cz:Float, pm:Int
 	
 	Method OnCreate()
+	
 		SetUpdateRate 30
+		SetRender()', DISABLE_VBO)
 		
-		'TShaderGLSL.LoadDefaultShader(New FastBrightShader)
 	End
 
 	Method Init()
@@ -42,8 +43,6 @@ Class Game Extends App
 		If init_gl Then Return
 		init_gl = True
 		
-		SetRender()', DISABLE_VBO)
-
 		
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,80)
