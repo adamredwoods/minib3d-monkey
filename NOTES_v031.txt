@@ -5,3 +5,4 @@
 
 - with monkey V66, you can only load new shaders in OnCreate() or OnRender() [android]
 - with monkey V66, SetRender() must be in OnCreate()
+- in monkey v66, shaders must be setup in OnCreate(). (ie. fastbrightshader = New FastBrightShader)

@@ -586,6 +586,15 @@ Class Matrix
 		Return arr
 	End
 	
+	
+	Method ToArray:Void(arr:Float[])
+		
+		arr[0] = grid[0][0]; arr[1]= grid[0][1]; arr[2]= grid[0][2]; arr[3]= grid[0][3]
+		arr[4] = grid[1][0]; arr[5]= grid[1][1]; arr[6]= grid[1][2]; arr[7]= grid[1][3]
+		arr[8] = grid[2][0]; arr[9]= grid[2][1]; arr[10]= grid[2][2]; arr[11]= grid[2][3]
+		arr[12] = grid[3][0]; arr[13]= grid[3][1]; arr[14]= grid[3][2]; arr[15]= grid[3][3]
+
+	End
 
 	
 	Method Update( a:Vector, b:Vector, c:Vector)
@@ -595,7 +604,7 @@ Class Matrix
 		grid[2] = [c.x,c.y,c.z,grid[3][2] ]
 		
 	End
-	
+		
 End 
 
 Function PrintMatrix(mat:Matrix)
