@@ -1,5 +1,7 @@
 Import minib3d
 
+Alias LoadString = app.LoadString
+
 '' - obj does not need to be triangles, can handle polys
 '' large polys (>4) may be triangulated poorly though...
 '' - combines reused surfaces
@@ -12,12 +14,15 @@ Class TModelObj
 	Const DEBUG:Int =0
 #Endif
 	
-	Const MAXVERTS:Int = 2000 ''should auto-increment as needed
+	Const MAXVERTS:Int = 1024 ''auto-increment as needed
 	
 	Field pos:Int=0
 	Field data:String
 	Field length:Int
 	Field stack:StringStack = New StringStack	
+	
+	
+	Global override_texflags:Int = -1
 	
 	Method ReadLine:String()
 		Local s:String=""
@@ -48,8 +53,10 @@ Class TModelObj
 		Return stack.Join("")
 	End
 	
-	Function LoadMesh:TMesh(url:String)
-	
+	Function LoadMesh:TMesh(url:String, flags:Int=-1)
+		
+		override_texflags = flags
+		
 		Local stream:TModelObj = New TModelObj
 		
 		stream.data = LoadString(url)
@@ -106,7 +113,7 @@ Class TModelObj
 				Local tag:String = Line[0..9].ToLower()
 	
 				If tag[0..2]= "v " Then
-					If VC>vertexP.Length() Then vertexP = vertexP.Resize(vertexP.Length()+MAXVERTS)
+					If VC>=vertexP.Length()-1 Then vertexP = vertexP.Resize(vertexP.Length()+MAXVERTS)
 					
 					vertexP[VC+1] = New TObjVertex
 					vertexP[VC+1].GetValues(Line[2..]) 
@@ -114,7 +121,7 @@ Class TModelObj
 				Endif
 				
 				If tag[0..3] = "vn " Then
-					If VN>vertexN.Length() Then vertexN = vertexN.Resize(vertexN.Length()+MAXVERTS)
+					If VN>=vertexN.Length()-1 Then vertexN = vertexN.Resize(vertexN.Length()+MAXVERTS)
 				
 					vertexN[VN+1] = New TObjNormal
 					vertexN[VN+1].GetValues(Line[3..]) 
@@ -122,7 +129,7 @@ Class TModelObj
 				Endif
 				
 				If tag[0..3] = "vt " Then
-					If VT>vertexT.Length() Then vertexT = vertexT.Resize(vertexT.Length()+MAXVERTS)
+					If VT>=vertexT.Length()-1 Then vertexT = vertexT.Resize(vertexT.Length()+MAXVERTS)
 				
 					vertexT[VT+1] = New TObjTexCoord
 					vertexT[VT+1].GetValues(Line[3..]) 
@@ -486,7 +493,10 @@ Class TModelObj
 
 				texfile[0] = texfile[texfile.Length()-1] ''get rid of any prior folders (blender fix)
 				
-				MatLib[CMI].texture = LoadTexture(texfile[0] ) 
+				Local flags:Int = TTexture.default_texflags
+				If override_texflags > -1 Then flags = override_texflags
+				
+				MatLib[CMI].texture = LoadTexture(texfile[0], flags ) 
 				If MatLib[CMI].texture.TextureHeight() > 1
 				
 					MatLib[CMI].brush.BrushTexture( MatLib[CMI].texture) 

@@ -644,14 +644,16 @@ Public
 		
 		Local new_sampler_state:XNASamplerState 
 		 
+		new_sampler_state = _st_cU_cV ''only use wrap with power-of-two textures
+		
 		If tex_flags&16 And tex_flags&32 Then ' clamp u clamp v flag
 			new_sampler_state = _st_cU_cV
 		Elseif tex_flags&16 'clamp u flag
 			new_sampler_state = _st_cU_wV
 		Elseif tex_flags&32 'clamp v flag
 			new_sampler_state = _st_wU_cV
-		Else						
-			new_sampler_state = _st_wU_wV ''only use wrap with power-of-two textures
+		Elseif tex_count>0						
+			new_sampler_state = _st_wU_wV ''only use wrap with power-of-two textures		
 		End
 	
 		' ' preserve sampler state
