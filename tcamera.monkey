@@ -149,7 +149,13 @@ Class TCamera Extends TEntity
 		cam.fog_b=fog_b
 		cam.fog_range_near=fog_range_near
 		cam.fog_range_far=fog_range_far
-
+		
+		cam.use_cam_layer = use_cam_layer
+		cam.cam_layer = cam_layer
+		cam.draw2D = draw2D
+		
+		Return cam
+		
 	End 
 	
 	Method FreeEntity()
@@ -625,27 +631,8 @@ Class TCamera Extends TEntity
 	End
 	
 	
-	''
-	'' CameraLayer(entity)
-	'' - overloading from TEntity
-	'' - this command isolates a camera's render to only this object and it's children
-	'' - used for shaders and ui screens (if camera set to ortho)
-	'' - lights are uneffected
-	'' - camera are rendered in order they are added (or use EntityOrder() )
-	Method CameraLayer:Void(ent:TEntity)
-		
-		ent.use_cam_layer = True
-		ent.cam_layer = Self
-		
-		For Local ch:TEntity = Eachin ent.child_list
-			
-			Self.CameraLayer(ch)
-		Next
-		
-		EnableCameraLayer()
-		
-	End
 	
+
 	
 	Method EnableCameraLayer:Void()
 		use_cam_layer = True

@@ -1931,16 +1931,20 @@ Class TEntity
 		Return xd*xd + yd*yd + zd*zd
 		
 	End 
-
+	
+	
+	''
+	'' CameraLayer(entity)
+	'' - this command isolates a camera's render to only this object and it's children
+	'' - used for shaders and ui screens (if camera set to ortho)
+	'' - lights are uneffected
+	'' - camera are rendered in order they are added (or use EntityOrder() )
 	Method CameraLayer:Void(e:TEntity)
 		
 		Local cam:TCamera = TCamera(e)
 		
-		If cam<>Null
-			''add camera layer
-			
-			cam.CameraLayer(Self)
-		Else
+		If e=Null
+		
 			'' remove camera layer
 			
 			use_cam_layer = False
@@ -1954,6 +1958,35 @@ Class TEntity
 				ch.CameraLayer(Null)
 				
 			Next
+			
+		Else If TCamera(Self) And cam=Null
+		
+			'' use camera, add entity & children
+			TCamera(Self).EnableCameraLayer()
+			e.use_cam_layer = True
+			e.cam_layer = TCamera(Self)
+			
+			For Local ch:TEntity = Eachin e.child_list
+				
+				''make sure its not a camera
+				If TCamera(e)=Null Then Self.CameraLayer(ch)
+			Next
+			
+		Else If cam<>Null And TCamera(Self)=Null	
+		
+			'' use entity, add camera
+			cam.EnableCameraLayer()
+			use_cam_layer = True
+			cam_layer = cam
+			
+			For Local ch:TEntity = Eachin Self.child_list
+				
+				''make sure its not a camera
+				If TCamera(ch)=Null Then ch.CameraLayer(cam)
+			Next
+			
+		Else
+			
 			
 		Endif
 	End

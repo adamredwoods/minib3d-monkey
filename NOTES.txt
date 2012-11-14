@@ -1,3 +1,5 @@
+****************************************
+minib3d v0.32
 
 - updated for monkey v66
 - re-arranged preloading/buffer loading (future-proofing)
@@ -12,6 +14,14 @@
   (ie. use store pointers: fastbrightshader = New FastBrightShader)
 
 
+  - added TEntity.Draw(x,y) command:
+	Draw works much like Mojo's DrawImage command where it must be updated per frame to work, and renders the order of all objects layered when RenderWorld() is called. It can be placed in OnRender() but before RenderWorld(). 
+	The use of Draw is pixel perfect, but will automatically scale based on TPixmap's width and height. To override auto-scaling use Draw(x,y,true).
+
+	Usage:
+	local txt:TText = CreateText2D("Some text here")
+	txt.Draw(0,0)
+  
 ****************************************
 minib3d v0.30
 

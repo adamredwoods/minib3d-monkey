@@ -113,6 +113,34 @@ Class TText Extends TSprite
 	End
 	
 	
+	Method CopyEntity:TEntity(parent_ent:TEntity = Null)
+		
+		Local txt:TText = New TText
+		
+		Self.CopyBaseSpriteTo(txt, parent_ent)
+		
+		txt.cam = cam
+		txt.mode = mode
+		txt.text = text
+		txt.length = length
+		txt.font_file = font_file
+		txt.orig_width = orig_width
+		txt.orig_height = orig_height
+		
+		txt.char_uvwidth = char_uvwidth
+		txt.surf = surf
+		txt.char_pixels = char_pixels
+		txt.pixel_ratio = pixel_ratio
+		txt.padding = padding
+		txt.char_rows = char_rows
+		
+		txt.align = align
+		
+		Return txt
+	End
+	
+	
+	
 	Method AddChar(char:Int, num:Int, x:Float=0.0, y:Float=0.0, offset:Float=0.0)
 		
 		Local uv:Float = (char - 32.0) * char_uvwidth + (char - 32.0) * padding

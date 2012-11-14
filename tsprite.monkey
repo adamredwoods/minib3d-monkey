@@ -31,6 +31,14 @@ Class TSprite Extends TMesh
 		' new sprite
 		Local sprite:TSprite=New TSprite
 		
+		Self.CopyBaseSpriteTo(sprite, parent_ent)
+
+		Return sprite
+		
+	End
+	
+	Method CopyBaseSpriteTo:Void(sprite:TSprite, parent_ent:TEntity=Null)
+	
 		' copy contents of child list before adding parent
 		For Local ent:TEntity=Eachin child_list
 			ent.CopyEntity(sprite)
@@ -115,10 +123,11 @@ Class TSprite Extends TMesh
 		sprite.handle_x=handle_x
 		sprite.handle_y=handle_y
 		sprite.view_mode=view_mode
-
-		Return sprite
 		
-	End 
+		sprite.use_cam_layer = use_cam_layer
+		sprite.cam_layer = cam_layer
+		
+	End
 		
 	Function CreateSprite:TSprite(parent_ent:TEntity=Null)
 

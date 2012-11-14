@@ -273,7 +273,9 @@ Class TRender
 		TRender.render.UpdateCamera(cam)
 		
 		For Local mesh:TMesh = Eachin draw_list
-		
+			
+			If Not mesh Then Continue
+			
 			If mesh.is_sprite Or mesh.is_update
 				
 				mesh.Update(cam ) ' rotate sprites with respect to current cam					

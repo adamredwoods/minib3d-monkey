@@ -136,6 +136,12 @@ Class TMesh Extends TEntity
 		mesh.pick_mode=pick_mode
 		mesh.obscurer=obscurer
 	
+		
+		mesh.cam_layer = cam_layer
+		mesh.use_cam_layer = use_cam_layer
+		mesh.is_sprite = is_sprite
+		mesh.is_update = is_update
+		
 		' copy mesh info
 		
 		mesh.min_x=min_x
@@ -1010,6 +1016,9 @@ Class TMesh Extends TEntity
 		mesh.auto_fade=auto_fade
 		mesh.fade_near=fade_near
 		mesh.fade_far=fade_far
+		
+		mesh.use_cam_layer = use_cam_layer
+		mesh.cam_layer = cam_layer
 		
 		mesh.anim=anim
 		mesh.anim_render=anim_render
