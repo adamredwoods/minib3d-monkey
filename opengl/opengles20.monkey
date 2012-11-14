@@ -23,17 +23,17 @@ Import minib3d.opengl.framebuffergl
 #OPENGL_GLES20_ENABLED="true"
 #OPENGL_DEPTH_BUFFER_ENABLED="true"
 #MINIB3D_DRIVER="opengl20"
-#ANDROID_NATIVE_GL_ENABLED=True ''*************************PROBLEMATIC only used on Android 2.2*****************************
+#ANDROID_NATIVE_GL_ENABLED=True ''*************************PROBLEMATIC? only used on Android 2.2*****************************
 
 #If TARGET="html5"
 	Extern
 		'Function glTexImage2D2( target:Int,level:Int,internalformat:Int,width:Int,height:Int,border:Int,format:Int,type:Int,pixels:Int )="_glTexImage2D2"
 		Global CheckWebGL:Int = "window.WebGLRenderingContext"
-		
+		Global CheckWebGLContext:Int = "CheckWebGLContext()" ''placed function in tpixmaphtml5.js
 	Public
 #Else
 	Global CheckWebGL:Int =1
-
+	Global CheckWebGLContext:Int = 1
 #Endif
 
 
@@ -84,7 +84,7 @@ Class OpenglES20 Extends TRender
 	Field v_matrix:Matrix = New Matrix
 	Field fog_flag:Int
 	
-	Field t_array:Float[16] 'temp array
+	Field t_array:Float[] = New Float[16] 'temp array
 	
 	Global total_errors:Int=0
 	
@@ -100,7 +100,8 @@ Class OpenglES20 Extends TRender
 	Method GetVersion:Float()
 		Local webgl:String, st:String
 		
-		If Not CheckWebGL Then Error "** WebGL not found. Please upgrade or check browser options."
+		If Not CheckWebGL Then Error "** WebGL not found. Please upgrade or check browser options. ~n~n"
+		If Not CheckWebGLContext Then Error "** WebGL Context not found. Please upgrade or check browser options. ~n~n"
 		
 		Local s:String = glGetString(GL_VERSION)
 Print s	
@@ -162,7 +163,8 @@ Print s
 	End
 	
 	Method Finish:Void()
-	
+		
+		glFlush()
 		
 	End
 	
@@ -435,13 +437,19 @@ Print s
 				ambient_blue =TLight.ambient_blue
 			Endif
 			
+			If cam.draw2D
+				lightflag=0
+				ambient_red  =0.0
+				ambient_green=0.0
+				ambient_blue =0.0
+				If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, 0 )
+			Endif
 
 			'Local ambient#[]=[ambient_red,ambient_green,ambient_blue,1.0]	
 			Local no_mat#[]=[0.0,0.0,0.0,0.0]
 			Local mat_diffuse#[]=[red,green,blue,alpha]
 			Local mat_shininess#[]=[100.0] ' upto 128
 			
-		
 			
 			'' --------------------------------------
 			If skip_sprite_state = False
@@ -497,24 +505,30 @@ Print s
 					
 			If DEBUG And GetGLError() Then Print "*pre vbos"
 			
+			
 			If vbo
+				
+				Local bind:Bool=False
 				
 				If Not (mesh.anim_render Or surf.vbo_dyn)
 					glEnableVertexAttribArray(shader.u.vertcoords)
 					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 					glVertexAttribPointer( shader.u.vertcoords, 3, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.POS_OFFSET )
+					bind=True
 				Endif
 
 				If shader.u.normals<>-1
 					glEnableVertexAttribArray(shader.u.normals)					
-					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) 'normals
+					If Not bind Then glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) 'normals
 					glVertexAttribPointer( shader.u.normals, 3, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.NORMAL_OFFSET )
+					bind=True
 				Endif
 			
 				If(shader.u.colors<>-1 ) '' ** causes problems on FireFox if we do not send color info
 					glEnableVertexAttribArray(shader.u.colors)
-					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) 'color
+					If Not bind Then glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) 'color
 					glVertexAttribPointer( shader.u.colors, 4, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.COLOR_OFFSET )
+					bind=True
 				Endif
 
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,surf.vbo_id[5]) 'tris
@@ -650,8 +664,7 @@ Print s
 						frame=surf.brush.tex[ix].tex_frame
 						tex_smooth = surf.brush.tex[ix].tex_smooth		
 					Endif
-					
-						
+	
 	
 					''preserve texture states--------------------------------------
 					If ((surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
@@ -696,14 +709,22 @@ Print s
 				
 					' mipmapping texture flag
 					If tex_flags&8<>0
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR) ''GL_LINEAR_MIPMAP_NEAREST
-					Elseif tex_smooth
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_LINEAR)
+						If tex_smooth
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
+						Else
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
+						Endif
 					Else
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST) 
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
+						If tex_smooth
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
+						Else
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
+						Endif
+
 
 					Endif
 					
@@ -868,7 +889,11 @@ Print s
 			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
 			
 			If DEBUG And GetGLError() Then Print "*mats flags"
-
+			
+			
+			If cam.draw2D
+				glDisable(GL_DEPTH_TEST)
+			Endif
 
 			'' draw tris
 
@@ -901,6 +926,9 @@ Print s
 
 		Next ''end non-alpha loop
 		
+		If cam.draw2D
+			glEnable(GL_DEPTH_TEST)
+		Endif
 
 		If Not alpha_list Then Exit ''get out of loop, no alpha
 		temp_list = alpha_list
@@ -909,7 +937,6 @@ Print s
 		
 		temp_list = Null
 		
-		glFlush()
 		
 		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
 		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
@@ -969,7 +996,7 @@ Print s
 		
 		''---load default shader here----
 
-		TShaderGLSL.LoadDefaultShader(New FullShader)	
+		TShader.LoadDefaultShader(New FullShader)	
 
 		
 		
@@ -1188,7 +1215,7 @@ Print s
 		TRender.render.ClearErrors()	
 		
 		' if mask flag is true, mask pixmap
-		If tex.flags&4
+		If flags&4
 			tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
@@ -1231,7 +1258,7 @@ Print s
 		
 		
 		Local mipmap:Int= 0, mip_level:Int=0
-		If tex.flags&8 Then mipmap=True
+		If flags&8 Then mipmap=True
 		
 		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
 		

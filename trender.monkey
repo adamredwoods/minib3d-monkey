@@ -13,7 +13,11 @@ Import minib3d
 
 Class TRender
 
+#If CONFIG="debug"
 	Const DEBUG:Int=1
+#else
+	Const DEBUG:Int=0
+#endif
 
 	Global render:TRender
 	Global vbo_enabled:Bool=False ' this is set in GraphicsInit - will be set to true if USE_VBO is true and the hardware supports vbos
@@ -23,12 +27,15 @@ Class TRender
 	Global width:Int,height:Int,mode:Int,depth:Int,rate:Int
 	
 	Global wireframe:Bool=False ''draw meshes as lines or filled
-
+	Global disable_lighting:Bool = False ''turns off light shading, renders full color
+	
 	Global alpha_pass:Int = 0 ''for optimizing the TMesh render routine
+	
+	Global draw_list:List<TMesh> = New List<TMesh> ''immediate mode drawing for overlay, text
 	
 	Private
 	
-	Global render_list:List<TMesh> = New List<TMesh>
+	Global render_list:RenderAlphaList = New RenderAlphaList
 	Global render_alpha_list:RenderAlphaList = New RenderAlphaList
 	
 	Global temp_shader:TShader
@@ -56,6 +63,8 @@ Class TRender
 	
 	Method UpdateCamera(cam:TCamera) Abstract
 	
+	Method UpdateVBO(surface:TSurface)
+	End
 	
 	''-------------------------------------------------------
 	
@@ -67,9 +76,9 @@ Class TRender
 		render_alpha_list.Clear()
 		
 		If entities
-Print TEntity.entity_list.Count()			
+'Print TEntity.entity_list.Count()			
 			For Local ent:TEntity=Eachin TEntity.entity_list
-Print ent.classname
+'Print ent.classname
 				ent.FreeEntity()
 				ent=Null
 			Next
@@ -150,6 +159,12 @@ Print ent.classname
 					
 						TAnimation.AnimateVertex(mesh,mesh.anim_time,first,last)
 						
+					Elseif mesh.anim >=4
+						
+						TBone.UpdateBoneChildren( mesh)
+						
+						TAnimation.VertexDeform(TMesh(mesh))
+						
 					Endif
 					
 					If mesh.anim_mode=0 ''stop animation
@@ -206,8 +221,7 @@ Print ent.classname
 	Function  RenderWorld:Void()
 		
 		''process texture binds
-		BindTextureStack()
-		
+		TRender.render.BindTextureStack()		
 		
 		If Not TCamera.cam_list Or render = Null Then Return
 		
@@ -237,8 +251,47 @@ Print ent.classname
 			TShader.PostProcess(cam)
 			
 		Next
-
+		
+		RenderDrawList()
+		
 	End 
+	
+	
+	Function RenderDrawList:Void()
+
+		If draw_list.IsEmpty Then Return
+		
+		TShader.DefaultShader()
+		TRender.render.Reset()
+		
+		Local cam:TCamera=New TCamera ''Do NOT add to cam_list
+		
+		cam.CameraViewport(0,0,TRender.width,TRender.height)
+		cam.SetPixelCamera
+		cam.CameraClsMode(False,True)
+		cam.draw2D = 1
+		TRender.render.UpdateCamera(cam)
+		
+		For Local mesh:TMesh = Eachin draw_list
+		
+			If mesh.is_sprite Or mesh.is_update
+				
+				mesh.Update(cam ) ' rotate sprites with respect to current cam					
+				If mesh.Alpha() Then mesh.alpha_order=1.0 ' test for alpha in surface
+				
+				''auto-scaling for sprites and ttext
+				TSprite(mesh).mat_sp.Scale( Int(TSprite(mesh).pixel_scale[0]) , Int(TSprite(mesh).pixel_scale[1]), 1.0)
+					
+			Endif
+			
+			
+			TRender.render.Render(mesh,cam)
+		Next
+		
+		draw_list.Clear()
+		TRender.render.Reset()
+		
+	End
 	
 	
 	Method RenderCamera:Void(cam:TCamera, skip:Int=0)
@@ -277,13 +330,15 @@ Print ent.classname
 			'' reject non-mesh
 			mesh = TMesh( ent )
 			
+'Print "// ent:"+ent.classname+" : "+ent.name
+			
 			If mesh				
 				
 				'If mesh.parent_hidden=True Or mesh.hidden=True Or mesh.brush.alpha=0.0 Then Continue
 				If mesh.Hidden()=True Or mesh.brush.alpha=0.0 Then Continue
 				
 				''cam layer mode
-				If (mesh.is_cam_layer And mesh.cam_layer <> cam) Or (cam.is_cam_layer And mesh.cam_layer <> cam)  Then Continue
+				If (mesh.use_cam_layer And mesh.cam_layer <> cam) Or (cam.use_cam_layer And mesh.cam_layer <> cam)  Then Continue
 				
 				' get new bounds
 				mesh.GetBounds()
@@ -291,8 +346,10 @@ Print ent.classname
 				' Perform frustum cull
 				
 				Local inview:Int =cam.EntityInFrustum(mesh)
+				
 'Print "// mesh "+mesh.classname+" "+inview	
 'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
+
 				If inview
 				
 					If mesh.auto_fade=True Then mesh.AutoFade(cam)
@@ -312,9 +369,10 @@ Print ent.classname
 
 
 					Else
-					
-						mesh.alpha_order=0.0
+						
 						TRender.render.Render(mesh,cam)
+						'mesh.alpha_order=-cam.EntityDistanceSquared(mesh)
+						'render_list.AddLast(mesh)
 	
 					Endif
 					
@@ -322,9 +380,21 @@ Print ent.classname
 			Endif
 					
 		Next
-
+		
+		'' can't draw front to back, then "entity.order" is messed up
+		' Draw front to back for opaque
+		'render_list.Sort()
+		'For mesh = Eachin render_list
+		
+			'TRender.alpha_pass=1 'skip, no alpha
+			'mesh.alpha_order=0.0
+			'TRender.render.Render(mesh,cam)
+			
+		'Next
+		'TRender.alpha_pass=0
+		
 				
-		' Draw everything in alpha render list
+		' Draw back to front, alpha render list
 		
 		render_alpha_list.Sort() ''sorting alpha_order
 		'TRender.alpha_pass = 1 ''skip non-alpha surface pass ''ACTUALLY this may help hardware z-ordering
@@ -345,6 +415,8 @@ Print ent.classname
 		wireframe = enable
 		
 	End 
+	
+	
 	
 	Method ReloadSurfaces:Int()
 		
@@ -373,7 +445,7 @@ Print ent.classname
 	''
 	''due to openGL context begin available only guaranteed in OnRender(), use this to queue texture binds
 	''
-	Function BindTextureStack()
+	Method BindTextureStack()
 	
 		For Local tex:TTexture = Eachin TTexture.tex_bind_stack
 			If tex.bind_flags = -255

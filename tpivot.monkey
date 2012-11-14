@@ -7,10 +7,6 @@ Class TPivot Extends TEntity
 	
 	End Method
 	
-	Method Delete()
-
-	
-	End Method
 
 	Method CopyEntity:TEntity(parent_ent:TEntity=Null)
 

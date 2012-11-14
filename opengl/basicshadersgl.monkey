@@ -82,23 +82,23 @@ Class FullShader Extends TShaderGLSL
 	''LOWP, MEDP are causing matrix problems on android
 	
 	Const VERTP:String = "/*generic opengl 2.0 shader*/ ~n"+
-	"#ifdef GL_ES ~n#define LOWP ~n#define MEDP ~n  precision mediump float; ~n#else~n #define LOWP~n #define MEDP~n #endif ~n"+
-	"attribute vec2 aTexcoords0, aTexcoords1;attribute vec3 aVertcoords;attribute vec3 aNormals;attribute LOWP vec4 aColors;uniform mat4 pMatrix, vMatrix, mMatrix;"+
-	"/*light*/ uniform LOWP float lightType[2];uniform mat4 lightMatrix[2];uniform MEDP vec3 lightSpot[2]; /*x=outercutoff,y=innercutoff,z=spot exponent*/ "+
-	"/*color*/ uniform LOWP vec4 basecolor; uniform LOWP float colorflag, lightflag; "+
-	"/*texture*/ uniform MEDP vec2 texPosition[5],  texScale[5]; uniform MEDP vec2 texRotation[5]; uniform MEDP float texflag; uniform highp int texfxNormal[2];"+
-	"uniform MEDP vec3 scaleInv; uniform int fogflag; uniform vec2 fogRange; "+
-	"varying vec2 texcoord[4]; varying vec4 normal; varying LOWP vec4 vertcolor;"+
+	"#ifdef GL_ES ~n precision mediump float; ~n#endif ~n"+
+	"attribute vec2 aTexcoords0, aTexcoords1;attribute vec3 aVertcoords;attribute vec3 aNormals;attribute vec4 aColors;uniform mat4 pMatrix, vMatrix, mMatrix;"+
+	"/*light*/ uniform float lightType[2];uniform mat4 lightMatrix[2];uniform vec3 lightSpot[2]; /*x=outercutoff,y=innercutoff,z=spot exponent*/ "+
+	"/*color*/ uniform vec4 basecolor; uniform float colorflag, lightflag; "+
+	"/*texture*/ uniform vec2 texPosition[5],  texScale[5]; uniform vec2 texRotation[5]; uniform float texflag; uniform highp int texfxNormal[2];"+
+	"uniform vec3 scaleInv; uniform int fogflag; uniform vec2 fogRange; "+
+	"varying vec2 texcoord[4]; varying vec4 normal; varying vec4 vertcolor;"+
 	"varying vec4 lightVec, halfVec; varying float fogBlend; varying vec3 nmLight;"+
-	"const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const float LOG2 = 1.442695;vec4 lightPos[5]; ~n"+
+	"const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const float LOG2 = 1.442695; ~n"+
 	"void main() {"+
-	"vec4 vertVec = all_ones; lightPos[0] = vec4(lightMatrix[0][3][0],lightMatrix[0][3][1],lightMatrix[0][3][2],1.0);"+
+	"vec4 lightPos[5]; vec4 vertVec = all_ones; lightPos[0] = vec4(lightMatrix[0][3][0],lightMatrix[0][3][1],lightMatrix[0][3][2],1.0);"+
 	"/*****IMPORTANT: I'm WORKING in WORLD SPACE******* and pMatrix = p*v */"+
 	"vertVec = mMatrix * vec4(aVertcoords, 1.0);normal = mMatrix * vec4(aNormals,0.0);"+
 	"normal = normalize(normal); float light = lightType[0] * (lightflag>0.0?1.0:0.0); float d = 0.0;float spotlight = 1.0;lightVec = all_ones; /*IMPORTANT! for android, divide by 0 in normalization error*/"+
 	"mat3 lightmat = mat3(lightMatrix[0][0].xyz, lightMatrix[0][1].xyz, lightMatrix[0][2].xyz);"+
 	"/*halfvec specular*/ halfVec = vec4(normalize((lightPos[0].xyz- vertVec.xyz) + -( vMatrix[3].xyz - vertVec.xyz )) , 0.0);"+
-    "if (light == 1.0 ) {lightVec.xyz = lightmat * vec3(0.0,0.0,1.0); nmLight = normalize(-lightVec.xyz);"+
+    "if (light == 1.0 ) {lightVec.xyz = lightmat * vec3(0.0,0.0,-1.0); nmLight = normalize(-lightVec.xyz);"+
 	"} else if (light == 2.0 ) { lightVec.xyz = vertVec.xyz; nmLight = normalize(lightPos[0].xyz - vertVec.xyz);	"+
 	"} else if (light == 3.0 ) { vec3 lightDir = normalize(lightmat * vec3(0.0,0.0,1.0));lightVec.xyz = vertVec.xyz; nmLight = normalize(lightPos[0].xyz - vertVec.xyz);}"+
 	"/*NORMAL MAPPING ROTATION*/"+
@@ -117,7 +117,7 @@ Class FullShader Extends TShaderGLSL
 		"if (texflag >3.0) {scale = texScale[3];cosang = texRotation[3].x;sinang = texRotation[3].y;pos = texPosition[3]/scale;"+
 			"(texcoord[3]).x = ((aTexcoords0.x + pos.x) * cosang - (aTexcoords0.y + pos.y) * sinang)*scale.x;(texcoord[3]).y = ((aTexcoords0.x + pos.x) * sinang + (aTexcoords0.y + pos.y) * cosang)*scale.y;"+
 			"j++;}}"+
-	"vertcolor = (colorflag>0.0?aColors:basecolor);	vec4 vertpos = pMatrix * vertVec; gl_Position = vertpos; fogBlend = 0.0;"+
+	"vertcolor = (colorflag>0.0?aColors:basecolor );	vec4 vertpos = pMatrix * vertVec; gl_Position = vertpos; fogBlend = 0.0;"+
 	"if (fogflag == 1) {	float fogz = length(vertpos.xyz);fogBlend = (fogz- fogRange.x) / (fogRange.y - fogRange.x);	fogBlend = clamp(fogBlend, 0.0, 1.0);"+
 	"}else if (fogflag == 2) {	float fogz = length(vertpos.xyz); float dens = 1.0/ (fogRange.y - fogRange.x);	fogBlend = 1.0-exp2( -dens*(fogz- fogRange.x)* LOG2 );"+
 		"fogBlend = clamp(fogBlend, 0.0, 1.0);}else if (fogflag == 3) {	float fogz = length(vertpos.xyz);float ff = (fogz- fogRange.x);	float dens = 1.0/ (fogRange.y - fogRange.x);"+
@@ -126,20 +126,20 @@ Class FullShader Extends TShaderGLSL
 		
 		
 		
-	Const FRAGP:String = "#ifdef GL_ES ~n#define LOWP ~n#define MEDP ~n precision mediump float; ~n#else ~n#define LOWP ~n#define MEDP ~n#endif ~n"+
-	"varying vec2 texcoord[4]; varying vec4 normal;varying LOWP vec4 vertcolor;varying vec4 lightVec, halfVec; /*using z component for light att  ;spotlight coefficient packed into halfvec.w*/"+
+	Const FRAGP:String = "#ifdef GL_ES ~nprecision mediump float; ~n~n#endif ~n"+
+	"varying vec2 texcoord[4]; varying vec4 normal;varying vec4 vertcolor;varying vec4 lightVec, halfVec; /*using z component for light att  ;spotlight coefficient packed into halfvec.w*/"+
 	"varying float fogBlend;varying vec3 nmLight;uniform mat4 mMatrix;"+
-	"/*texture*/ uniform MEDP float texflag; uniform sampler2D uTexture[5];uniform LOWP vec2 texBlend[5];uniform highp int texfxNormal[2];"+
-	"/*light*/uniform LOWP float lightflag;uniform LOWP vec4 lightColor[2];uniform vec4 lightAtt[2];uniform mat4 lightMatrix[2];uniform LOWP float lightType[2];uniform MEDP vec3 lightSpot[2];"+
+	"/*texture*/ uniform float texflag; uniform sampler2D uTexture[5];uniform vec2 texBlend[5];uniform highp int texfxNormal[2];"+
+	"/*light*/uniform float lightflag;uniform vec4 lightColor[2];uniform vec4 lightAtt[2];uniform mat4 lightMatrix[2];uniform float lightType[2];uniform vec3 lightSpot[2];"+
 	"/*material*/"+
-	"uniform LOWP vec4 ambientcolor;uniform float shininess;uniform LOWP float flags;uniform vec4 fogColor;"+
+	"uniform vec4 ambientcolor;uniform float shininess;uniform float flags;uniform vec4 fogColor;"+
 	"const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec3 LIGHTUNIT = vec3(0.0,0.0,-1.0);"+
-	"vec4 BlendFunction(const float blend, const vec4 texture, const vec4 finalcolor, const vec4 vertcolor) {"+
+	"vec4 BlendFunction(const float blend, const vec4 texture, const vec4 finalcolor, const vec4 vertcolorx) {"+
 	"vec4 color = all_zeros;	"+
-	"if (blend ==1.0) {color.xyz = mix(finalcolor.xyz, texture.xyz, texture.w );color.w = vertcolor.w;	return color;"+
-	"} else if (blend ==2.0) {color = (vertcolor * texture); 	return color;"+
-	"} else if(blend==3.0) {	vec4 mod = (vertcolor * texture);color = vec4( mod.xyz, texture.w*vertcolor.w);	return finalcolor+color;"+
-	"} else if(blend==4.0) {	vec4 mod = (vertcolor * texture);color = vec4( mod.xyz, texture.w*vertcolor.w); return finalcolor+color;"+
+	"if (blend ==1.0) {color.xyz = mix(finalcolor.xyz, texture.xyz, texture.w );color.w = vertcolorx.w;	return color;"+
+	"} else if (blend ==2.0) {color = (vertcolorx * texture); 	return color;"+
+	"} else if(blend==3.0) {	vec4 mod = (vertcolorx * texture);color = vec4( mod.xyz, texture.w*vertcolorx.w);	return finalcolor+color;"+
+	"} else if(blend==4.0) {	vec4 mod = (vertcolorx * texture);color = vec4( mod.xyz, texture.w*vertcolorx.w); return finalcolor+color;"+
 	"} return texture;}"+
 	"vec4 LightFunction0 ( const vec4 lightcolor, const vec3 norm, inout vec4 specular ) {"+
 	"const int i=0; /*do per light, webgl restriction*/"+
@@ -153,14 +153,14 @@ Class FullShader Extends TShaderGLSL
 			"float spotlightFade = clamp((lightSpot[i].x - spotlight) / (lightSpot[i].x - lightSpot[i].y), 0.0, 1.0);spotlight = pow(spotlight * spotlightFade, lightSpot[i].z);};	"+	
 	"vec3 L = ( (texflag > 0.0) && (texfxNormal[0] > 0) ) ? nmLight : normalize(lightPos.xyz - lightVec.xyz); vec3 N = norm; float NdotL = dot(N,L);"+
 	"if (NdotL > 0.0) {	if (dist > 0.0 && dist < lightAtt[i].w*10.0) {"+
-	"if (lightType[i] >1.0) d = (lightAtt[i].w* spotlight) / ( lightAtt[i].x + (lightAtt[i].y* dist) + (lightAtt[i].z*(dist * dist)) ) ;"+	
+	"if (lightType[i] >1.0) d = (spotlight ) / (  lightAtt[i].x + (lightAtt[i].y* dist)  ) ;"+	
 	"lambertTerm = clamp(NdotL * d  , 0.0, 1.0) ;"+
 	"if (shininess > 0.0) {	specular = pow( max(dot(halfVec.xyz, N) , 0.0), 100.0  ) *  d * shine4;	}}}"+
 	"return (lightColor[i] * lambertTerm  );}"+
 	"void main () {"+
-	"LOWP vec4 finalcolor = all_zeros;vec4 ambient = vec4(ambientcolor.xyz,0.0);vec4 light = all_ones;vec4 specular = all_zeros;"+
+	" vec4 finalcolor = all_zeros;vec4 ambient = vec4(ambientcolor.xyz,0.0);vec4 light = all_ones;vec4 specular = all_zeros;"+
 	"vec3 N = ( (texflag > 0.0) && (texfxNormal[0] > 0) ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : normalize(normal.xyz);"+
-	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : all_ones ;	LOWP vec4 texture = all_ones;"+
+	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : all_ones ; vec4 texture = all_ones;"+
 	"if (texflag<1.0) {	finalcolor = vec4(vertcolor.xyz, vertcolor.w);	} else {"+
 		"if (texflag >0.0 && (texfxNormal[0] < 1) ) {texture = texture2D(uTexture[0], (texcoord[0]).xy);	finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor);"+
 		"}if (texflag >1.0 ) {texture = texture2D(uTexture[1], (texcoord[1]).xy); /* .zw is bad on powerVR, causes dependent texture read*/"+
@@ -188,7 +188,7 @@ Class FullShader Extends TShaderGLSL
 			LinkVariables()
 			global_uniforms = u
 			init_id = shader_id
-			Dprint "..FullShader success"
+			If active Then Dprint "..FullShader success"
 			
 		Else If init_id
 		
@@ -218,7 +218,7 @@ Class FastBrightShader Extends TShaderGLSL
 		" (texcoord[0]).x = ((aTexcoords0.x + pos.x) * cosang - (aTexcoords0.y + pos.y) * sinang)*scale.x; (texcoord[0]).y = ((aTexcoords0.x + pos.x) * sinang + (aTexcoords0.y + pos.y) * cosang)*scale.y;"+
 		" varTex.x = step(1.0,texflag); varTex.y = step(2.0,texflag);"+
 		" ~n} "
-	Const FRAGP:String = "#ifdef GL_ES ~n precision mediump float; ~n #endif ~n uniform sampler2D uTexture[2]; uniform vec4 ambientcolor;"+
+	Const FRAGP:String = "#ifdef GL_ES ~n precision highp float; ~n #endif ~n uniform sampler2D uTexture[2]; uniform vec4 ambientcolor;"+
 		" varying vec2 texcoord[1]; varying vec4 vertColor; varying vec2 varTex; const vec4 all_ones=vec4(1.0,1.0,1.0,1.0);"+
 		" void main(){  gl_FragColor= vec4(ambientcolor.xyz,0.0) + mix(vertColor, vertColor * texture2D( uTexture[0],texcoord[0] ) * mix(all_ones,texture2D( uTexture[1],texcoord[0] ),varTex.y), varTex.x );"+
 		" ~n} "
@@ -239,7 +239,7 @@ Class FastBrightShader Extends TShaderGLSL
 			LinkVariables()
 			global_uniforms = u
 			init_id = shader_id
-			Dprint "..FastBrightShader success"
+			If active Then Dprint "..FastBrightShader success"
 			
 		Else If init_id
 		

@@ -5,6 +5,10 @@ Import opengl.gles20
 Import minib3d.tshader
 Import minib3d.opengl.framebuffergl
 
+
+Alias LoadString = app.LoadString
+
+
 '' NOTES:
 '' -- use LinkVariables to specifically use default shader variables, otherwise it won't (FBO display)
 
@@ -137,6 +141,7 @@ Class TShaderGLSL Extends TShader
 	Private 
 	
 	'Global default_shader_id:Int
+	Field webgl_shader:Int
 	
 	Public
 	
@@ -188,7 +193,9 @@ Class TShaderGLSL Extends TShader
 	
 	Function LoadShader:TShaderGLSL(vp_file:String, fp_file:String, sh:TShader=Null)
 		
+		Local fail:Int=0
 		Local shader:TShaderGLSL
+		
 		If sh<>Null
 			shader = TShaderGLSL(sh)
 		Else
@@ -198,15 +205,17 @@ Class TShaderGLSL Extends TShader
 		Local vs:Int = shader.CompileShader(LoadString(vp_file),GL_VERTEX_SHADER)
 		Local fs:Int = shader.CompileShader(LoadString(fp_file),GL_FRAGMENT_SHADER)
 		If (vs) And (fs)
-			
-			Print "..shader success: "+vp_file+" "+fp_file
-			
-			shader.LinkShader()
+
+			If Not shader.LinkShader() Then fail=1
 			
 		Else
+			fail = 1
+		Endif
 		
+		If Not fail
+			Print "..shader success: "+vp_file+" "+fp_file
+		Else		
 			Print "**compiler error: "+vp_file+" "+vs+", "+fp_file+" "+fs
-			
 		Endif
 
 		Return shader
@@ -231,12 +240,15 @@ Class TShaderGLSL Extends TShader
 		log = glGetProgramInfoLog(shader_id)
 		If TRender.DEBUG Then Print log
 		
+		
+			log = glGetShaderSource(webgl_shader) 'glGetProgramInfoLog(shader_id)
+			If TRender.DEBUG Then Print log
+		
 		If result[0] <> GL_TRUE
 			Print "**Shader Linking Error "
 			
-			Local log:String
 			log = glGetProgramInfoLog(shader_id)
-			If Not TRender.DEBUG Then Print log
+			If TRender.DEBUG Then Print log
 			
 			glDeleteShader(vertex_id)
 			glDeleteShader(fragment_id)
@@ -267,7 +279,9 @@ Class TShaderGLSL Extends TShader
 		Endif
 		
 		''Create GLSL Shader
+		''WebGL returns a shader obj
 		Local id:Int = glCreateShader(type)
+		webgl_shader = id
 
 		If type = GL_VERTEX_SHADER Then vertex_id = id
 		If type = GL_FRAGMENT_SHADER Then fragment_id = id
@@ -322,13 +336,6 @@ Class TShaderGLSL Extends TShader
 		default_shader.name = "DefaultShader"
 		SetShader( default_shader )
 		
-		
-	End
-	
-	Function LoadDefaultShader:Void(sh:TShader)
-	
-		default_shader = sh
-		SetShader( default_shader )
 		
 	End
 	

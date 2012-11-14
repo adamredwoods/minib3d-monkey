@@ -9,11 +9,27 @@ Class Quaternion
 	
 	End 
 	
-	Method Delete()
-
+	Method New(xx#,yy#,zz#,ww#)
 	
-	End 
+		x=xx; y=yy; z=zz; w=ww
+	End
 	
+	Method Copy:Quaternion()
+		Return New Quaternion(x,y,z,w)
+	End
+	
+	Method Overwrite:Void(q:Quaternion)
+		x = q.x; y=q.y; z=q.z; w=q.w
+	End
+	
+	Method Overwrite:Void(xx,yy,zz,ww)
+		x = xx; y=yy; z=zz; w=ww
+	End
+	
+	Method Update(xx:Float, yy:Float, zz:Float, ww:Float)	
+		x=xx; y=xx; z=zz; w=ww	
+	End
+		
 	Method AxisAngleToQuat:Quaternion(ax:Float,ay:Float,az:Float,an:Float)
 		'' only good for orthogonal
 		Local s:Float
@@ -47,7 +63,7 @@ Class Quaternion
 		Return r
 	End
 	
-	Method MatrixToQuat:Quaternion(mat:Matrix)
+	Function MatrixToQuat:Void(mat:Matrix, q:Quaternion)
 		'' only good for orthogonal
 		Local wt:Float, w4:Float
 		
@@ -56,31 +72,31 @@ Class Quaternion
 
 		If (w4 > 0)  
 		  w4 = 1.0/(Sqrt(w4+1.0) * 2) '' S=4*qw 
-		  w = 0.25 / w4
-		  x = (mat.grid[2][1] - mat.grid[1][2]) *w4
-		  y = (mat.grid[0][2] - mat.grid[2][0]) *w4 
-		  z = (mat.grid[1][0] - mat.grid[0][1]) *w4 
+		  q.w = 0.25 / w4
+		  q.x = (mat.grid[2][1] - mat.grid[1][2]) *w4
+		  q.y = (mat.grid[0][2] - mat.grid[2][0]) *w4 
+		  q.z = (mat.grid[1][0] - mat.grid[0][1]) *w4 
 		Elseif ((mat.grid[0][0] > mat.grid[1][1]) And (mat.grid[0][0] > mat.grid[2][2]))
 		  w4 = 1.0/(Sqrt(1.0 + mat.grid[0][0] - mat.grid[1][1] - mat.grid[2][2]) * 2) '' S=4*qx 
-		  w = (mat.grid[2][1] - mat.grid[1][2]) *w4
-		  x = 0.25 / w4
-		  y = (mat.grid[0][1] + mat.grid[1][0]) *w4
-		  z = (mat.grid[0][2] + mat.grid[2][0]) *w4
+		  q.w = (mat.grid[2][1] - mat.grid[1][2]) *w4
+		  q.x = 0.25 / w4
+		  q.y = (mat.grid[0][1] + mat.grid[1][0]) *w4
+		  q.z = (mat.grid[0][2] + mat.grid[2][0]) *w4
 		Elseif (mat.grid[1][1] > mat.grid[2][2])
 		  w4 = 1.0/(Sqrt(1.0 + mat.grid[1][1] - mat.grid[0][0] - mat.grid[2][2]) * 2) '' S=4*qy
-		  w = (mat.grid[0][2] - mat.grid[2][0]) *w4
-		  x = (mat.grid[0][1] + mat.grid[1][0]) *w4 
-		  y = 0.25 / w4
-		  z = (mat.grid[1][2] + mat.grid[2][1]) *w4 
+		  q.w = (mat.grid[0][2] - mat.grid[2][0]) *w4
+		  q.x = (mat.grid[0][1] + mat.grid[1][0]) *w4 
+		  q.y = 0.25 / w4
+		  q.z = (mat.grid[1][2] + mat.grid[2][1]) *w4 
 		Else 
 		  w4 = 1.0/(Sqrt(1.0 + mat.grid[2][2] - mat.grid[0][0] - mat.grid[1][1]) * 2) '' S=4*qz
-		  w = (mat.grid[1][0] - mat.grid[0][1]) *w4
-		  x = (mat.grid[0][2] + mat.grid[2][0]) *w4
-		  y = (mat.grid[1][2] + mat.grid[2][1]) *w4
-		  z = 0.25 / w4
+		  q.w = (mat.grid[1][0] - mat.grid[0][1]) *w4
+		  q.x = (mat.grid[0][2] + mat.grid[2][0]) *w4
+		  q.y = (mat.grid[1][2] + mat.grid[2][1]) *w4
+		  q.z = 0.25 / w4
 		Endif
 		
-		Return Self
+		
 	End
 	
 
@@ -139,7 +155,7 @@ Class Quaternion
 				
 	End 
 	
-	
+	'' unit quats only
 	Function QuatToMatrix:Void(x#,y#,z#,w#,mat:Matrix)
 		Local x2#, xx2#, xy2#, xz2#, xw2#, y2#, yy2#, yz2#, yw2#, z2#, zz2#, zw2#
 		
@@ -224,9 +240,9 @@ Class Quaternion
 		
 		Local q:Quaternion = New Quaternion
 		
-		Local p = pitch * 0.5
-		Local y = yaw * 0.5
-		Local r = roll * 0.5
+		Local p = rx * 0.5
+		Local y = ry * 0.5
+		Local r = rz * 0.5
 	 
 		Local sinp = Sin(p)
 		Local siny = Sin(y)
@@ -302,28 +318,8 @@ Class Quaternion
 		
 		Return var
 	End 
-	
-	
-	Method Normalize()
 
-		Local lengthSq:Float = x * x + y * y + z * z + w * w
-	
-		If (lengthSq = 0.0 ) Return
-		If (lengthSq <> 1.0 )
-			Local scale:Float = ( 1.0 / Sqrt( lengthSq ) )
-			x *= scale
-			y *= scale
-			z *= scale
-			w *= scale
-		Endif
-		
-	End
 
-	Method Update(xx:Float, yy:Float, zz:Float, ww:Float)
-		
-		x=xx; y=xx; z=zz; w=ww
-		
-	End
 	
 	Method RotateVector:Vector(vec:Vector)
 
@@ -339,6 +335,63 @@ Class Quaternion
 		vec2.z = (ay * vec.x) - (aw * vec.z) - (ax * vec.y)
 		
 		Return vec2
+	End
+	
+	Method Inverse:Quaternion()
+		Return New Quaternion( -Self.x, -Self.y, -Self.z, Self.w)
+	End
+	
+	Method Normalize:Quaternion()
+		Local l# = x * x + y * y + z * z + w * w
+
+		If ( l = 0 )
+			x = 0
+			y = 0
+			z = 0
+			w = 0
+		Else
+			l = 1.0 / Sqrt(l)
+			x = x * l
+			y = y * l
+			z = z * l
+			w = w * l
+		End
+		
+		Return Self
+	End
+	
+	Method Multiply:Quaternion(q2:Quaternion)
+		Local q:Quaternion = New Quaternion
+		q.x =  x * q2.w + y * q2.z - z * q2.y + w * q2.x
+		q.y = -x * q2.z + y * q2.w + z * q2.x + w * q2.y
+		q.z =  x * q2.y - y * q2.x + z * q2.w + w * q2.z
+		q.w = -x * q2.x - y * q2.y - z * q2.z + w * q2.w
+		Return q
+	End
+	
+	Method Multiply:Quaternion(q2x#, q2y#, q2z#, q2w#)
+		Local q:Quaternion = New Quaternion
+		q.x =  x * q2w + y * q2z - z * q2y + w * q2x
+		q.y = -x * q2z + y * q2w + z * q2x + w * q2y
+		q.z =  x * q2y - y * q2x + z * q2w + w * q2z
+		q.w = -x * q2x - y * q2y - z * q2z + w * q2w
+		Return q
+	End
+
+	Method Multiply:Vector( v:Vector)
+
+		Local ix# =  w * v.x + y * v.z - z * v.y
+		Local iy# =  w * v.y + z * v.x - x * v.z
+		Local iz# =  w * v.z + x * v.y - y * v.x
+		Local iw# = -x * v.x - y * v.y - z * v.z
+
+		' inverse quat
+
+		Local xx# = ix * w + iw * -x + iy * -z - iz * -y
+		Local yy# = iy * w + iw * -y + iz * -x - ix * -z
+		Local zz# = iz * w + iw * -z + ix * -y - iy * -x
+
+		Return New Vector(xx,yy,zz)	
 	End
 	
 End 

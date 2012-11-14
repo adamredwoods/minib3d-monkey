@@ -27,6 +27,8 @@ Class TCamera Extends TEntity
 	Field fog_r#,fog_g#,fog_b#
 	Field fog_range_near#=1.0,fog_range_far#=1000.0
 	
+	Field draw2D:Int =0 ''draw everything flat, bright
+	
 	' used by CameraProject
 	'mat:Matrix = cam view matrix (inverse it)
 	Field mod_mat:Matrix =New Matrix ''this is the view matrix, sorry to confuse, but was this way before me
@@ -41,8 +43,6 @@ Class TCamera Extends TEntity
 	
 	Field frustum:Float[][] '[6][4]
 	
-	''for cam layer
-	Field layer_entity:TEntity
 
 
 	'Field testdata:Float[10]
@@ -627,28 +627,32 @@ Class TCamera Extends TEntity
 	
 	''
 	'' CameraLayer(entity)
+	'' - overloading from TEntity
 	'' - this command isolates a camera's render to only this object and it's children
 	'' - used for shaders and ui screens (if camera set to ortho)
 	'' - lights are uneffected
 	'' - camera are rendered in order they are added (or use EntityOrder() )
-	Method CameraLayer(ent:TEntity)
+	Method CameraLayer:Void(ent:TEntity)
 		
-		is_cam_layer = True
-		layer_entity = ent
-		ent.is_cam_layer = True
+		ent.use_cam_layer = True
 		ent.cam_layer = Self
 		
 		For Local ch:TEntity = Eachin ent.child_list
 			
-			ch.is_cam_layer = True
-			ch.cam_layer = Self
-			
+			Self.CameraLayer(ch)
 		Next
 		
-		''auto set camera to not clear color, but to clear depth
-		CameraClsMode(False, True)
+		EnableCameraLayer()
 		
 	End
+	
+	
+	Method EnableCameraLayer:Void()
+		use_cam_layer = True
+		''auto set camera to not clear color, but to clear depth
+		CameraClsMode(False, True)
+	End
+	
 	
 	'' GluProject()
 	'' --takes a 3d point and returns screen coordinates.
@@ -715,6 +719,59 @@ Class TCamera Extends TEntity
 	
 		Return New Vector(inv_mat.grid[3][0]*d,inv_mat.grid[3][1]*d,inv_mat.grid[3][2]*d)
 	
+	End
+	
+	
+	Method SetPixelCamera()
+		
+
+		Local left# = -TRender.width / 2.0
+		Local right# = TRender.width / 2.0
+		Local bottom#= -TRender.height / 2.0
+		Local top# = TRender.height / 2.0
+		
+		Local near#=1.0
+		Local far#=2.0
+		
+		Local x_orth# = 2.0 / (right - left)
+		Local y_orth# = 2.0 / (top - bottom)
+		Local z_orth# = -2.0 / (far - near)
+
+		Local tx# = -(right + left) / (right - left)
+		Local ty# = -(top + bottom) / (top - bottom)
+		Local tz# = -(far + near) / (far - near)
+		
+	
+		proj_mat.grid[0][0] = x_orth
+		proj_mat.grid[0][1] = 0.0
+		proj_mat.grid[0][2] = 0.0
+		proj_mat.grid[0][3] = 0.0
+		
+		proj_mat.grid[1][0] = 0.0
+		proj_mat.grid[1][1] = y_orth
+		proj_mat.grid[1][2] = 0.0
+		proj_mat.grid[1][3] = 0.0
+		
+		proj_mat.grid[2][0] = 0.0
+		proj_mat.grid[2][1] = 0.0
+		proj_mat.grid[2][2] = z_orth
+		proj_mat.grid[2][3] = 0.0
+		
+		proj_mat.grid[3][0] = tx
+		proj_mat.grid[3][1] = ty
+		proj_mat.grid[3][2] = tz
+		proj_mat.grid[3][3] = 1.0
+
+
+
+		mod_mat.LoadIdentity()
+		'mod_mat.grid[2][3] = -1.0
+		mat.LoadIdentity()
+		view_mat = mod_mat
+		projview_mat.Overwrite(proj_mat ) 'Copy()
+		
+		'projview_mat.Multiply4(mod_mat)
+		
 	End
 	
 End

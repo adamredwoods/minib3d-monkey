@@ -170,7 +170,13 @@ Class TBrush
 			texture.v_pos = y*texture.frame_vstep
 		Endif
 		
-	End 
+	End
+	
+	Method GetTexture:TTexture(index:Int=0)
+		
+		Return tex[index]
+		
+	End
 	
 	Method BrushBlend(blend_no)
 	

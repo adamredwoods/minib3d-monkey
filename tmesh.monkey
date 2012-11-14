@@ -31,7 +31,7 @@ Class TMesh Extends TEntity
 		
 	Field is_sprite:Bool = False '' used for sprites
 	Field is_update:Bool = False ''used for batching, etc.
-
+	
 
 	Private
 	
@@ -44,10 +44,6 @@ Class TMesh Extends TEntity
 	
 	End 
 	
-	Method Delete()
-
-	
-	End 
 	
 	Method CopyEntity:TEntity(parent_ent:TEntity=Null)
 
@@ -84,9 +80,10 @@ Class TMesh Extends TEntity
 			mesh.mat.LoadIdentity()
 		Endif
 		
-		' copy entity info
-				
+		' copy entity info	
 		mesh.mat.Multiply(mat)
+		
+		mesh.loc_mat = loc_mat
 		
 		mesh.px=px
 		mesh.py=py
@@ -161,7 +158,9 @@ Class TMesh Extends TEntity
 		mesh.reset_bounds=reset_bounds
 
 		
-		mesh.bones = CopyBonesList(Self, New List<TBone>, 0).ToArray()
+		mesh.bones = CopyBonesList(mesh, New List<TBone>, 0).ToArray()
+		''set bones
+		ResetBones()
 	
 		Return mesh
 
@@ -279,16 +278,17 @@ Class TMesh Extends TEntity
 
 	End 
 	
-	Function LoadMesh:TMesh(file$,parent_ent:TEntity=Null)
+	Function LoadMesh:TMesh(file$,parent_ent:TEntity=Null, override_texflags:Int=-1)
 	
-		Local xmesh:TMesh=LoadAnimMesh(file)
+		Local xmesh:TMesh=LoadAnimMesh(file, Null, override_texflags)
 		Local mesh:TMesh = CreateMesh()
 		''
 		xmesh.HideEntity()
-		mesh = xmesh.CollapseAnimMesh(mesh)
+		xmesh.CollapseAnimMesh(mesh)
 		xmesh.FreeEntity()
 		
 		mesh.classname="Model"
+		mesh.name = file
 
 		mesh.AddParent(parent_ent)
 		'mesh.entity_link = entity_list.EntityListAdd(mesh)
@@ -305,13 +305,13 @@ Class TMesh Extends TEntity
 	
 	End 
 
-	Function LoadAnimMesh:TMesh(file$,parent_ent:TEntity=Null)
+	Function LoadAnimMesh:TMesh(file$,parent_ent:TEntity=Null, override_texflags:Int=-1)
 	
 		Local mesh:TMesh
 		If file.EndsWith(".obj") Or file.EndsWith(".obj.txt")
-			mesh = TModelObj.LoadMesh(file)
+			mesh = TModelObj.LoadMesh(file, override_texflags)
 		Else
-			mesh = TModelB3D.LoadAnimB3D(file,parent_ent)
+			mesh = TModelB3D.LoadAnimB3D(file,parent_ent, override_texflags)
 		Endif
 		
 		If Not mesh Then Return TMesh.CreateCube()
@@ -321,20 +321,25 @@ Class TMesh Extends TEntity
 	End 
 
 
+	Method CreateSurfaceID:Int()
+	
+		no_surfs=no_surfs+1 'putting this here may cause trouble
+		Return no_surfs-1
+		
+	End
 
 	Method CreateSurface:TSurface(bru:TBrush=Null)
 	
 		Local surf:TSurface=New TSurface
 		surf_list.AddLast(surf)
 		
-		no_surfs=no_surfs+1
-		
+			
 		If bru<>Null
 			surf.brush=bru.Copy()
 		Endif
 		
-		'' anim surf pointer
-		surf.surf_id = no_surfs-1
+		'' anim surf
+		surf.surf_id = CreateSurfaceID()
 		anim_surf = anim_surf.Resize(no_surfs)
 		
 		' new mesh surface - update reset flags
@@ -351,10 +356,8 @@ Class TMesh Extends TEntity
 
 		surf_list.AddLast(surf)
 		
-		no_surfs=no_surfs+1
-		
-		'' anim surf pointer
-		surf.surf_id = no_surfs-1
+		'' anim surf
+		surf.surf_id = CreateSurfaceID()
 		anim_surf = anim_surf.Resize(no_surfs)
 		
 		' new mesh surface - update reset flags
@@ -367,67 +370,101 @@ Class TMesh Extends TEntity
 
 	'' CreateGrid(x,y,parent)
 	'' creates a plane of quads x segments by y segments each segment 1x1 unit large
-	Function CreateGrid:TMesh(x_seg:Int,y_seg:Int,parent_ent:TEntity=Null)
+	'' can create either joined grid or separate grid (for mobile textures)
+	Function CreateGrid:TMesh(x_seg:Int,y_seg:Int, repeat_tex:Bool=False ,parent_ent:TEntity=Null)
 	
 		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
 	
 		Local surf:TSurface=mesh.CreateSurface()
 		Local yhalf# = y_seg*0.5
 		Local xhalf# = x_seg*0.5
-		Local xstep# = 1.0/x_seg
-		Local ystep# = 1.0/y_seg
-		Local texx:Float = 0.0, texy:Float = 0.0
+		Local txstep# = 1.0/x_seg
+		Local tystep# = -1.0/y_seg
+		
+		Local texx:Float = 0.0, texy:Float = 1.0
 		Local v0:Int,v1:Int,v2:Int,v3:Int
 		Local pv2:Int[x_seg+1]
 		Local qv2:Int[x_seg+1]
 		
-		For Local y:Float = -yhalf To yhalf Step 1.0
+		If Not repeat_tex
 		
-			v0= surf.AddVertex( -xhalf-0.5, 0, y-0.5)
-			v1= surf.AddVertex( -xhalf-0.5, 0, y+0.5)	
+			For Local y:Float = -yhalf To yhalf-1.0 Step 1.0
 			
-			For Local x:Float = -xhalf To xhalf Step 1.0
-
-
-				If x<>-xhalf Then v1 = v2; v0 = v3
-				If y= -yhalf
-					
-					v3= surf.AddVertex( x+0.5, 0, y-0.5)
-
-				Else
-					v3 = pv2[xhalf + x]
-									
-				Endif
+				v0= surf.AddVertex( -xhalf-0.5, 0, y-0.5)
+				v1= surf.AddVertex( -xhalf-0.5, 0, y+0.5)	
 				
-				v2= surf.AddVertex( x+0.5, 0, y+0.5)
-				qv2[xhalf + x] = v2
-				
-			
-				surf.VertexNormal(v0,0.0,1.0,0.0)
-				surf.VertexNormal(v1,0.0,1.0,0.0)
-				surf.VertexNormal(v2,0.0,1.0,0.0)
-				surf.VertexNormal(v3,0.0,1.0,0.0)
-				surf.VertexTexCoords(v0,texx,texy+ystep)
-				surf.VertexTexCoords(v1,texx,texy)
-				surf.VertexTexCoords(v2,texx+xstep,texy)
-				surf.VertexTexCoords(v3,texx+xstep,texy+ystep)
-				surf.AddTriangle(v0,v1,v2)
-				surf.AddTriangle(v0,v2,v3)
-				
+				For Local x:Float = -xhalf To xhalf-1.0 Step 1.0
 	
-				texx += xstep
+	
+					If x<>-xhalf Then v1 = v2; v0 = v3
+					If y= -yhalf
+						
+						v3= surf.AddVertex( x+0.5, 0, y-0.5)
+	
+					Else
+						v3 = pv2[xhalf + x]
+										
+					Endif
+					
+					v2= surf.AddVertex( x+0.5, 0, y+0.5)
+					qv2[xhalf + x] = v2
+					
+				
+					surf.VertexNormal(v0,0.0,1.0,0.0)
+					surf.VertexNormal(v1,0.0,1.0,0.0)
+					surf.VertexNormal(v2,0.0,1.0,0.0)
+					surf.VertexNormal(v3,0.0,1.0,0.0)
+					surf.VertexTexCoords(v0,texx,texy)
+					surf.VertexTexCoords(v1,texx,texy+tystep)
+					surf.VertexTexCoords(v2,texx+txstep,texy+tystep)
+					surf.VertexTexCoords(v3,texx+txstep,texy)
+					surf.AddTriangle(v0,v1,v2)
+					surf.AddTriangle(v0,v2,v3)
+					
+					'Print "tx "+texx+" "+texy+" "+(texx+txstep)+" "+(texy+tystep)+" :: "+txstep+" "+tystep			
+		
+					texx += txstep
+					
+					If texx>1.0 Then texx=0.0
+					
+				Next
+				
+				For Local i:Int = 0 To x_seg
+					pv2[i] = qv2[i]
+				Next
+				qv2 = New Int[x_seg+1]
+				
+				texx =0.0
+				texy += tystep
+				
+				If texy<0.0 Then texy=1.0
 				
 			Next
-			
-			For Local i:Int = 0 To x_seg
-				pv2[i] = qv2[i]
-			Next
-			qv2 = New Int[x_seg+1]
-			
-			texy += ystep
-			
-		Next
 		
+		Else
+			
+			''create segmented grid, separate squares for textures
+			For Local y:Float = -yhalf To yhalf-1.0 Step 1.0				
+				For Local x:Float = -xhalf To xhalf-1.0 Step 1.0
+								
+					v0= surf.AddVertex( x-0.5, 0, y-0.5)
+					v1= surf.AddVertex( x-0.5, 0, y+0.5)
+					v2= surf.AddVertex( x+0.5, 0, y+0.5)
+					v3= surf.AddVertex( x+0.5, 0, y-0.5)
+					surf.VertexNormal(v0,0.0,1.0,0.0)
+					surf.VertexNormal(v1,0.0,1.0,0.0)
+					surf.VertexNormal(v2,0.0,1.0,0.0)
+					surf.VertexNormal(v3,0.0,1.0,0.0)
+					surf.VertexTexCoords(v0,0.0,0.0)
+					surf.VertexTexCoords(v1,0.0,1.0)
+					surf.VertexTexCoords(v2,1.0,1.0)
+					surf.VertexTexCoords(v3,1.0,0.0)
+					surf.AddTriangle(v0,v1,v2)
+					surf.AddTriangle(v0,v2,v3)
+				
+				Next
+			Next
+		Endif
 		
 		surf.CropSurfaceBuffers()
 		
@@ -1001,9 +1038,9 @@ Class TMesh Extends TEntity
 	End 
 	
 	
-	''AddMesh()
+	'' AddMesh()
 	'' -- add self mesh to mesh2
-	'' -- confusing
+	'' -- confusing, consider AddMeshTo() or AddMesh(src, dest)
 	Method AddMesh(mesh2:TMesh, combine_brush:Bool=True)
 		
 		If Not mesh2 Then Return
@@ -1055,28 +1092,13 @@ Class TMesh Extends TEntity
 				Local s1v:Int = surf1.CountVertices()		
 				For Local v:Int=0 To s1v-1
 
-					Local vx#=surf1.VertexX(v)
-					Local vy#=surf1.VertexY(v)
-					Local vz#=surf1.VertexZ(v)
-					Local vr#=surf1.VertexRed(v)
-					Local vg#=surf1.VertexGreen(v)
-					Local vb#=surf1.VertexBlue(v)
-					Local va#=surf1.VertexAlpha(v)
-					Local vnx#=surf1.VertexNX(v)
-					Local vny#=surf1.VertexNY(v)
-					Local vnz#=surf1.VertexNZ(v)
-					Local vu0#=surf1.VertexU(v,0)
-					Local vv0#=surf1.VertexV(v,0)
-					Local vw0#=surf1.VertexW(v,0)
-					Local vu1#=surf1.VertexU(v,1)
-					Local vv1#=surf1.VertexV(v,1)
-					Local vw1#=surf1.VertexW(v,1)
+					Local vt:Vertex = surf1.GetVertex(v)
 						
-					Local v2:Int = surf.AddVertex(vx,vy,vz)
-					surf.VertexColor(v2,vr,vg,vb,va)
-					surf.VertexNormal(v2,vnx,vny,vnz)
-					surf.VertexTexCoords(v2,vu0,vv0,vw0,0)
-					surf.VertexTexCoords(v2,vu1,vv1,vw1,1)
+					Local v2:Int = surf.AddVertex(vt.x,vt.y,vt.z)
+					surf.VertexColor(v2,vt.r,vt.g,vt.b,vt.a)
+					surf.VertexNormal(v2,vt.nx,vt.ny,vt.nz)
+					surf.VertexTexCoords(v2,vt.u0,vt.v0,vt.w0,0)
+					surf.VertexTexCoords(v2,vt.u1,vt.v1,vt.w1,1)
 	
 				Next
 		
@@ -1411,7 +1433,46 @@ Class TMesh Extends TEntity
 		col_tree.reset_col_tree=True
 		
 	End 
+	
+	
+	' used by LoadMesh
+	Method TransformMesh(mat:Matrix)
 
+		For Local s=1 To no_surfs
+	
+			Local surf:TSurface=GetSurface(s)
+			
+			If Not surf Then Continue
+				
+			For Local v=0 To surf.no_verts-1
+		
+				Local vx#=surf.vert_data.VertexX(v)
+				Local vy#=surf.vert_data.VertexY(v)
+				Local vz#=surf.vert_data.VertexZ(v)
+	
+				Local rx#=( mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
+				Local ry#=( mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
+				Local rz#=( mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
+				
+				surf.vert_data.PokeVertCoords(v, rx,ry,rz)
+				
+				Local nx#=surf.vert_data.VertexNX(v)
+				Local ny#=surf.vert_data.VertexNY(v)
+				Local nz#=surf.vert_data.VertexNZ(v)
+	
+				rx=( mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz )
+				ry=( mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz )
+				rz=( mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz )
+				
+				surf.vert_data.PokeNormals(v, rx,ry,rz)
+
+			Next
+							
+		Next
+
+	End
+	
+	
 	Method UpdateNormals()
 
 		For Local s=1 To CountSurfaces()
@@ -1484,6 +1545,7 @@ Class TMesh Extends TEntity
 	
 	End 
 	
+	'' starts at 1
 	Method GetSurface:TSurface(surf_no_get:Int)
 		
 		Local surf_no=0
@@ -1551,7 +1613,8 @@ Class TMesh Extends TEntity
 	End 
 		
 	' used by CopyEntity
-	' recursive, returns number of bones
+	' recursive, returns bones list
+	' assumes bones have already been copied via tmesh.entitycopy
 	Function CopyBonesList:List<TBone>(ent:TEntity, bone_list:List<TBone>, no_bones:Int=0)
 		
 		Local bone:TBone
@@ -1559,7 +1622,7 @@ Class TMesh Extends TEntity
 			bone = TBone(e)
 			If bone<>Null
 
-				bone_list.AddLast(bone)
+				bone_list.AddLast( bone )
 				
 			Endif
 			CopyBonesList(bone,bone_list,no_bones)
@@ -1569,83 +1632,42 @@ Class TMesh Extends TEntity
 		
 	End 
 	
-	 ' used by LoadMesh
-	Method CollapseAnimMesh:TMesh(mesh:TMesh=Null)
 	
-		If mesh=Null Then mesh=CreateMesh()
+	 ' used by LoadMesh
+	Method CollapseAnimMesh:Void(mesh:TMesh=Null)
+	
+		If mesh=Null Then Return
 		
 		If TMesh(Self)<>Null
-			'Local new_mesh:TMesh=New TMesh 'TMesh(ent).CopyMesh() ' don't use copymesh, uses CreateMesh and adds to entity list
-			'TMesh(Self).AddMesh(new_mesh)
-			'new_mesh.TransformMesh(Self.mat)
-			'new_mesh.AddMesh(mesh)
+
 			Self.TransformMesh(Self.mat)
-			Self.AddMesh(mesh)
+			Self.AddMesh(mesh,False) ' don't use copymesh
+			
 		Endif
 		
-		mesh=CollapseChildren(Self,mesh)
+		CollapseChildren(Self,mesh)
 
-		Return mesh
 
 	End 
 	
 	' used by LoadMesh
 	' has to be function as we need to use this function with all entities and not just meshes
-	Function CollapseChildren:TMesh(ent0:TEntity,mesh:TMesh=Null)
+	Function CollapseChildren:Void(ent0:TEntity, mesh:TMesh=Null)
 
 		For Local ent:TEntity=Eachin ent0.child_list
 			If TMesh(ent)<>Null
-				'Local new_mesh:TMesh=New TMesh 'TMesh(ent).CopyMesh() ' don't use copymesh, uses CreateMesh and adds to entity list
-				'TMesh(ent).AddMesh(new_mesh)
-				'new_mesh.TransformMesh(ent.mat)
-				'new_mesh.AddMesh(mesh)
+
 				TMesh(ent).TransformMesh(ent.mat)
-				TMesh(ent).AddMesh(mesh)
+				TMesh(ent).AddMesh(mesh,False) 'dont use CopyMesh
 			Endif
-			mesh=CollapseChildren(ent,mesh)
+			CollapseChildren(ent,mesh)
 			
 		Next
-		
-		Return mesh
+
 		
 	End 
 
-	' used by LoadMesh
-	Method TransformMesh(mat:Matrix)
-
-		For Local s=1 To no_surfs
-	
-			Local surf:TSurface=GetSurface(s)
-			
-			If Not surf Then Continue
-				
-			For Local v=0 To surf.no_verts-1
-		
-				Local vx#=surf.vert_data.VertexX(v)
-				Local vy#=surf.vert_data.VertexY(v)
-				Local vz#=surf.vert_data.VertexZ(v)
-	
-				Local rx#=( mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
-				Local ry#=( mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
-				Local rz#=( mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
-				
-				surf.vert_data.PokeVertCoords(v, rx,ry,rz)
-				
-				Local nx#=surf.vert_data.VertexNX(v)
-				Local ny#=surf.vert_data.VertexNY(v)
-				Local nz#=surf.vert_data.VertexNZ(v)
-	
-				rx=( mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz )
-				ry=( mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz )
-				rz=( mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz )
-				
-				surf.vert_data.PokeNormals(v, rx,ry,rz)
-
-			Next
-							
-		Next
-
-	End 
+	 
 	
 	
 	Method MeshesIntersect:Bool( mesh2:TMesh)
@@ -1894,13 +1916,68 @@ Class TMesh Extends TEntity
 	End
 	
 	
+	Method GetAnimSurface:TSurface(surf:TSurface)
+	
+		Return anim_surf[surf.surf_id]
+		
+	End
+	
+	
+	Method ResetBones:Void()
+		
+		For Local bo:TBone = Eachin bones
+			If bo
+				bo.UpdateMatrix(bo.rest_mat)
+			Endif
+		Next
+		
+		UpdateChildren(Self)
+	End
+	
+	
+	Method Draw(x:Float, y:Float, no_scaling:Bool = False)
+		
+		''immediate mode draw to screen
+		TRender.draw_list.AddLast(Self)
+		''position
+		Local w# = TRender.width*0.5
+		Local h# = TRender.height*0.5
+		PositionEntity((x-w), (h-y), 1.0)
+		
+		TSprite(Self).pixel_scale[0] = 1.0
+		TSprite(Self).pixel_scale[1] = 1.0
+			
+		''auto-scaling for sprites and ttext
+		If Not no_scaling
+
+			If TText(Self)
+			
+				Local scx% = Ceil(TText(Self).char_pixels* TText(Self).pixel_ratio+1.0)
+				TText(Self).pixel_scale[0] = scx
+				TText(Self).pixel_scale[1] = scx
+				
+			Elseif TSprite(Self)
+				Local scx% = Self.brush.GetTexture(0).width * 0.5 '' a sprite is 2 units wide (-1,1)
+				Local scy% = Self.brush.GetTexture(0).height * 0.5
+			
+				TSprite(Self).pixel_scale[0] = scx
+				TSprite(Self).pixel_scale[1] = scy
+			Endif
+			
+		Endif
+		'PositionEntity(0, 0, 1.0)
+	End
+	
 	
 	Method Update(cam:TCamera)
 		
 		''legacy use: may want to call Render()
-		Print "TMesh update"
+		'Print "TMesh update"
 		
 	End
+	
+	
+
 	
 End
 

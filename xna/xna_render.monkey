@@ -144,6 +144,7 @@ Public
 		Else
 			_xna.WorldMatrix(ent.mat.ToArray())
 		Endif
+
 		
 		''run through surfaces twice, sort alpha surfaces for second pass
 		For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs
@@ -162,13 +163,20 @@ Public
 				UpdateSurface(surf, mesh)
 				
 				' set textures / blending / shading / culling
-				_xna.Update(ent, surf, cam)
-
+				_xna.Update(ent, surf, cam)		
+		
+				If cam.draw2D
+					
+					_xna.CurrentEffect(_xna._draw2DEffect)
+					_xna.DisableDepth()
+					
+				Endif
+				
 				' draw tris
 				Local passes:= _xna.CurrentEffect.Effect.CurrentTechnique.Passes
+								
 				For Local pass:= Eachin passes
-
-
+					
 					pass.Apply()
 
 					' draw tris
@@ -201,7 +209,7 @@ Public
 	Method Finish:Void()
 	
 		'' clear some states as we return to mojo
-		_device.SamplerState(0, _xna._st_cU_cV)
+		_xna.ClearStates()
 		
 	End
 	
@@ -255,7 +263,7 @@ Public
 	Method BindTexture:TTexture(tex:TTexture,flags:Int)
 	
 		' if mask flag is true, mask pixmap
-		If tex.flags&4
+		If flags&4
 			tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
@@ -273,7 +281,7 @@ Public
 		End 
 		
 		Local mipmap:Int= 0, mip_level:Int=0
-		If tex.flags&8 Then mipmap=True
+		If flags&8 Then mipmap=True
 		If Not( IsPowerOfTwo(width) Or IsPowerOfTwo(height) ) Then 
 			mipmap=False
 			' TODO: no wrap addressing mode and no DXT compression on nonpower of two textures.
@@ -541,15 +549,14 @@ Private
 	
 	Field _blendStates			:XNABlendState[] 
 	Field _lastSamplerState		:XNASamplerState 	
-	Field _st_cU_cV				:XNASamplerState
-	Field _st_wU_cV				:XNASamplerState
-	Field _st_cU_wV				:XNASamplerState
-	Field _st_wU_wV				:XNASamplerState
+	Field _st_uvNormal			:UVSamplerState
+	Field _st_uvSmooth			:UVSamplerState
 	
 	' effects
 	Field _lastEffect			:IEffectContainer
 	Field _basicEffect			:BasicEffect
-	Field _enviromentEffect		:BasicEffect 
+	Field _enviromentEffect		:BasicEffect
+	Field _draw2DEffect			:Draw2DEffect
 	
 	' last combined brush values
 	Field tex_count%, _red#,_green#,_blue#,_alpha#,_shine#,_blend%,_fx%, tex_flags%, textures:TTexture[]
@@ -564,7 +571,8 @@ Public
 		' effects
 		_basicEffect = New BasicEffect(device.CreateBasicEffect())
 		_enviromentEffect = New BasicEffect(device.CreateBasicEffect())
-
+		_draw2DEffect = New Draw2DEffect(device.CreateBasicEffect())
+		
 		_lastEffect = _basicEffect
 		
 		' states
@@ -580,11 +588,9 @@ Public
 		_depthStencilNoDepth.DepthBufferWriteEnable = False
 		
 		_blendStates 		= [XNABlendState.AlphaBlend, XNABlendState.AlphaBlend, XNABlendState.Premultiplied, XNABlendState.Additive, XNABlendState.Opaque]
-		_st_cU_cV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
-		_st_wU_cV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Wrap , TextureAddressMode_Clamp)
-		_st_cU_wV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
-		_st_wU_wV 		= XNASamplerState.Create( TextureFilter_Linear, TextureAddressMode_Wrap, TextureAddressMode_Wrap)
-		
+		_st_uvNormal 		= UVSamplerState.Create( TextureFilter_Linear )
+		_st_uvSmooth 		= UVSamplerState.Create( TextureFilter_Point )
+
 	End
 
 	Method Reset()
@@ -600,6 +606,10 @@ Public
 	Method SetLight(id, dirX#, dirY#, dirZ#, r#, g#, b#)
 		_lastEffect.SetLight(id, dirX, dirY, dirZ, r, g, b)
     End
+	
+	Method CurrentEffect:Void(effect:IEffectContainer) Property
+		_lastEffect = effect
+	End
 	
 	Method CurrentEffect:IEffectContainer() Property
 		Return _lastEffect
@@ -640,20 +650,36 @@ Public
 		Endif
 	End
 	
+	
+	
 	Method SetStates(ent:TEntity, surf:TSurface )
 		
-		Local new_sampler_state:XNASamplerState 
+		Local new_sampler_state:XNASamplerState
+		Local sampler:UVSamplerState
+		Local tex_smooth:Bool = False
+		
+		If surf.brush
+			For Local tex:TTexture = Eachin surf.brush.tex
+				If tex And tex.tex_smooth Then tex_smooth = True; Exit
+			Next
+		Endif
+		
+		If Not tex_smooth
+			sampler = _st_uvNormal
+		Else
+			sampler = _st_uvSmooth
+		Endif
 		 
-		new_sampler_state = _st_cU_cV ''only use wrap with power-of-two textures
+		new_sampler_state = sampler._cU_cV ''only use wrap with power-of-two textures
 		
 		If tex_flags&16 And tex_flags&32 Then ' clamp u clamp v flag
-			new_sampler_state = _st_cU_cV
+			new_sampler_state = sampler._cU_cV
 		Elseif tex_flags&16 'clamp u flag
-			new_sampler_state = _st_cU_wV
+			new_sampler_state = sampler._cU_wV
 		Elseif tex_flags&32 'clamp v flag
-			new_sampler_state = _st_wU_cV
+			new_sampler_state = sampler._wU_cV
 		Elseif tex_count>0						
-			new_sampler_state = _st_wU_wV ''only use wrap with power-of-two textures		
+			new_sampler_state = sampler._wU_wV ''only use wrap with power-of-two textures		
 		End
 	
 		' ' preserve sampler state
@@ -697,6 +723,18 @@ Public
 		_device.BlendState = _blendStates[_blend]
 		
 	End 
+	
+	Method DisableDepth()
+		_device.DepthStencilState = _depthStencilNoDepth
+	End
+	
+	''if we decide to return to monkey.mojo
+	Method ClearStates()
+		
+		 _device.SamplerState(0, _st_uvNormal._cU_cV)
+		
+	End
+	
 	
 	Method CombineBrushes(brushA:TBrush,brushB:TBrush )
 
@@ -756,7 +794,7 @@ Public
 
 			If _enviromentEffect <> _lastEffect Then 
 				_enviromentEffect.Update(cam,ent,_lastEffect)
-				_lastEffect = _enviromentEffect
+				CurrentEffect( _enviromentEffect )
 			End
 		
 			_enviromentEffect.Bind(ent, surf, _red,_green,_blue, _alpha, _shine, _fx, tex_count, textures )
@@ -764,7 +802,7 @@ Public
 
 			If _basicEffect <> _lastEffect Then 
 				_basicEffect.Update(cam,ent,_lastEffect)
-				_lastEffect = _basicEffect
+				CurrentEffect(_basicEffect)
 			End
 			
 			_basicEffect.Bind(ent, surf, _red,_green,_blue, _alpha, _shine, _fx, tex_count, textures )
@@ -775,6 +813,7 @@ Public
 	End 
 	
 	
+	
 	Method IsPowerOfTwo?(x)
 	    Return (x <> 0) And ((x & (x - 1)) = 0)
 	End
@@ -782,6 +821,27 @@ Public
 End
 
 
+Class UVSamplerState
+
+	Field _cU_cV:XNASamplerState
+	Field _wU_cV:XNASamplerState
+	Field _cU_wV:XNASamplerState
+	Field _wU_wV:XNASamplerState	
+	
+	Function Create:UVSamplerState(filter:Int)
+	
+		Local s:UVSamplerState = New UVSamplerState
+		
+		s._cU_cV 		= XNASamplerState.Create( filter, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
+		s._wU_cV 		= XNASamplerState.Create( filter, TextureAddressMode_Wrap , TextureAddressMode_Clamp)
+		s._cU_wV 		= XNASamplerState.Create( filter, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
+		s._wU_wV 		= XNASamplerState.Create( filter, TextureAddressMode_Wrap, TextureAddressMode_Wrap)
+		
+		Return s
+		
+	End
+	
+End
 
 
 
@@ -969,6 +1029,27 @@ Class BasicEffect Extends EffectContainer
 	End
 End
 
+
+Class Draw2DEffect Extends BasicEffect
+	
+	Method Reset()
+		Super.Reset()
+	End
+	
+	Method New(effect:XNABasicEffect)
+		_effect = effect
+
+	End 
+	
+	Method Bind(ent:TEntity, surf:TSurface, _red#,_green#,_blue#, _alpha#, _shine#, _fx#, tex_count, textures:TTexture[]  )
+		Super.Bind(ent,surf,_red,_green,_blue,_alpha,_shine,_fx,tex_count,textures)
+		
+		Local effect:= XNABasicEffect(_effect)
+		effect.FogEnabled = False
+		effect.LightingEnabled = False
+	End
+	
+End
 
 
 

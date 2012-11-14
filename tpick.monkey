@@ -206,14 +206,13 @@ Class TPick
 				cen.Update(ent.mat.grid[3][0] - ax, ent.mat.grid[3][1] - ay,-ent.mat.grid[3][2] - az)
 
 				If Not col_obj.RaySphereTest(ray,cen, rad) Then Continue
-
+				
+				
 			Endif
 			
-			
 			col_info.CollisionSetup(ent, ent.pick_mode)
-		
 			pick = col_info.CollisionDetect(col_obj)
-			
+	
 			
 			If pick
 				picked_ent=ent

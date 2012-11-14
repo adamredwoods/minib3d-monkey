@@ -37,7 +37,14 @@ Class TShader Extends TBrush
 		''extend me
 		'default_shader = LoadShader(vp_file, fp_file)
 	End
-
+	
+	Function LoadDefaultShader:Void(sh:TShader)
+	
+		default_shader = sh
+		SetShader( default_shader )
+		
+	End
+	
 	Function LoadShader:TShader(vp_file:String, fp_file:String) 'Abstract
 		''extend me
 	End
@@ -89,6 +96,8 @@ Class TShader Extends TBrush
 	End
 	
 	Function DefaultShader:TShader()
+		
+		If Not (g_shader) Then Return Null
 		
 		g_shader.active = 0
 		g_shader = default_shader
@@ -163,7 +172,7 @@ End
 
 
 ''
-''used to process a pre/post shader per entity
+''used to process a pre/post shader per entity (used in brushes)
 ''
 Interface IShaderEntity Extends IShaderProcess
 	

@@ -49,6 +49,33 @@ Import minib3d.vector
 '' helper databuffer classes
 ''
 
+Class Vertex
+	
+	Field x#, y#, z#
+	Field r#,g#,b#,a#
+	Field nx#,ny#,nz#
+	Field u0#,v0#,u1#,v1#
+	Field w0#=0.0, w1#=0.0
+	
+	Method GetVertex:Void(vid:Int, src:VertexDataBuffer)
+
+		Local data:Float[] = src.GetFloatArray(vid)
+		x = data[0]; y=data[1]; z=data[2] 'data[3]=null
+		nx=data[4];ny=data[5];nz=data[6] 'data[7]=null
+		r=data[8];g=data[9];b=data[10];a=data[11]
+		u0=data[12];v0=data[13];u1=data[14];v1=data[15]
+		
+	End
+
+End
+
+
+Function GetVertex:Vertex(vid:Int, src:VertexDataBuffer)
+	Local v:Vertex = New Vertex
+	v.GetVertex(vid,src)
+	Return v
+End
+
 
 Class VertexDataBuffer
 	
@@ -178,7 +205,18 @@ Class VertexDataBuffer
 		If coord_set=0 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT1 )
 		If coord_set=1 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT3 )
 	End 
-
+	
+	Method GetFloatArray:Float[](vid:Int)
+	
+		Local data:Float[Int(SIZE/4)], j:Int=0
+		For Local i:Int=0 To SIZE-1 Step 4
+			data[j] = buf.PeekFloat(vid*SIZE+i)
+			j+=1
+		Next
+		
+		Return data
+	End
+	
 End
 
 

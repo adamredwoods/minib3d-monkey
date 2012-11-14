@@ -23,14 +23,19 @@ Class TTexture
 	
 	Global tex_list:List<TTexture> = New List<TTexture>
 	Field tex_link:list.Node<TTexture>
-
-	Field file$,flags:Int,blend:Int=2,coords:Int
-	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
-	Field bind_flags:Int = -1
 	
 	Field width:Int,height:Int ' returned by Name/Width/Height commands
 	
 	Field pixmap:TPixmap
+	
+	Field file$,blend:Int=2,coords:Int
+	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
+	Field flags:Int, bind_flags:Int = -1
+	Global default_texflags:Int=9
+	
+	Field tex_smooth:Bool =True ''smooths texture via graphics driver
+	Field resize_smooth:Bool ''smooth resize (used for mipmap reducing/ power of two enlarging)
+	Global useGlobalResizeSmooth:Bool = True
 		
 	Field no_frames:Int=1
 	Field frame_ustep:Float=1.0,frame_vstep:Float=1.0, frame_xstep:Int, frame_ystep:Int
@@ -38,19 +43,20 @@ Class TTexture
 	Field frame_startx:Int, frame_starty:Int
 	
 	Field gltex:Int[] = New Int[1]
-	Field tex_id:Int '' for targets to use
+	Field tex_id:Int '' for target implementations to use instead of gltex[]
 	Field no_mipmaps:Int
 	
 	Field cube_pixmap:TPixmap[] 
 	Field cube_face:Int=0,cube_mode:Int=1
-
-	Field tex_smooth:Bool =True ''smooths texture via graphics driver
+	
 	Field is_font:Bool = False
-	Global resize_smooth:Bool = True ''smooth resize (used for mipmap reducing)
+	
 
 	Method New()
-	
-	
+		
+		''set this here, this way it is retained for lost contexts
+		resize_smooth = useGlobalResizeSmooth
+		
 	End 
 
 	'' DeleteTexture and BindTexture in TRender
@@ -94,7 +100,7 @@ Class TTexture
 	
 		Local pixmap:TPixmap = tex.pixmap
 		
-		pixmap=AdjustPixmap(pixmap)
+		pixmap=AdjustPixmap(pixmap, tex.resize_smooth)
 		tex.width=pixmap.width
 		tex.height=pixmap.height
 		
@@ -105,28 +111,29 @@ Class TTexture
 	End 
 
 
-	Function LoadTexture:TTexture(file$,flags:Int=9,tex:TTexture=Null)
+	Function LoadTexture:TTexture(file$,flags:Int=-1,tex:TTexture=Null)
 				
 		Return LoadAnimTexture(file,flags,0,0,0,1,tex)
 	
 	End
 	
 	''use this LoadTexture(pixmap) for lost context
-	Function LoadTexture:TTexture(pixmap:TPixmap,flags:Int=9, tex:TTexture = Null)
+	Function LoadTexture:TTexture(pixmap:TPixmap,flags:Int=-1, tex:TTexture = Null)
 		
 		If Not tex
 			tex =New TTexture
 			tex.tex_link = tex_list.AddLast(tex)
 		Endif
-		
-		tex.flags=flags ''overwrites filterflags
+
 		tex.FilterFlags()
+		If flags>-1 Then tex.flags = flags ''overwrites filterflags
 		
 		tex.pixmap = pixmap
 		If tex.pixmap.height = 0 Then Return tex
+
 		
 		''poweroftwo
-		tex.pixmap=AdjustPixmap(tex.pixmap)
+		tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth)
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 		
@@ -137,7 +144,7 @@ Class TTexture
 	End
 	
 	
-	Function LoadNewTexture:TTexture(file$,flags=9,tex:TTexture=Null)
+	Function LoadNewTexture:TTexture(file$,flags=-1,tex:TTexture=Null)
 		''
 		'' will force a new texture to be loaded instead of reusing, uses memory
 		''
@@ -146,15 +153,15 @@ Class TTexture
 	
 	End
 	
-	Function LoadAnimTexture:TTexture(file$,flags%,frame_width%,frame_height%,first_frame%=0,frame_count%=-1,tex:TTexture=Null,force_new:Int=False)
+	Function LoadAnimTexture:TTexture(file$,flags%=-1,frame_width%,frame_height%,first_frame%=0,frame_count%=-1,tex:TTexture=Null,force_new:Int=False)
 	
 		If tex=Null Then tex=New TTexture
 		
 		tex.file=file
 		
 		' set tex.flags before TexInList
-		tex.flags=flags ''overwrites filterflags
 		tex.FilterFlags()
+		If flags>-1 Then tex.flags = flags ''overwrites filterflags
 		
 		
 		' check to see if texture with same properties exists already, if so return existing texture
@@ -177,7 +184,8 @@ Class TTexture
 	
 		oldw = tex.pixmap.width; oldh=tex.pixmap.width
 		
-		tex.pixmap=AdjustPixmap(tex.pixmap)
+		
+		tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth)
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 	
@@ -568,11 +576,12 @@ Class TTexture
 	
 	End 
 		
-	Function AdjustPixmap:TPixmap(pixmap:TPixmap)
+	Function AdjustPixmap:TPixmap(pixmap:TPixmap, resize_smooth:Bool = True)
 		
 		' adjust width and height size to next biggest power of 2 size
 		Local width=Pow2Size(pixmap.width)
 		Local height=Pow2Size(pixmap.height)
+		
 		
 		' if width or height have changed then resize pixmap
 		If width<>pixmap.width Or height<>pixmap.height
@@ -593,12 +602,12 @@ Class TTexture
 
 
 
-	Function ResizeNoSmooth()
+	Method ResizeNoSmooth()
 		''does not smooth on resize
 		resize_smooth = False
 	End
 	
-	Function ResizeSmooth()
+	Method ResizeSmooth()
 		''does smooth on resize
 		resize_smooth = True
 	End
@@ -629,7 +638,7 @@ Class TTexture
 				TRender.render.DeleteTexture(tex.gltex)				
 				
 				If tex.is_font
-					TTexture.ResizeNoSmooth()
+					'TTexture.ResizeNoSmooth()
 					TTexture.ClearTextureFilters() ''no mip map
 				Endif
 				
@@ -637,7 +646,7 @@ Class TTexture
 				
 				If tex.is_font
 					TTexture.RestoreTextureFilters()
-					TTexture.ResizeSmooth()
+					'TTexture.ResizeSmooth()
 				Endif
 			'Next
 			

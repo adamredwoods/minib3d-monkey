@@ -118,8 +118,8 @@ Class OpenglES11 Extends TRender
 		
 		Local name$=ent.EntityName()
 	
-		Local fog=False
-		If glIsEnabled(GL_FOG)=True Then fog=True ' if fog enabled, we'll enable it again at end of each surf loop in case of fx flag disabling it
+		Local fog%=False
+		If cam.fog_mode = True Then fog=True ' if fog enabled, we'll enable it again at end of each surf loop in case of fx flag disabling it
 	
 		glDisable(GL_ALPHA_TEST)
 
@@ -159,7 +159,7 @@ Class OpenglES11 Extends TRender
 			
 					
 'Print "***classname: "+ent.classname+" : "+name			
-'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Size()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
+'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
 'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_sprite_state)
 'Print "   mesh.anim:"+mesh.anim
 'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
@@ -537,9 +537,15 @@ Class OpenglES11 Extends TRender
 					Endif
 				
 					' mipmapping texture flag
+
 					If tex_flags&8<>0
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
+						If tex_smooth
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST_MIPMAP_LINEAR)
+						Else
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
+						Endif
 					Else
 						If tex_smooth
 							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
@@ -757,7 +763,12 @@ Class OpenglES11 Extends TRender
 				TSprite(mesh).mat_sp.ToArray(t_array)
 				glMultMatrixf(t_array )
 			Endif
-				
+			
+			If cam.draw2D
+				glDisable(GL_DEPTH_TEST)
+				glDisable(GL_FOG)
+				glDisable(GL_LIGHTING)
+			Endif
 
 			If TRender.render.wireframe
 				
@@ -779,7 +790,6 @@ Class OpenglES11 Extends TRender
 			glPopMatrix()
 			
 			
-
 	
 			' enable fog again if fog was enabled at start of func
 			If fog=True
@@ -788,6 +798,11 @@ Class OpenglES11 Extends TRender
 
 		Next ''end non-alpha loop
 		
+		
+		If cam.draw2D
+			glEnable(GL_DEPTH_TEST)
+			glEnable(GL_LIGHTING)
+		Endif
 
 		If Not alpha_list Then Exit ''get out of loop, no alpha
 		temp_list = alpha_list
@@ -796,7 +811,6 @@ Class OpenglES11 Extends TRender
 		
 		temp_list = Null
 		
-		glFlush()
 		
 		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
 		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
@@ -809,6 +823,7 @@ Class OpenglES11 Extends TRender
 	Method Finish:Void()
 		
 		''
+		glFlush()
 		
 	End
 	
@@ -992,7 +1007,7 @@ Class OpenglES11 Extends TRender
 			
 		Endif
 		
-		If DEBUG And GetGLError() Then Print "*verttris"
+		If DEBUG And GetGLError() Then Print "*vbo update"
 
 		
 		surf.reset_vbo=False
@@ -1055,10 +1070,10 @@ Class OpenglES11 Extends TRender
 		TRender.render.ClearErrors()	
 		
 		''retrieve bind flags from stack
-		If tex.bind_flags <>-1 Then flags = tex.bind_flags
+		'If tex.bind_flags <>-1 Then flags = tex.bind_flags Else flags = tex.flags
 		
 		' if mask flag is true, mask pixmap
-		If tex.flags&4
+		If flags&4
 			tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
@@ -1074,13 +1089,23 @@ Class OpenglES11 Extends TRender
 		
 		glBindTexture GL_TEXTURE_2D,tex.gltex[0]
 		
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT) 'GL_CLAMP_TO_EDGE)
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT) 'GL_CLAMP_TO_EDGE)
+		If flags&8
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+		Else
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
+		Endif
+		
 		Local mipmap:Int= 0, mip_level:Int=0
 		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
 		
-		If tex.flags&8 Then mipmap=True
-
-			Repeat
+		If flags&8 Then mipmap=True
 			
+			Repeat
+				glPixelStorei GL_UNPACK_ALIGNMENT,1
 				glTexImage2D GL_TEXTURE_2D,mip_level,GL_RGBA,width,height,0,GL_RGBA,GL_UNSIGNED_BYTE,pix.pixels
 				
 				If( glGetError()<>GL_NO_ERROR )
@@ -1092,9 +1117,9 @@ Class OpenglES11 Extends TRender
 				If height>1 height *= 0.5
 
 				If tex.resize_smooth
-					tex.pixmap=pix.ResizePixmap(width,height)
+					pix=TPixmapGL(pix.ResizePixmap(width,height))
 				Else
-					tex.pixmap=pix.ResizePixmapNoSmooth(width,height)
+					pix=TPixmapGL(pix.ResizePixmapNoSmooth(width,height))
 				Endif
 				
 				mip_level+=1
@@ -1131,9 +1156,9 @@ Class OpenglES11 Extends TRender
 			glLightfv(gl_light[light_no-1],GL_SPECULAR, [light.spec_red,light.spec_grn,light.spec_blu,light.spec_a])
 			
 			' if point light or spotlight then set constant attenuation to 0
-			If light.light_type>1
-				glLightfv(gl_light[light_no-1],GL_CONSTANT_ATTENUATION,[0.0])
-			Endif
+
+			glLightfv(gl_light[light_no-1],GL_CONSTANT_ATTENUATION,[light.const_att])
+
 			
 			' if spotlight then set exponent to 10.0 (controls fall-off of spotlight - roughly matches B3D)
 			If light.light_type=3
@@ -1164,13 +1189,8 @@ Class OpenglES11 Extends TRender
 		glLightfv(gl_light[light_no-1],GL_DIFFUSE,rgba)
 
 		' point or spotlight, set attenuation
-		If light.light_type>1
-		
-			Local light_range#[]=[light.range]
-			
-			glLightfv(gl_light[light_no-1],GL_LINEAR_ATTENUATION,light_range)
-		
-		Endif
+		glLightfv(gl_light[light_no-1],GL_LINEAR_ATTENUATION,[light.lin_att])
+
 
 		' spotlight, set direction and range
 		If light.light_type=3 
