@@ -923,47 +923,7 @@ Class OpenglES11 Extends TRender
 
 		If surf.reset_vbo=-1 Then surf.reset_vbo=255
 
-#rem	
-		If surf.reset_vbo&1
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-			If surf.vbo_dyn =False
-				glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*3*4),surf.vert_coords.buf,GL_STATIC_DRAW)
-			Else
-				If surf.reset_vbo <> 255
-					glBufferSubData(GL_ARRAY_BUFFER,0,(surf.no_verts*3*4),surf.vert_coords.buf)
-				Else
-					glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*3*4),surf.vert_coords.buf,GL_DYNAMIC_DRAW)
-				Endif
-			Endif
-		Endif
-		'If GetGLError() Then Print "vertcoords"
-		
-		If surf.reset_vbo&2
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[1])
-			glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*2*4),surf.vert_tex_coords0.buf,GL_STATIC_DRAW)
-	
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[2])
-			glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*2*4),surf.vert_tex_coords1.buf,GL_STATIC_DRAW)	
-		Endif
-		'If GetGLError() Then Print "verttexcords"
-		
-		If surf.reset_vbo&4
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[3])
-			glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*3*4),surf.vert_norm.buf,GL_STATIC_DRAW)
-		Endif
-		'If GetGLError() Then Print "vertnorm"
-		
-		If surf.reset_vbo&8
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
-			If surf.reset_vbo <> 255
-				glBufferSubData(GL_ARRAY_BUFFER,0,(surf.no_verts*4*4),surf.vert_col.buf)
-			Else
-				glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*4*4),surf.vert_col.buf,GL_STATIC_DRAW)
-			Endif
-			
-		Endif
-		'If GetGLError() Then Print "vertcol"
-#end
+
 		
 		''surf.vert_anim array should be null until it is set by BoneToVertexAnimation
 		

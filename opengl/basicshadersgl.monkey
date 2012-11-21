@@ -159,7 +159,8 @@ Class FullShader Extends TShaderGLSL
 	"return (lightColor[i] * lambertTerm  );}"+
 	"void main () {"+
 	" vec4 finalcolor = all_zeros;vec4 ambient = vec4(ambientcolor.xyz,0.0);vec4 light = all_ones;vec4 specular = all_zeros;"+
-	"vec3 N = ( (texflag > 0.0) && (texfxNormal[0] > 0) ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : normalize(normal.xyz);"+
+	"bool usenormalmap = (texflag > 0.0) && (texfxNormal[0] > 0); /*fixes webgl angle bug*/~n"+
+	"vec3 N = (( usenormalmap  ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : normalize(normal.xyz));"+
 	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : all_ones ; vec4 texture = all_ones;"+
 	"if (texflag<1.0) {	finalcolor = vec4(vertcolor.xyz, vertcolor.w);	} else {"+
 		"if (texflag >0.0 && (texfxNormal[0] < 1) ) {texture = texture2D(uTexture[0], (texcoord[0]).xy);	finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor);"+

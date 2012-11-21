@@ -81,7 +81,7 @@ Class TText Extends TSprite
 		TTexture.useGlobalResizeSmooth = True
 		
 		tex.is_font = True
-		tex.flags=4
+		tex.flags=4 |16|32
 		tex.TextureBlend(2)
 		tex.NoSmooth() ''can be set by user
 		
@@ -89,7 +89,7 @@ Class TText Extends TSprite
 		tt.EntityTexture(tex)
 		tt.char_rows = Ceil( (c_pixels*num_chars+(num_chars*(pad*2) )) / tt.orig_width )
 
-		tt.pixel_ratio = tex.width/tt.orig_width
+		tt.pixel_ratio = Float(tex.width)/tt.orig_width
 		
 		Local temp_chars_per_row:Int = Floor( num_chars/tt.char_rows)
 		tt.char_uvwidth = (tt.char_pixels * tt.pixel_ratio) / Float(tex.width)	

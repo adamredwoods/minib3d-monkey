@@ -13,7 +13,7 @@ Import minib3d.tbone
 
 
 Class TEntity
-
+	
 	Const inverse_255:Float = 1.0/255.0
 
 	Global entity_list:EntityList<TEntity> = New EntityList<TEntity>
@@ -168,33 +168,49 @@ Class TEntity
 
 	Method PositionEntity(x#,y#,z#,glob=False)
 		
-		''negate z
+		''negate z for opengl
 		z=-z
+		
+		'' treat bones differently, before global
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return
 
 		' conv glob to local. x/y/z always local to parent or global if no parent
+
 		If glob=True And parent<>Null
-	
+			
+			'px = x; py= y; pz= z
+			'UpdateMatTrans(True)
+			'If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
+			'Return
+			
+			
 			temp_mat=parent.mat.Copy().Inverse()
-			'temp_mat.Scale(1/psx,1/psy,1/psz)
+			'
 			'z=-z
+			
+			'x=(x+parent.mat.grid[3][0])
+			'y=(y+parent.mat.grid[3][1])
+			'z=(z+parent.mat.grid[3][2])
+			
 			Local psx#=parent.gsx
 			Local psy#=parent.gsy
 			Local psz#=parent.gsz
-	
-			x=(x+parent.mat.grid[3][0])
-			y=(y+parent.mat.grid[3][1])
-			z=(z+parent.mat.grid[3][2]) '-z
-			Local pos:Float[] = temp_mat.TransformPoint(x,y,-z) '+z
-
-			x=(pos[0]+temp_mat.grid[3][0])/(psx*psx) 'pos[0]/psx
-			y=(pos[1]+temp_mat.grid[3][1])/(psy*psy) 'pos[1]/psy
-			z=(pos[2]-temp_mat.grid[3][2])/(psz*psz) '-pos[2]/psz
-			z=-z
+			temp_mat.InverseScale(psx,psy,psz)
 			
+			'temp_mat.Inverse() ''only 3x3 inverse
+			
+			Local pos:Float[] = temp_mat.TransformPoint(x,y,z) '-z
+	
+			'x=(pos[0]+temp_mat.grid[3][0])/(psx*psx) 'pos[0]/psx
+			'y=(pos[1]+temp_mat.grid[3][1])/(psy*psy) 'pos[1]/psy
+			'z=(pos[2]+temp_mat.grid[3][2])/(psz*psz) '-pos[2]/psz
+			'z=-z
+			
+			x= pos[0]
+			y= pos[1]
+			z= pos[2]
 		Endif
-		
-		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z); Return
+
 					
 		px=x
 		py=y
@@ -217,7 +233,7 @@ Class TEntity
 		
 	Method MoveEntity(mx#,my#,mz#)
 		
-		'mz=-mz 'transformpoint flips this
+		mz=-mz ' opengl -z
 		
 		Local pos:Float[]		
 
@@ -230,7 +246,7 @@ Class TEntity
 		
 		px=px+pos[0]
 		py=py+pos[1]
-		pz=pz+(-pos[2])
+		pz=pz+pos[2]
 		
 		'' treat bones differently
 		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz); Return
@@ -257,7 +273,10 @@ Class TEntity
 		'Local tx#=x
 		'Local ty#=y
 		tz=-tz
-
+		
+		'' treat bones differently and bypass global
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return
+		
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
 						
@@ -277,8 +296,7 @@ Class TEntity
 		py=py+ty
 		pz=pz+tz
 		
-		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz); Return
+		
 
 		If parent<>Null
 			''global
@@ -308,6 +326,15 @@ Class TEntity
 		sy=y
 		sz=z
 
+		'' treat bones differently
+		If TBone(Self) <> Null
+			gsx=parent.gsx*sx
+			gsy=parent.gsy*sy
+			gsz=parent.gsz*sz
+
+			TBone(Self).ScaleBone(sx,sy,sz,glob)
+			Return
+		Endif
 
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
@@ -317,10 +344,6 @@ Class TEntity
 			sz = sz/parent.gsz
 	
 		Endif
-		
-		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).ScaleBone(sx,sy,sz); Return
-	
 
 		If parent<>Null	
 			gsx=parent.gsx*sx
@@ -342,6 +365,8 @@ Class TEntity
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self,3)
 
 	End 
+	
+	
 
 	Method RotateEntity(e:TEntity)
 		
@@ -355,6 +380,9 @@ Class TEntity
 		ry=y
 		rz=z
 		
+		'' treat bones differently, and bypass global
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz, glob); Return
+		
 		' conv glob to local. pitch/yaw/roll always local to parent or global if no parent
 		If glob=True And parent<>Null
 
@@ -363,9 +391,6 @@ Class TEntity
 			rz=rz-parent.EntityRoll(True)
 		
 		Endif
-		
-		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz); Return
 		
 		If parent<>Null
 		
@@ -394,7 +419,7 @@ Class TEntity
 		rz=rz+z
 		
 		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz); Return
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz,glob); Return
 		
 
 		If parent<>Null
@@ -411,6 +436,8 @@ Class TEntity
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
 
 	End 
+	
+	
 
 	' Function by mongia2
 	Method PointEntity(target_ent:TEntity,roll#=0)
@@ -628,8 +655,23 @@ Class TEntity
 	
 	End 
 	
+	Method ActivateBones:Void()
+		anim_render = True
+		anim_trans=0
+		anim = 4
+		'nim_mode = 4
+		anim_update = True
+	End
 	
-	Method Animate(mode:Int=1,speed:Float=1.0,seq:Int=0,trans:Int=0)
+	Method ActivateVertexAnim:Void()
+		anim_render = True
+		anim_trans=0
+		anim = 2
+		anim_update = True
+	End
+	
+	'' 0=none, 1=repeat, 2=ping-pong, 3=play once, 4 = boned anim
+	Method Animate:Void(mode:Int=1,speed:Float=1.0,seq:Int=0,trans:Int=0)
 	
 		anim_mode=mode
 		anim_update=True ' update anim for all modes (including 0)
@@ -639,9 +681,7 @@ Class TEntity
 			anim_trans=trans
 			If Not anim_time Then anim_time=anim_seqs_first[seq]
 		Else
-			anim_render = True
-			anim_trans=0
-			anim = 4
+			ActivateBones()
 		Endif
 		
 		If trans>0
@@ -650,7 +690,6 @@ Class TEntity
 		
 	End 
 	
-
 	Method SetAnimTime(time#, seq%=0)
 	
 		anim_mode=-1 ' use a mode of -1 for setanimtime
@@ -1830,7 +1869,7 @@ Class TEntity
 		If load_identity=False And parent
 			''load parent mat
 			'mat.Overwrite(parent.mat)
-			'mat.Translate(px,py,pz)
+			'mat.Translate4(px,py,pz)
 			mat.grid[3][0] = parent.mat.grid[0][0]*px + parent.mat.grid[1][0]*py + parent.mat.grid[2][0]*pz + parent.mat.grid[3][0]
 			mat.grid[3][1] = parent.mat.grid[0][1]*px + parent.mat.grid[1][1]*py + parent.mat.grid[2][1]*pz + parent.mat.grid[3][1]
 			mat.grid[3][2] = parent.mat.grid[0][2]*px + parent.mat.grid[1][2]*py + parent.mat.grid[2][2]*pz + parent.mat.grid[3][2]
@@ -1912,7 +1951,10 @@ Class TEntity
 				Endif
 				
 				UpdateChildren(ent_c,type)
-				
+			
+			Else
+				''modify bone
+				TBone(ent_c).UpdateMatrix(ent_c.loc_mat)
 			Endif
 			
 			

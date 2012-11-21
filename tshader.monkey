@@ -125,7 +125,7 @@ Class TShader Extends TBrush
 		
 	End
 	
-	''-- draw entity with g_shader instead of brush shader
+	''-- draws entity with g_shader instead of brush shader
 	Method DrawEntity:Void(cam:TCamera, ent:TEntity)
 		
 		''update camera, since this routine is used in shaders
@@ -146,6 +146,8 @@ Class TShader Extends TBrush
 		ent.shader_brush.active= temp
 		
 	End
+	
+
 	
 End
 

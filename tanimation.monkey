@@ -628,7 +628,7 @@ Class TAnimation
 		
 		
 		''set new anim=2 number for vert animation
-		mesh.anim = 2
+		mesh.ActivateVertexAnim()
 
 	End
 

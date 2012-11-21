@@ -1,12 +1,14 @@
 ****************************************
 minib3d v0.32
 
-- updated for monkey v66
-- re-arranged preloading/buffer loading (future-proofing)
-- uses #MINIB3D_DEBUG_MODEL = "true" to debug models instead of hardcoding
-
 - added function TEntity GetChildren(recursive = true)
-- update movement functions to allow bone deformation. should work with Entity commands as well.(PositionBone, RotateBone, ScaleBone, etc.)
+- update movement functions to allow bone deformation. should work with Entity commands as well.(PositionEntity, RotateEntity, ScaleEntity, etc.) To animate with bones you must use myEntity.ActivateBones() or myEntity.Animate(4). You cannot combine B3D animation and programmable bone animation.
+
+	Example:
+	zombie.ActivateBones()
+	Local ent:TEntity = zombie.FindChild("Joint9")
+	ent.TurnEntity(0,1.0,0) ' 'rotates zombie torso on y axis
+	ent.PositionEntity(1.0,0,0,True) ' 'moves zombie torso to global x=1
 
 - with monkey V66, you can only load new shaders in OnCreate() or OnRender() [android]
 - with monkey V66, SetRender() must be in OnCreate()
@@ -14,14 +16,28 @@ minib3d v0.32
   (ie. use store pointers: fastbrightshader = New FastBrightShader)
 
 
-  - added TEntity.Draw(x,y) command:
+- added TEntity.Draw(x,y) command:
 	Draw works much like Mojo's DrawImage command where it must be updated per frame to work, and renders the order of all objects layered when RenderWorld() is called. It can be placed in OnRender() but before RenderWorld(). 
 	The use of Draw is pixel perfect, but will automatically scale based on TPixmap's width and height. To override auto-scaling use Draw(x,y,true).
+	Also beware, that you need to use HideEntity() to keep the object from appearing in multiple cameras.
 
 	Usage:
 	local txt:TText = CreateText2D("Some text here")
+	txt.HideEntity()
 	txt.Draw(0,0)
-  
+
+- adjusted lighting slightly to be similar across all targets
+- bug fixes: CameraLayer, LoadMesh problems, B3D loading problems, html5 Chrome bug, XNA bugs, iOS texureloading bug
+- re-arranged XNA code
+ 
+****************************************
+minib3d v0.31
+
+- updated for monkey v66
+- re-arranged preloading/buffer loading (future-proofing)
+- uses #MINIB3D_DEBUG_MODEL = "true" to debug models instead of hardcoding
+ 
+ 
 ****************************************
 minib3d v0.30
 

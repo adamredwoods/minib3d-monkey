@@ -101,8 +101,8 @@ Class Matrix
 	
 	Method Inverse:Matrix()
 		'' only good for orthogonal matrixes
-		'' (ie. no shearing)
-		'' if there are problems, need to make the determinate-style inverse (many calculations)
+		'' (ie. no scaling)
+		'' if there are problems, need to use the determinate-style inverse (many calculations)
 		
 		Local mat:Matrix=New Matrix
 	
@@ -354,11 +354,36 @@ Class Matrix
 		grid[2][0] = grid[2][0]*sz
 		grid[2][1] = grid[2][1]*sz
 		grid[2][2] = grid[2][2]*sz
-	
+		
 	End 
 	
+	''special function to remove global scale after a 3x3 inverse
+	Method InverseScale:Void(sx#, sy#, sz#)
+		If sx=1.0 And sy=1.0 And sz=1.0 Then Return
+		
+		sx = 1.0/(sx*sx); sy = 1.0/(sy*sy); sz = 1.0/(sz*sz)
+		
+		''3x4
+		grid[0][0] = grid[0][0]*sx
+		grid[0][1] = grid[0][1]*sx
+		grid[0][2] = grid[0][2]*sx
+
+		grid[1][0] = grid[1][0]*sy
+		grid[1][1] = grid[1][1]*sy
+		grid[1][2] = grid[1][2]*sy
+
+		grid[2][0] = grid[2][0]*sz
+		grid[2][1] = grid[2][1]*sz
+		grid[2][2] = grid[2][2]*sz
+		
+		grid[3][0] = grid[3][0]*sx
+		grid[3][1] = grid[3][1]*sy
+		grid[3][2] = grid[3][2]*sz
+		
+	End
+	
 	Method FastRotateScale:Void(rx:Float,ry:Float,rz:Float,scx:Float,scy:Float,scz:Float)
-		''no need to load ident before this, no parenting
+		''this function will overwrite current matrix
 		
 		Local sx:Float, sy:Float, sz:Float, cx:Float, cy:Float, cz:Float, theta:Float
 		
@@ -542,19 +567,19 @@ Class Matrix
 	''
 	
 	''bbdoc: Transforms a point through the matrix, returns a float array
-	''bbdoc: external facing, so it will flip Z internally (ie. if used internally, z is not needed to flip)
+	''bbdoc: may need to negate z... p[2] = -p[2]
 	Method TransformPoint:Float[](x:Float, y:Float, z:Float, w:Float=1.0)
 		
 		Local p0:Float,p1:Float,p2:Float,p3:Float
 		
 		'' -z, opengl
 		
-		p0 = grid[0][0]*x + grid[1][0]*y + grid[2][0]*-z + grid[3][0] *w
-		p1 = grid[0][1]*x + grid[1][1]*y + grid[2][1]*-z + grid[3][1] *w
-		p2 = grid[0][2]*x + grid[1][2]*y + grid[2][2]*-z + grid[3][2] *w
+		p0 = grid[0][0]*x + grid[1][0]*y + grid[2][0]*z + grid[3][0] *w
+		p1 = grid[0][1]*x + grid[1][1]*y + grid[2][1]*z + grid[3][1] *w
+		p2 = grid[0][2]*x + grid[1][2]*y + grid[2][2]*z + grid[3][2] *w
 
 		
-		Return [p0,p1,-p2]
+		Return [p0,p1,p2]
 	End
 	
 	''bbdoc: returns a matrix class from an float array [16]

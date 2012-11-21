@@ -8,9 +8,19 @@ Import minib3d.opengl.framebuffergl
 
 Alias LoadString = app.LoadString
 
-
 '' NOTES:
 '' -- use LinkVariables to specifically use default shader variables, otherwise it won't (FBO display)
+
+
+Extern
+
+	'' to debug webGL angle shader translastions (needs priveldged code extension activated)
+	Function Get_HLSL:String(sh:Int) = "gl.getExtension(~qWEBGL_debug_shaders~q).getTranslatedShaderSource"
+
+Public
+
+
+
 
 Class ShaderUniforms
 	
@@ -241,8 +251,8 @@ Class TShaderGLSL Extends TShader
 		If TRender.DEBUG Then Print log
 		
 		
-			log = glGetShaderSource(webgl_shader) 'glGetProgramInfoLog(shader_id)
-			If TRender.DEBUG Then Print log
+			'log = glGetShaderSource(webgl_shader)
+			'If TRender.DEBUG Then Print log
 		
 		If result[0] <> GL_TRUE
 			Print "**Shader Linking Error "
@@ -292,6 +302,9 @@ Class TShaderGLSL Extends TShader
 		Local result:Int[1]
 		glGetShaderiv(id, GL_COMPILE_STATUS, result)
 		
+		''for debugging webgl angle hlsl transalations, must have the priveledged extensions flag on
+		'Local ss:String = Get_HLSL(id)
+		'Print "---- HLSL ---- ~n"+ss
 	
 		If result[0] <> GL_TRUE
 			Local log:String

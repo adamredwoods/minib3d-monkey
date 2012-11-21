@@ -43,7 +43,8 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 		If p.height Then p.pitch = GetBufferLength(p.pixels)/4.0 / p.height
 		
 		If Not p.width And Not p.height Then Dprint "Image Not Found: "+f
-
+		'Dprint "Image found "+f+" "+p.width+" "+p.height
+		
 		Return p
 		
 	End
@@ -250,6 +251,7 @@ Class PreloadManager Implements IPreloadManager
 		If id<1 Then Return
 		Local info:Int[2]
 		
+		f = FixDataPath(f)
 		data[id-1] = New DataBuffer()
 		LoadImageData(data[id-1], f, info)
 		w[id-1] = info[0]
@@ -273,7 +275,7 @@ Class PreloadManager Implements IPreloadManager
 				
 			Else
 				Local info:Int[2]
-				
+				f = FixDataPath(f)
 				p.pixels = New DataBuffer()
 				LoadImageData(p.pixels,f, info)
 				

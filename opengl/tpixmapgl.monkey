@@ -296,7 +296,11 @@ Class PreloadManager Implements IPreloadManager
 		
 		If id<1 Then Return
 		Local info:Int[2]
-		
+
+'' ugh....
+#If TARGET<>"ios"		
+		f = FixDataPath(f)
+#Endif
 		data[id-1] = LoadImageData(f, info)
 		w[id-1] = info[0]
 		h[id-1] = info[1]
@@ -319,7 +323,10 @@ Class PreloadManager Implements IPreloadManager
 				
 			Else
 				Local info:Int[2]
+'' ugh....
+#If TARGET<>"ios"
 				f = FixDataPath(f)
+#Endif
 				p.pixels = LoadImageData(f, info)
 				p.width = info[0]
 				p.height = info[1]

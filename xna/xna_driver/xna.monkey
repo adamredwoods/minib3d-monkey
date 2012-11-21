@@ -534,6 +534,7 @@ Class XNAEffect = "XNAEffect"
 	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjMat"
 	Method ViewMatrix:Void(mat:Float[]) = "SetViewMat"
 	Method WorldMatrix:Void(mat:Float[]) = "SetWorldMat"
+
 	
 	' may only be used with effects that usually implements IEffectFog
 	Method FogColor:Void(r#,g#,b#) Property = "SetFogColor"

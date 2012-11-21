@@ -8,7 +8,7 @@ Class TSprite Extends TMesh
 	Field view_mode:Int=1
 	Field mat_sp:Matrix = New Matrix
 	
-	Field pixel_scale:Int[] = New Int[2] ''used for draw2d mode
+	Field pixel_scale:Float[] = New Float[2] ''used for draw2d mode
 	
 	Private
 	

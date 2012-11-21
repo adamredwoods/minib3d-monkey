@@ -1951,30 +1951,32 @@ Class TMesh Extends TEntity
 		''position
 		Local w# = TRender.width*0.5
 		Local h# = TRender.height*0.5
-		PositionEntity((x-w), (h-y), 1.0)
-		
-		TSprite(Self).pixel_scale[0] = 1.0
-		TSprite(Self).pixel_scale[1] = 1.0
-			
-		''auto-scaling for sprites and ttext
-		If Not no_scaling
+		PositionEntity((x-w), (h-y), 1.99999)
 
+					
+		''auto-scaling for sprites and ttext
+		Local spr:TSprite = TSprite(Self)
+		If Not no_scaling And spr<>Null
+			spr.pixel_scale[0] = 1.0
+			spr.pixel_scale[1] = 1.0
+		
 			If TText(Self)
+				''mojo_font scx=12
+				Local scx# = Int((TText(Self).char_pixels* TText(Self).pixel_ratio)+1.5) '0.5 rounds up
+				spr.pixel_scale[0] = scx
+				spr.pixel_scale[1] = scx			
+			Else
+				Local scx# = Self.brush.GetTexture(0).width * 0.5 '' a sprite is 2 units wide (-1,1)
+				Local scy# = Self.brush.GetTexture(0).height * 0.5
 			
-				Local scx% = Ceil(TText(Self).char_pixels* TText(Self).pixel_ratio+1.0)
-				TText(Self).pixel_scale[0] = scx
-				TText(Self).pixel_scale[1] = scx
-				
-			Elseif TSprite(Self)
-				Local scx% = Self.brush.GetTexture(0).width * 0.5 '' a sprite is 2 units wide (-1,1)
-				Local scy% = Self.brush.GetTexture(0).height * 0.5
-			
-				TSprite(Self).pixel_scale[0] = scx
-				TSprite(Self).pixel_scale[1] = scy
+				spr.pixel_scale[0] = scx
+				spr.pixel_scale[1] = scy
 			Endif
 			
 		Endif
-		'PositionEntity(0, 0, 1.0)
+		
+		'PositionEntity(0, 0, 1.999)
+		
 	End
 	
 	

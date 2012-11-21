@@ -24,6 +24,8 @@ Class TBone Extends TEntity
 	Field tform_mat:Matrix=New Matrix
 	'Field base_mat:Matrix
 	
+	Field base_ent:TEntity
+	
 	Field rest_mat:Matrix = New Matrix
 
 
@@ -154,6 +156,12 @@ Public
 	
 	End 
 
+
+	Method AddBone()
+		'' adds bone to end of another bone
+		
+	End
+
 	' negates z value of bone matrices so that children are transformed
 	' in correct z direction
 	Function UpdateNonBoneChild:Void(ent_p:TEntity)
@@ -214,7 +222,7 @@ Public
 		'loc_mat.Overwrite(t_mat) 'retain new local mat
 
 		
-		UpdateMatrix(t_mat)
+		If Not glob Then UpdateMatrix(t_mat) Else UpdateMatrixGlobal(t_mat, 1, t_mat.ToArray() )
 
 		
 		
@@ -236,7 +244,7 @@ Public
 		
 		'loc_mat.Overwrite(t_mat) 'retain new local mat
 	
-		UpdateMatrix(t_mat)
+		If Not glob Then UpdateMatrix(t_mat) Else UpdateMatrixGlobal(t_mat, 0, [x,y,z])
 
 		
 		
@@ -255,14 +263,16 @@ Public
 		't_mat.Multiply(loc_mat)
 		
 		t_mat.grid[3][0] = (px+rest_mat.grid[3][0]); t_mat.grid[3][1] = (py+rest_mat.grid[3][1]); t_mat.grid[3][2] = (pz+rest_mat.grid[3][2]);
-		t_mat.Rotate(rx,ry,rz)
-		t_mat.Scale(x,y,z)
-			
+		t_mat.Rotate(rx,ry,rz)	
+		t_mat.Scale(x,y,z)	
 		'loc_mat.Overwrite(t_mat) 'retain new local mat
 
 		
-		UpdateMatrix(t_mat)
-
+		If Not glob
+			UpdateMatrix(t_mat)
+		Else
+			UpdateMatrixGlobal(t_mat, 3, [x,y,z])
+		Endif
 		
 		
 		If TBone(Self).child_list.IsEmpty()<>True Then UpdateBoneChildren(Self)
@@ -422,8 +432,8 @@ Public
 		
 			new_mat.Overwrite(TBone(parent).mat2)
 			new_mat.Multiply(loc_mat)
-			mat2.Overwrite(new_mat)
-			
+			mat2.Overwrite(new_mat)	
+						
 		Endif
 
 
@@ -435,7 +445,64 @@ Public
 	End
 	
 	
-	
+	Method UpdateMatrixGlobal:Void(mat0:Matrix, glob:Int = 0, grid:Float[] = [0.0])
+		
+		''challenge here is to create the local mat and chain mat	
+		loc_mat.Overwrite(mat0)
+		
+		If parent<>Null
+		
+			mat.Overwrite(parent.mat)
+			mat.Multiply(loc_mat)
+			
+		Endif
+		
+		' set mat2 - does not include root parent transformation
+		' mat2 is used to store local bone positions (in the chain), and is needed for vertex deform
+		If TBone(Self.parent)<>Null
+		
+			new_mat.Overwrite(TBone(parent).mat2)
+			new_mat.Multiply(loc_mat)
+			mat2.Overwrite(new_mat)
+			
+		Endif
+		
+		
+
+		' set tform mat
+		' A tform mat is needed to transform vertices, and is basically the bone mat multiplied by the inverse reference pose mat
+		tform_mat.Overwrite(mat2)
+		tform_mat.Multiply(inv_mat)
+If glob=0
+			new_mat.grid[3][0] = grid[0]
+			new_mat.grid[3][1] = grid[1]
+			new_mat.grid[3][2] = grid[2]
+			mat.grid[3][0] = grid[0]
+			mat.grid[3][1] = grid[1]
+			mat.grid[3][2] = grid[2]
+			tform_mat.grid[3][0] = grid[0]
+			tform_mat.grid[3][1] = grid[1]
+			tform_mat.grid[3][2] = grid[2]
+'Print grid[0]+" "+grid[1]+" "+grid[2]
+			mat2.Overwrite(new_mat)
+		Else If glob=1
+			new_mat.grid[0][0] = grid[0]
+			new_mat.grid[0][1] = grid[1]
+			new_mat.grid[0][2] = grid[2]
+			new_mat.grid[1][0] = grid[3]
+			new_mat.grid[1][1] = grid[4]
+			new_mat.grid[1][2] = grid[5]
+			new_mat.grid[2][0] = grid[6]
+			new_mat.grid[2][1] = grid[7]
+			new_mat.grid[2][2] = grid[8]
+			mat2.Overwrite(new_mat)
+		Else If glob=2
+			new_mat.Scale(sx/parent.gsx,sy/parent.gsy,sz/parent.gsz)
+			mat2.Overwrite(new_mat)
+		Endif
+		
+	End
+
 
 	
 

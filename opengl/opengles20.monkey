@@ -215,6 +215,10 @@ Print s
 		Local temp_list:List<TSurface> = mesh.surf_list
 		alpha_list.Clear()
 	
+		''re-enable at end
+		If cam.draw2D
+			glDisable(GL_DEPTH_TEST)
+		Endif
 		
 		''run through surfaces twice, sort alpha surfaces for second pass
 		For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs
@@ -890,10 +894,6 @@ Print s
 			
 			If DEBUG And GetGLError() Then Print "*mats flags"
 			
-			
-			If cam.draw2D
-				glDisable(GL_DEPTH_TEST)
-			Endif
 
 			'' draw tris
 
@@ -1413,8 +1413,14 @@ Print s
 		Endif
 
 	End 
+	
 
-
+	''Overloading
+	Function SetDrawShader:Void()
+		
+		SetShader(New FastBrightShader)
+		
+	End
 
 	
 End

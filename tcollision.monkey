@@ -377,14 +377,14 @@ Class CollisionInfo
 	
 		coll_method = col_method
 		
-		vec_i.Update(ent.mat.grid[0][0]/(ent.gsx),ent.mat.grid[1][0],-ent.mat.grid[2][0])
-		vec_j.Update(ent.mat.grid[0][1],ent.mat.grid[1][1]/(ent.gsy),-ent.mat.grid[2][1])
-		vec_k.Update(-ent.mat.grid[0][2],-ent.mat.grid[1][2],ent.mat.grid[2][2]/(ent.gsz))
+		vec_i.Update(ent.mat.grid[0][0],ent.mat.grid[1][0],-ent.mat.grid[2][0])
+		vec_j.Update(ent.mat.grid[0][1],ent.mat.grid[1][1],-ent.mat.grid[2][1])
+		vec_k.Update(-ent.mat.grid[0][2],-ent.mat.grid[1][2],ent.mat.grid[2][2])
 		t_mat.Update(vec_i,vec_j,vec_k)
 		
 		'mat = ent.mat.Inverse()
 		''remove global scaling from matrix
-		't_mat.Scale(1/(ent.gsx*ent.gsx),1/(ent.gsy*ent.gsy),1/(ent.gsz*ent.gsz)) 
+		t_mat.InverseScale(ent.gsx,ent.gsy,ent.gsz) 
 		't_mat.Scale(1/(ent.gsx),1/(ent.gsy),1/(ent.gsz))
 		vec_v.Update(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2])
 		

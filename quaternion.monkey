@@ -236,7 +236,7 @@ Class Quaternion
 		Return ret_var
 	End 
 	
-	Function EulerToQuat:Quaternion(rx#,ry#,rz#) ''double-check to make sure correct
+	Function EulerToQuat:Quaternion(rx#,ry#,rz#) ''*****double-check to make sure correct******
 		
 		Local q:Quaternion = New Quaternion
 		

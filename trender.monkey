@@ -31,6 +31,7 @@ Class TRender
 	
 	Global alpha_pass:Int = 0 ''for optimizing the TMesh render routine
 	
+	Global camera2D:TCamera = New TCamera '' do not add to cam_list
 	Global draw_list:List<TMesh> = New List<TMesh> ''immediate mode drawing for overlay, text
 	
 	Private
@@ -261,16 +262,22 @@ Class TRender
 
 		If draw_list.IsEmpty Then Return
 		
-		TShader.DefaultShader()
+		TRender.render.SetDrawShader()
 		TRender.render.Reset()
 		
-		Local cam:TCamera=New TCamera ''Do NOT add to cam_list
+		camera2D.CameraViewport(0,0,TRender.width,TRender.height)
+		camera2D.SetPixelCamera
+		camera2D.CameraClsMode(False,True)
+		camera2D.draw2D = 1
 		
-		cam.CameraViewport(0,0,TRender.width,TRender.height)
-		cam.SetPixelCamera
-		cam.CameraClsMode(False,True)
-		cam.draw2D = 1
-		TRender.render.UpdateCamera(cam)
+		alpha_pass=1
+		'camera2D.ExtractFrustum()
+		'camera2D.CameraProjMode(3)
+		
+		TRender.render.UpdateCamera(camera2D)
+		
+		'cam = TCamera.cam_list.First()
+		'cam.draw2D=1
 		
 		For Local mesh:TMesh = Eachin draw_list
 			
@@ -278,20 +285,21 @@ Class TRender
 			
 			If mesh.is_sprite Or mesh.is_update
 				
-				mesh.Update(cam ) ' rotate sprites with respect to current cam					
-				If mesh.Alpha() Then mesh.alpha_order=1.0 ' test for alpha in surface
-				
-				''auto-scaling for sprites and ttext
-				TSprite(mesh).mat_sp.Scale( Int(TSprite(mesh).pixel_scale[0]) , Int(TSprite(mesh).pixel_scale[1]), 1.0)
-					
+				mesh.Update(camera2D ) ' rotate sprites with respect to current cam					
+								
 			Endif
 			
+			''auto-scaling for sprites and ttext
+			Local sp:TSprite = TSprite(mesh)
+			If mesh.is_sprite Then sp.mat_sp.Scale( (sp.pixel_scale[0]) , (sp.pixel_scale[1]), 1.0)
+
 			
-			TRender.render.Render(mesh,cam)
+			If mesh.Alpha() Then mesh.alpha_order=1.0 ' test for alpha in surface
+			
+			TRender.render.Render(mesh,camera2D)
 		Next
 		
 		draw_list.Clear()
-		TRender.render.Reset()
 		
 	End
 	
@@ -461,6 +469,13 @@ Class TRender
 			tex.bind_flags = -1
 		Next
 		TTexture.tex_bind_stack.Clear()
+		
+	End
+	
+	
+	Function SetDrawShader:Void()
+		
+		'' set a fast, bright shader, used with drawing 2D, text
 		
 	End
 	
