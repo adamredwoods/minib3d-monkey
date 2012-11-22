@@ -1,6 +1,7 @@
 Import minib3d
 Import matrix
 Import monkey.math
+Import minib3d.tbone
 
 
 ''NOTES:
@@ -10,7 +11,9 @@ Import monkey.math
 '' -- if you need faster operations on mobile, you'll need a fixed-point math library
 
 
+
 Class TEntity
+	
 	Const inverse_255:Float = 1.0/255.0
 
 	Global entity_list:EntityList<TEntity> = New EntityList<TEntity>
@@ -68,7 +71,7 @@ Class TEntity
 	Field old_z#
 	
 	'' used by TCamera for camera layer
-	Field is_cam_layer:Bool = False
+	Field use_cam_layer:Bool = False
 	Field cam_layer:TCamera
 	
 		
@@ -96,11 +99,103 @@ Class TEntity
 		loc_mat.LoadIdentity()
 		
 	End
-	
-	Method Delete()
-	
-	End
 
+	
+	Method CopyBaseEntityTo:Void(ent:TEntity, parent_ent:TEntity=Null)
+
+		' copy contents of child list before adding parent
+		For Local ent2:TEntity=Eachin child_list
+			ent2.CopyEntity(ent)
+		Next
+		
+		' lists
+			
+		' add parent, then add to list
+		ent.AddParent(parent_ent)
+		ent.entity_link = entity_list.EntityListAdd(ent)
+	
+		' add to collision entity list
+		If collision_type<>0
+			TCollisionPair.ent_lists[collision_type].AddLast(ent)
+		Endif
+		
+		' add to pick entity list
+		If pick_mode<>0
+			ent.pick_link = TPick.ent_list.AddLast(ent)
+		Endif
+
+	
+		' update matrix
+		If ent.parent<>Null
+			ent.mat.Overwrite(ent.parent.mat)
+		Else
+			ent.mat.LoadIdentity()
+		Endif
+		
+		' copy entity info	
+		ent.mat.Multiply(mat)
+		
+		ent.loc_mat = loc_mat
+		
+		ent.px=px
+		ent.py=py
+		ent.pz=pz
+		ent.sx=sx
+		ent.sy=sy
+		ent.sz=sz
+		ent.rx=rx
+		ent.ry=ry
+		ent.rz=rz
+		ent.qw=qw
+		ent.qx=qx
+		ent.qy=qy
+		ent.qz=qz
+		
+		ent.gsx = gsx
+		ent.gsy = gsy
+		ent.gsz = gsz
+		
+		ent.name=name
+		ent.classname=classname
+		ent.order=order
+		ent.hide=False
+		ent.auto_fade=auto_fade
+		ent.fade_near=fade_near
+		ent.fade_far=fade_far
+		
+		ent.brush=Null
+		ent.brush=brush.Copy()
+		
+		ent.anim=anim
+		ent.anim_render=anim_render
+		ent.anim_mode=anim_mode
+		ent.anim_time=anim_time
+		ent.anim_speed=anim_speed
+		ent.anim_seq=anim_seq
+		ent.anim_trans=anim_trans
+		ent.anim_dir=anim_dir
+		ent.anim_seqs_first=anim_seqs_first[..]
+		ent.anim_seqs_last=anim_seqs_last[..]
+		ent.no_seqs=no_seqs
+		ent.anim_update=anim_update
+	
+		ent.cull_radius=cull_radius
+		ent.radius_x=radius_x
+		ent.radius_y=radius_y
+		ent.box_x=box_x
+		ent.box_y=box_y
+		ent.box_z=box_z
+		ent.box_w=box_w
+		ent.box_h=box_h
+		ent.box_d=box_d
+		ent.collision_type=collision_type
+		ent.pick_mode=pick_mode
+		ent.obscurer=obscurer
+		
+		ent.use_cam_layer = use_cam_layer
+		ent.cam_layer = cam_layer
+	End
+	
 	Method FreeEntity()
 	
 		If entity_link Then entity_link.Remove()
@@ -129,34 +224,86 @@ Class TEntity
 		
 		child_list.Clear()
 	End 
-
+	
+	
+	''
+	'' method properties return GLOBAL position
+	''
+	Method X:Float() Property
+		Return mat.grid[3][0]
+	End
+	Method Y:Float() Property
+		Return mat.grid[3][1]
+	End
+	Method Z:Float() Property
+		Return -mat.grid[3][2]
+	End
+	Method X:Void(xx:Float) Property
+		mat.grid[3][0] = xx
+	End
+	Method Y:Void(yy:Float) Property
+		mat.grid[3][1] = yy
+	End
+	Method Z:Void(zz:Float) Property
+		mat.grid[3][2] = -zz
+	End
+	
+	
+	
 	' Entity movement
+
+	Method PositionEntity(e:TEntity)
+		
+		PositionEntity(e.X,e.Y,e.Z,True)
+		
+	End
 
 	Method PositionEntity(x#,y#,z#,glob=False)
 		
+		''negate z for opengl
 		z=-z
+		
+		
 
 		' conv glob to local. x/y/z always local to parent or global if no parent
+
 		If glob=True And parent<>Null
-	
+			
+			'px = x; py= y; pz= z
+			'UpdateMatTrans(True)
+			'If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
+			'Return
+			
+			
 			temp_mat=parent.mat.Copy().Inverse()
-			'temp_mat.Scale(1/psx,1/psy,1/psz)
+			'
 			'z=-z
+			
+			'x=(x+parent.mat.grid[3][0])
+			'y=(y+parent.mat.grid[3][1])
+			'z=(z+parent.mat.grid[3][2])
+			
 			Local psx#=parent.gsx
 			Local psy#=parent.gsy
 			Local psz#=parent.gsz
-	
-			x=(x+parent.mat.grid[3][0])
-			y=(y+parent.mat.grid[3][1])
-			z=(z+parent.mat.grid[3][2]) '-z
-			Local pos:Float[] = temp_mat.TransformPoint(x,y,-z) '+z
-
-			x=(pos[0]+temp_mat.grid[3][0])/(psx*psx) 'pos[0]/psx
-			y=(pos[1]+temp_mat.grid[3][1])/(psy*psy) 'pos[1]/psy
-			z=(pos[2]-temp_mat.grid[3][2])/(psz*psz) '-pos[2]/psz
-			z=-z
+			temp_mat.InverseScale(psx,psy,psz)
 			
+			'temp_mat.Inverse() ''only 3x3 inverse
+			
+			Local pos:Float[] = temp_mat.TransformPoint(x,y,z) '-z
+	
+			'x=(pos[0]+temp_mat.grid[3][0])/(psx*psx) 'pos[0]/psx
+			'y=(pos[1]+temp_mat.grid[3][1])/(psy*psy) 'pos[1]/psy
+			'z=(pos[2]+temp_mat.grid[3][2])/(psz*psz) '-pos[2]/psz
+			'z=-z
+			
+			x= pos[0]
+			y= pos[1]
+			z= pos[2]
 		Endif
+
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return
 					
 		px=x
 		py=y
@@ -179,7 +326,7 @@ Class TEntity
 		
 	Method MoveEntity(mx#,my#,mz#)
 		
-		'mz=-mz 'transformpoint flips this
+		mz=-mz ' opengl -z
 		
 		Local pos:Float[]		
 
@@ -192,7 +339,10 @@ Class TEntity
 		
 		px=px+pos[0]
 		py=py+pos[1]
-		pz=pz+(-pos[2])
+		pz=pz+pos[2]
+		
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz); Return
 		
 		If parent<>Null
 			''global	
@@ -216,7 +366,7 @@ Class TEntity
 		'Local tx#=x
 		'Local ty#=y
 		tz=-tz
-
+		
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
 						
@@ -235,6 +385,11 @@ Class TEntity
 		px=px+tx
 		py=py+ty
 		pz=pz+tz
+		
+		
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return
+		
 
 		If parent<>Null
 			''global
@@ -252,12 +407,17 @@ Class TEntity
 
 	End 
 	
+	Method ScaleEntity(e:TEntity)
+		
+		ScaleEntity(e.EntityScaleX,e.EntityScaleY,e.EntityScaleZ,True)
+		
+	End
+	
 	Method ScaleEntity(x#,y#,z#,glob=False)
 		
 		sx=x
 		sy=y
 		sz=z
-
 
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
@@ -267,6 +427,17 @@ Class TEntity
 			sz = sz/parent.gsz
 	
 		Endif
+		
+		'' treat bones differently
+		If TBone(Self) <> Null
+			gsx=parent.gsx*sx
+			gsy=parent.gsy*sy
+			gsz=parent.gsz*sz
+
+			TBone(Self).ScaleBone(sx,sy,sz,glob)
+			Return
+		Endif
+		
 
 		If parent<>Null	
 			gsx=parent.gsx*sx
@@ -288,6 +459,14 @@ Class TEntity
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self,3)
 
 	End 
+	
+	
+
+	Method RotateEntity(e:TEntity)
+		
+		RotateEntity(e.rx, e.ry, e.rz, True)
+		
+	End
 
 	Method RotateEntity(x#,y#,z#,glob=False)
 		
@@ -303,6 +482,9 @@ Class TEntity
 			rz=rz-parent.EntityRoll(True)
 		
 		Endif
+		
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz, glob); Return
 		
 		If parent<>Null
 		
@@ -329,6 +511,10 @@ Class TEntity
 		rx=rx+(-x)
 		ry=ry+y
 		rz=rz+z
+		
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz,glob); Return
+		
 
 		If parent<>Null
 		
@@ -344,6 +530,8 @@ Class TEntity
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
 
 	End 
+	
+	
 
 	' Function by mongia2
 	Method PointEntity(target_ent:TEntity,roll#=0)
@@ -405,8 +593,11 @@ Class TEntity
 
 
 		If angle < 0.00001
-			mat.LoadIdentity()
-			mat.Scale(sx,sy,sz)
+			'mat.LoadIdentity()
+			mat.grid[0][0]=gsx; mat.grid[1][0]=0.0; mat.grid[2][0]=0.0
+			mat.grid[0][1]=0.0; mat.grid[1][1]=gsy; mat.grid[2][1]=0.0
+			mat.grid[0][2]=0.0; mat.grid[1][2]=0.0; mat.grid[2][2]=gsz
+			'mat.Scale(gsx,gsy,gsz)
 			Return
 		Elseif angle > 179.9999
 			''flip
@@ -443,9 +634,9 @@ Class TEntity
 		temp_mat.grid[2][1] = (tmp1 + tmp2) *Self.sz
 		temp_mat.grid[1][2] = (tmp1 - tmp2) *Self.sy
 		
-		temp_mat.grid[3][0] = Self.px
-		temp_mat.grid[3][1] = Self.py
-		temp_mat.grid[3][2] = Self.pz
+		temp_mat.grid[3][0] = mat.grid[3][0] 'Self.px
+		temp_mat.grid[3][1] = mat.grid[3][1] 'Self.py
+		temp_mat.grid[3][2] = mat.grid[3][2] 'Self.pz
 		temp_mat.grid[3][3] = 1.0
 		
 		If parent<>Null
@@ -453,6 +644,7 @@ Class TEntity
 			mat.Multiply(temp_mat)
 		Else
 			mat.Overwrite(temp_mat )
+			loc_mat.Overwrite(temp_mat)
 		Endif
 		
 		rx = mat.GetPitch()
@@ -560,15 +752,34 @@ Class TEntity
 	
 	End 
 	
+	Method ActivateBones:Void()
+		anim_render = True
+		anim_trans=0
+		anim = 4
+		'nim_mode = 4
+		anim_update = True
+	End
 	
-	Method Animate(mode:Int=1,speed:Float=1.0,seq:Int=0,trans:Int=0)
+	Method ActivateVertexAnim:Void()
+		anim_render = True
+		anim_trans=0
+		anim = 2
+		anim_update = True
+	End
+	
+	'' 0=none, 1=repeat, 2=ping-pong, 3=play once, 4 = boned anim
+	Method Animate:Void(mode:Int=1,speed:Float=1.0,seq:Int=0,trans:Int=0)
 	
 		anim_mode=mode
-		anim_speed=speed
-		anim_seq=seq
-		anim_trans=trans
-		If Not anim_time Then anim_time=anim_seqs_first[seq]
 		anim_update=True ' update anim for all modes (including 0)
+		If mode<>4
+			anim_speed=speed
+			anim_seq=seq
+			anim_trans=trans
+			If Not anim_time Then anim_time=anim_seqs_first[seq]
+		Else
+			ActivateBones()
+		Endif
 		
 		If trans>0
 			anim_time=0
@@ -576,7 +787,6 @@ Class TEntity
 		
 	End 
 	
-
 	Method SetAnimTime(time#, seq%=0)
 	
 		anim_mode=-1 ' use a mode of -1 for setanimtime
@@ -584,6 +794,7 @@ Class TEntity
 		anim_seq=seq
 		anim_trans=0
 		anim_time=time
+		
 		anim_update=False ' set anim_update to false so UpdateWorld won't animate entity
 	
 		Local first=anim_seqs_first[anim_seq]
@@ -644,6 +855,7 @@ Class TEntity
 		Return False
 	
 	End 
+	
 		
 	' Entity control
 	
@@ -810,9 +1022,9 @@ Class TEntity
 
 		If TCamera(Self)<>Null
 		
-			TCamera(Self).cam_link.Remove() 
+			'TCamera(Self).cam_link.Remove() 
 			
-			TCamera.cam_list.EntityListAdd(TCamera(Self) )
+			'TCamera.cam_list.EntityListAdd(TCamera(Self) )
 			
 			TCamera.cam_list.Sort()
 		Else	
@@ -938,11 +1150,14 @@ Class TEntity
 		Endif
 		
 	End
-		
+	
+	'' returns self if no parent	
 	Method GetParent:TEntity()
 	
-		Return parent
-	
+		If parent Then Return parent
+		
+		Return Self
+		
 	End 
 
 	' Entity state
@@ -1054,13 +1269,15 @@ Class TEntity
 		
 	End 
 	
-	Method CountChildren()
+	Method CountChildren:Int(recursive:Bool = False, num:Int=0)
 
-		Local no_children=0
+		Local no_children:Int = num
 		
 		For Local ent:TEntity=Eachin child_list
 
 			no_children=no_children+1
+			
+			If recursive Then no_children= no_children + ent.CountChildren(True)
 
 		Next
 
@@ -1068,6 +1285,8 @@ Class TEntity
 
 	End 
 	
+	'' starts from 1
+	'' non-recursive
 	Method GetChild:TEntity(child_no)
 	
 		Local no_children=0
@@ -1082,6 +1301,20 @@ Class TEntity
 		Return Null
 	
 	End 
+	
+	Method GetChildren:EntityList<TEntity>(recursive:Bool=False, list:EntityList<TEntity> = Null)
+		
+		If Not recursive Then Return child_list
+		
+		If Not list Then list = New EntityList<TEntity>
+		
+		For Local ent:TEntity = Eachin child_list
+			list.AddLast(ent)
+			ent.GetChildren(True,list) ''recursive
+		Next
+		
+		Return list
+	End
 	
 	Method FindChild:TEntity(child_name$)
 	
@@ -1100,6 +1333,37 @@ Class TEntity
 		Return Null
 	
 	End 
+	
+	Function  CountAllChildren:Int(ent:TEntity,no_children:Int=0)
+		
+		Return ent.CountChildren(True)
+
+	End 
+	
+	Method GetChildFromAll:TEntity(child_no:Int, no_children:Int=0, ent:TEntity=Null)
+
+		If ent=Null Then ent=Self
+		
+		Local ent3:TEntity=Null
+		
+		For Local ent2:TEntity=Eachin ent.child_list
+
+			no_children=no_children+1
+			
+			If no_children=child_no Then Return ent2
+			
+			If ent3=Null
+			
+				ent3=GetChildFromAll(child_no,no_children,ent2)
+
+			Endif
+
+		Next
+
+		Return ent3
+			
+	End
+	
 	
 	' Calls function in TPick
 	Method EntityPick:TEntity(range#)
@@ -1676,61 +1940,29 @@ Class TEntity
 
 	End 
 	
-	Function  CountAllChildren(ent:TEntity,no_children=0)
-		
-		Local ent2:TEntity
-	
-		For ent2=Eachin ent.child_list
-
-			no_children=no_children+1
-			
-			no_children=TEntity.CountAllChildren(ent2,no_children)
-
-		Next
-
-		Return no_children
-
-	End 
-	
-	Method GetChildFromAll:TEntity(child_no:Int, no_children:Int=0, ent:TEntity=Null)
-
-		If ent=Null Then ent=Self
-		
-		Local ent3:TEntity=Null
-		
-		For Local ent2:TEntity=Eachin ent.child_list
-
-			no_children=no_children+1
-			
-			If no_children=child_no Then Return ent2
-			
-			If ent3=Null
-			
-				ent3=GetChildFromAll(child_no,no_children,ent2)
-
-			Endif
-
-		Next
-
-		Return ent3
-			
-	End 
+ 
 	
 	' Internal - not recommended for general use
 	Private
 	
-	Method UpdateMat(load_identity:Bool =False)
+	Method UpdateMat:Void(load_identity:Bool =False)
 
-		If load_identity=True
-			mat.LoadIdentity()
-		Endif
 		
-		mat.Translate(px,py,pz)
-		mat.Rotate(rx,ry,rz)
-		mat.Scale(sx,sy,sz)
-	
-		If load_identity Then loc_mat.Overwrite(mat)
-
+			If load_identity=True
+				mat.LoadIdentity()
+			Endif
+			
+			mat.Translate(px,py,pz)
+			mat.Rotate(rx,ry,rz)
+			mat.Scale(sx,sy,sz)
+		
+			If load_identity Then loc_mat.Overwrite(mat)
+			
+			If parent
+				gsx=parent.gsx*sx
+				gsy=parent.gsy*sy
+				gsz=parent.gsz*sz
+			Endif
 	End 
 	
 	Method UpdateMatTrans(load_identity:Bool =False)
@@ -1738,7 +1970,7 @@ Class TEntity
 		If load_identity=False And parent
 			''load parent mat
 			'mat.Overwrite(parent.mat)
-			'mat.Translate(px,py,pz)
+			'mat.Translate4(px,py,pz)
 			mat.grid[3][0] = parent.mat.grid[0][0]*px + parent.mat.grid[1][0]*py + parent.mat.grid[2][0]*pz + parent.mat.grid[3][0]
 			mat.grid[3][1] = parent.mat.grid[0][1]*px + parent.mat.grid[1][1]*py + parent.mat.grid[2][1]*pz + parent.mat.grid[3][1]
 			mat.grid[3][2] = parent.mat.grid[0][2]*px + parent.mat.grid[1][2]*py + parent.mat.grid[2][2]*pz + parent.mat.grid[3][2]
@@ -1784,37 +2016,54 @@ Class TEntity
 			mat.FastRotateScale(rx,ry,rz,sx,sy,sz)
 		Endif
 		
+		If parent
+			gsx=parent.gsx*sx
+			gsy=parent.gsy*sy
+			gsz=parent.gsz*sz
+		Endif
 		
 		If load_identity Then loc_mat.Overwrite(mat)
 
 	End
 	
 	
+	
  	Public
+	
 	
 	Function UpdateChildren(ent_p:TEntity, type:Int=0)
 		
 		For Local ent_c:TEntity=Eachin ent_p.child_list
 			
-			'ent_c.mat.Overwrite(ent_p.mat)
-			If Not type
-				ent_c.mat.Overwrite(ent_p.mat)
-				ent_c.UpdateMat()
-			Elseif type = 1
-				ent_c.UpdateMatTrans()
-			Elseif type = 2
-				ent_c.mat.Overwrite(ent_p.mat)
-				ent_c.UpdateMat()
-				'ent_c.UpdateMatRot() ''wont update positions	
-			Elseif type = 3
-				'' update global scale for children
-				ent_c.gsx=ent_c.parent.gsx*ent_c.sx
-				ent_c.gsy=ent_c.parent.gsy*ent_c.sy
-				ent_c.gsz=ent_c.parent.gsz*ent_c.sz
-				ent_c.UpdateMatSca()
-			Endif
+			''dont modify bones mat
+			If TBone(ent_c)=Null
+			
+				'ent_c.mat.Overwrite(ent_p.mat)
+				If type = 0
+					ent_c.mat.Overwrite(ent_p.mat)
+					ent_c.UpdateMat()
+				Elseif type = 1
+					ent_c.UpdateMatTrans()
+				Elseif type = 2
+					ent_c.mat.Overwrite(ent_p.mat)
+					ent_c.UpdateMat()
+					'ent_c.UpdateMatRot() ''wont update positions	
+				Elseif type = 3
+					'' update global scale for children
+					ent_c.gsx=ent_c.parent.gsx*ent_c.sx
+					ent_c.gsy=ent_c.parent.gsy*ent_c.sy
+					ent_c.gsz=ent_c.parent.gsz*ent_c.sz
+					ent_c.UpdateMatSca()
+				Endif
 				
-			UpdateChildren(ent_c,type)
+				UpdateChildren(ent_c,type)
+			
+			Else
+				''modify bone
+				TBone(ent_c).UpdateMatrix(ent_c.loc_mat)
+			Endif
+			
+			
 					
 		Next
 
@@ -1830,6 +2079,66 @@ Class TEntity
 		Return xd*xd + yd*yd + zd*zd
 		
 	End 
+	
+	
+	''
+	'' CameraLayer(entity)
+	'' - this command isolates a camera's render to only this object and it's children
+	'' - used for shaders and ui screens (if camera set to ortho)
+	'' - lights are uneffected
+	'' - camera are rendered in order they are added (or use EntityOrder() )
+	Method CameraLayer:Void(e:TEntity)
+		
+		Local cam:TCamera = TCamera(e)
+		
+		If e=Null
+		
+			'' remove camera layer
+			
+			use_cam_layer = False
+			cam_layer = Null
+			
+			For Local ch:TEntity = Eachin Self.child_list
+				
+				ch.use_cam_layer = False
+				ch.cam_layer = Null
+				
+				ch.CameraLayer(Null)
+				
+			Next
+			
+		Else If TCamera(Self) And cam=Null
+		
+			'' use camera, add entity & children
+			TCamera(Self).EnableCameraLayer()
+			e.use_cam_layer = True
+			e.cam_layer = TCamera(Self)
+			
+			For Local ch:TEntity = Eachin e.child_list
+				
+				''make sure its not a camera
+				If TCamera(e)=Null Then Self.CameraLayer(ch)
+			Next
+			
+		Else If cam<>Null And TCamera(Self)=Null	
+		
+			'' use entity, add camera
+			cam.EnableCameraLayer()
+			use_cam_layer = True
+			cam_layer = cam
+			
+			For Local ch:TEntity = Eachin Self.child_list
+				
+				''make sure its not a camera
+				If TCamera(ch)=Null Then ch.CameraLayer(cam)
+			Next
+			
+		Else
+			
+			
+		Endif
+	End
+
 
 End
 
@@ -1870,6 +2179,8 @@ Class EntityList<T> Extends List<T>
 		Return lh.order < rh.order
 		
 	End
+	
+
 	
 End
 

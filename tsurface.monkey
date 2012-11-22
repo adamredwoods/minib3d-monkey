@@ -2,6 +2,11 @@ Import minib3d
 Import monkeybuffer
 Import monkeyutility
 
+
+'' NOTES
+''
+'' - future plans: multiple surfaces = one big shared vert_data (move to tmesh), but multiple tris indexes
+
 Class TSurface
 
 	Const inverse_255:Float = 1.0/255.0
@@ -37,6 +42,7 @@ Class TSurface
 	' animated surf attached to this surface (edit 2012)
 	Field surf_id:Int ''used to link anim_surf and surface
 
+
 	' vertex animation coords per frame
 	' not copied in tsurface, but in tmesh
 	Field vert_anim:TVertexAnim[] ''surf.vert_anim array should be null until it is set by BoneToVertexAnimation
@@ -63,9 +69,27 @@ Class TSurface
 	
 	' used by Compare to sort array, and TMesh.Update to enable/disable alpha blending
 	Field alpha_enable:Bool =False
-
+	
+	
+	''properties
+	Method Brush:TBrush() Property
+		Return brush
+	End
+	'Method Brush:Void(br:TBrush) Property
+		'' read-only for now
+	'End
+	Method Texture:TTexture() Property
+		If brush.tex Then Return brush.tex[0]
+	End
+	'Method Texture:Void(tx:TTexture) Property
+		'' read-only for now
+	'End
+	
+	
+	
 	Method New()
 		
+	
 	End 
 	
 	Method Delete()
@@ -73,6 +97,7 @@ Class TSurface
 		FreeVBO()
 			
 	End 
+	
 
 	' used to sort surfaces into alpha order. used by TMesh.Update
 	Method Compare(other:Object)
@@ -230,46 +255,19 @@ Class TSurface
 	
 		Endif
 
-		'Local n2:Int = no_verts*2
-		'Local n3:Int = no_verts*3
-		'Local n4:Int = no_verts*4
-		
-		'Local vxi=(n3)-3
-		'Local vyi=(n3)-2
-		'Local vzi=(n3)-1		
-		'Local vui=(n2)-2
-		'Local vvi=(n2)-1
-		'Local vri=(n4)-4
-		'Local vgi=(n4)-3
-		'Local vbi=(n4)-2
-		'Local vai=(n4)-1
+
 		
 		Local vid:Int = no_verts-1
 		
 		'vert_coords
 		vert_data.PokeVertCoords(vid,x,y,-z)
-		'vert_coords.Poke(vxi,x)
-		'vert_coords.Poke(vyi,y)
-		'vert_coords.Poke(vzi,-z) ' ***ogl***
 		
-		vert_data.PokeTexCoords(vid,u,v,u,v)
-		'vert_tex_coords0.Poke(vui,u)
-		'vert_tex_coords0.Poke(vvi,v)
-		'vert_tex_coords1.Poke(vui,u)
-		'vert_tex_coords1.Poke(vvi,v)
-		
+		vert_data.PokeTexCoords(vid,u,v,u,v)		
 		
 		' default vertex colours
 		vert_data.PokeColor(vid,1.0,1.0,1.0,1.0)
-		'vert_col.Poke(vri,1.0)
-		'vert_col.Poke(vgi,1.0)
-		'vert_col.Poke(vbi,1.0)
-		'vert_col.Poke(vai,1.0)
 		
-		vert_data.PokeNormals(vid,0.0,0.0,1.0)
-		'vert_norm.Poke(vxi,0.0)
-		'vert_norm.Poke(vyi,0.0)
-		'vert_norm.Poke(vzi,0.0)		
+		vert_data.PokeNormals(vid,0.0,0.0,1.0)		
 		
 		Return vid
 	
@@ -322,12 +320,9 @@ Class TSurface
 	End 
 	
 	Method VertexCoords(vid,x#,y#,z#)
-	
-		'vid=vid*3
+
 		vert_data.PokeVertCoords(vid,x,y,-z)
-		'vert_coords.Poke(vid,x)
-		'vert_coords.Poke(vid+1,y)
-		'vert_coords.Poke(vid+2,-z) ' ***ogl***
+
 		
 		' mesh shape has changed - update reset flag
 		reset_vbo = reset_vbo|1
@@ -571,12 +566,15 @@ Class TSurface
 			Local vx:Vector = vert_data.PeekVertCoords(v) 'New Vector( vert_coords.Peek(v*3+0), vert_coords.Peek(v*3+1), vert_coords.Peek(v*3+2))
 
 			Local norm:Vector = norm_map.Get(vx)
-			norm = norm.Normalize()
 			
-			vert_data.PokeNormals(v,norm.x,norm.y,norm.z)
-			'vert_norm.Poke(v*3+0,norm.x)
-			'vert_norm.Poke(v*3+1,norm.y)
-			'vert_norm.Poke(v*3+2,norm.z)
+			If norm
+				norm = norm.Normalize()
+				
+				vert_data.PokeNormals(v,norm.x,norm.y,norm.z)
+				'vert_norm.Poke(v*3+0,norm.x)
+				'vert_norm.Poke(v*3+1,norm.y)
+				'vert_norm.Poke(v*3+2,norm.z)
+			Endif
 			
 		Next
 	
@@ -889,13 +887,24 @@ Class TSurface
 		Next
 		
 	End 
-
+	
+	Method GetVertex:Vertex(vid:Int)
+	
+		Local v:Vertex = New Vertex
+		v.GetVertex(vid,vert_data)
+		Return v
+		
+	End
+	
 End 
 
 
 ''
 '' helper classes
 ''
+
+
+
 
 Class VertArray
 

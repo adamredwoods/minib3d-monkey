@@ -447,8 +447,8 @@ Function CreateCube:TMesh(parent:TEntity=Null)
 End 
 
 
-Function CreateGrid:TMesh(x_seg:Int, y_seg:Int, parent:TEntity=Null)
-	Return TMesh.CreateGrid(x_seg, y_seg,parent)
+Function CreateGrid:TMesh(x_seg:Int, y_seg:Int, repeat_tex:Bool=False , parent:TEntity=Null)
+	Return TMesh.CreateGrid(x_seg, y_seg, repeat_tex, parent)
 End
 
 #rem
@@ -494,15 +494,18 @@ Function CreateSurface:TSurface(mesh:TMesh,brush:TBrush=Null)
 	Return mesh.CreateSurface(brush)
 End 
 
-Function CreateText3D:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
-	Local tt:TText = TText.CreateText(camx,str,font,num_chars,c_pixels,pad)
-	tt.mode = False
+Function CreateText3D:TText(str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
+	Local tt:TText = TText.CreateText(Null, str,font,num_chars,c_pixels,pad, False)
 	Return tt
 End
 
 Function CreateText2D:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
-	Local tt:TText = TText.CreateText(camx,str,font,num_chars,c_pixels,pad)
-	tt.mode = True
+	Local tt:TText = TText.CreateText(camx,str,font,num_chars,c_pixels,pad, True)
+	Return tt
+End
+
+Function CreateText2D:TText(str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
+	Local tt:TText = TText.CreateText(Null,str,font,num_chars,c_pixels,pad, True)
 	Return tt
 End
 
@@ -885,8 +888,8 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadAnimMesh">Online Help</a>
 #End 
-Function LoadAnimMesh:TMesh(file$,parent:TEntity=Null)
-	Return TMesh.LoadAnimMesh(file,parent)
+Function LoadAnimMesh:TMesh(file$,parent:TEntity=Null, override_texflags:Int=-1)
+	Return TMesh.LoadAnimMesh(file,parent, override_texflags)
 End 
 
 #rem
@@ -910,8 +913,8 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=LoadMesh">Online Help</a>
 #End 
-Function LoadMesh:TMesh(file$,parent:TEntity=Null)
-	Return TMesh.LoadMesh(file,parent)
+Function LoadMesh:TMesh(file$,parent:TEntity=Null, override_texflags:Int=-1)
+	Return TMesh.LoadMesh(file,parent, override_texflags)
 End 
 
 #rem

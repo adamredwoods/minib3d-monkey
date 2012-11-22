@@ -14,7 +14,7 @@ Class TCamera Extends TEntity
 
 	Field vx:Int,vy:Int,vwidth:Int,vheight:Int
 	Field cls_r#=0.0,cls_g#=0.0,cls_b#=0.0
-	Field cls_color:Int=True,cls_zbuffer:Int=True
+	Field cls_color:Bool=True,cls_zbuffer:Bool=True
 	
 	Field range_near#=1.0,range_far#=1000.0
 	Field zoom#=1.0, inv_zoom#=1.0, fov_y#, aspect# ''inv_zoom for TText
@@ -26,6 +26,8 @@ Class TCamera Extends TEntity
 	Field fog_mode%
 	Field fog_r#,fog_g#,fog_b#
 	Field fog_range_near#=1.0,fog_range_far#=1000.0
+	
+	Field draw2D:Int =0 ''draw everything flat, bright
 	
 	' used by CameraProject
 	'mat:Matrix = cam view matrix (inverse it)
@@ -41,8 +43,6 @@ Class TCamera Extends TEntity
 	
 	Field frustum:Float[][] '[6][4]
 	
-	''for cam layer
-	Field layer_entity:TEntity
 
 
 	'Field testdata:Float[10]
@@ -50,7 +50,7 @@ Class TCamera Extends TEntity
 	Method New()
 		
 		frustum = AllocateFloatArray(6,4)
-	
+		
 	End 
 	
 
@@ -107,7 +107,7 @@ Class TCamera Extends TEntity
 		cam.qy=qy
 		cam.qz=qz
 
-		cam.name=name
+		cam.name=name+"("+cam_list.Count()+")"
 		cam.classname=classname
 		cam.order=order
 		cam.hide=False
@@ -149,7 +149,13 @@ Class TCamera Extends TEntity
 		cam.fog_b=fog_b
 		cam.fog_range_near=fog_range_near
 		cam.fog_range_far=fog_range_far
-
+		
+		cam.use_cam_layer = use_cam_layer
+		cam.cam_layer = cam_layer
+		cam.draw2D = draw2D
+		
+		Return cam
+		
 	End 
 	
 	Method FreeEntity()
@@ -167,6 +173,7 @@ Class TCamera Extends TEntity
 		cam.CameraViewport(0,0,TRender.width,TRender.height)
 		
 		cam.classname="Camera"
+		cam.name = "proj"+cam_list.Count()
 		
 		cam.AddParent(parent_ent)
 		cam.entity_link = entity_list.EntityListAdd(cam) ' add to entity list
@@ -235,6 +242,8 @@ Class TCamera Extends TEntity
 	Method CameraProjMode(mode:Int=1)
 	
 		proj_mode=mode
+		
+		If mode=2 Then name="ortho"
 				
 	End
 	
@@ -475,7 +484,7 @@ Class TCamera Extends TEntity
 			'z=tformed_z
 			
 			Local r:Float[] = ent.mat.TransformPoint(mesh.center_x,mesh.center_y,mesh.center_z)
-			x=r[0]; y=r[1]; z=r[2]
+			x=r[0]; y=r[1]; z=-r[2] ''-z opengl
 			
 			' radius - apply entity scale
 			'Local rx#=radius*ent.gsx 'EntityScaleX(True)
@@ -617,7 +626,7 @@ Class TCamera Extends TEntity
 			
 		Else If proj_mode = 3
 			
-			
+			SetPixelCamera()
 			
 	
 		Endif
@@ -625,30 +634,15 @@ Class TCamera Extends TEntity
 	End
 	
 	
-	''
-	'' CameraLayer(entity)
-	'' - this command isolates a camera's render to only this object and it's children
-	'' - used for shaders and ui screens (if camera set to ortho)
-	'' - lights are uneffected
-	'' - camera are rendered in order they are added (or use EntityOrder() )
-	Method CameraLayer(ent:TEntity)
-		
-		is_cam_layer = True
-		layer_entity = ent
-		ent.is_cam_layer = True
-		ent.cam_layer = Self
-		
-		For Local ch:TEntity = Eachin ent.child_list
-			
-			ch.is_cam_layer = True
-			ch.cam_layer = Self
-			
-		Next
-		
+	
+
+	
+	Method EnableCameraLayer:Void()
+		use_cam_layer = True
 		''auto set camera to not clear color, but to clear depth
 		CameraClsMode(False, True)
-		
 	End
+	
 	
 	'' GluProject()
 	'' --takes a 3d point and returns screen coordinates.
@@ -715,6 +709,55 @@ Class TCamera Extends TEntity
 	
 		Return New Vector(inv_mat.grid[3][0]*d,inv_mat.grid[3][1]*d,inv_mat.grid[3][2]*d)
 	
+	End
+	
+	
+	Method SetPixelCamera()
+		
+		name="pixel"
+
+		Local left# = -TRender.width / 2.0
+		Local right# = TRender.width +left
+		Local bottom#= -TRender.height / 2.0
+		Local top# = TRender.height +bottom
+		
+		Local near#=1.0
+		Local far#=2.0
+
+		Local tx# = -(right + left) / (right - left)
+		Local ty# = -(top + bottom) / (top - bottom)
+		Local tz# = -(far + near) / (far - near)
+		
+	
+		proj_mat.grid[0][0] = 2.0 / (right - left)
+		proj_mat.grid[0][1] = 0.0
+		proj_mat.grid[0][2] = 0.0
+		proj_mat.grid[0][3] = 0.0
+		
+		proj_mat.grid[1][0] = 0.0
+		proj_mat.grid[1][1] = 2.0 / (top - bottom)
+		proj_mat.grid[1][2] = 0.0
+		proj_mat.grid[1][3] = 0.0
+		
+		proj_mat.grid[2][0] = 0.0
+		proj_mat.grid[2][1] = 0.0
+		proj_mat.grid[2][2] = -2.0 / (far - near)
+		proj_mat.grid[2][3] = 0.0
+		
+		proj_mat.grid[3][0] = tx
+		proj_mat.grid[3][1] = ty
+		proj_mat.grid[3][2] = tz
+		proj_mat.grid[3][3] = 1.0
+
+
+
+		mod_mat.LoadIdentity()
+		mat.LoadIdentity()
+		view_mat = mod_mat
+		projview_mat.Overwrite(proj_mat ) ' proj_view for shaders
+		
+		'projview_mat.Multiply4(mod_mat)
+		
 	End
 	
 End

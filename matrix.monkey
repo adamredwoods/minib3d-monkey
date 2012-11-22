@@ -35,11 +35,8 @@ Class Matrix
 		
 	End
 	
-	Method Delete()
-
-	End
 	
-	Method LoadIdentity()
+	Method LoadIdentity:Void()
 	
 		grid[0] = [1.0,0.0,0.0,0.0]
 		grid[1] = [0.0,1.0,0.0,0.0]
@@ -80,7 +77,7 @@ Class Matrix
 	
 	' overwrite - overwrites self with matrix passed as parameter
 	
-	Method Overwrite(mat:Matrix)
+	Method Overwrite:Void(mat:Matrix)
 	
 		grid[0][0]=mat.grid[0][0]
 		grid[1][0]=mat.grid[1][0]
@@ -104,8 +101,8 @@ Class Matrix
 	
 	Method Inverse:Matrix()
 		'' only good for orthogonal matrixes
-		'' (ie. no shearing)
-		'' if there are problems, need to make the determinate-style inverse (many calculations)
+		'' (ie. no scaling)
+		'' if there are problems, need to use the determinate-style inverse (many calculations)
 		
 		Local mat:Matrix=New Matrix
 	
@@ -207,8 +204,8 @@ Class Matrix
 		
 	End
 
-	Method Multiply(mat:Matrix)
-		'' 3x3 multiply
+	Method Multiply:Void(mat:Matrix)
+		'' 3x4 multiply
 		''consider Strassen's algorithm?
 	
 		Local m00# = grid[0][0]*mat.grid[0][0] + grid[1][0]*mat.grid[0][1] + grid[2][0]*mat.grid[0][2] + grid[3][0]*mat.grid[0][3]
@@ -247,7 +244,7 @@ Class Matrix
 		
 	End
 
-	Method Multiply4(mat:Matrix)
+	Method Multiply4:Void(mat:Matrix)
 		'' 4x4 multiply
 		''consider Strassen's algorithm?
 	
@@ -298,7 +295,7 @@ Class Matrix
 		Return v2
 	End
 
-	Method Translate(x:Float,y:Float,z:Float)
+	Method Translate:Void(x:Float,y:Float,z:Float)
 	
 		grid[3][0] = grid[0][0]*x + grid[1][0]*y + grid[2][0]*z + grid[3][0]
 		grid[3][1] = grid[0][1]*x + grid[1][1]*y + grid[2][1]*z + grid[3][1]
@@ -306,7 +303,7 @@ Class Matrix
 
 	End 
 	
-	Method Translate4(x#,y#,z#,w#=1.0)
+	Method Translate4:Void(x#,y#,z#,w#=1.0)
 	
 		grid[3][0] = grid[0][0]*x + grid[1][0]*y + grid[2][0]*z + grid[3][0]*w
 		grid[3][1] = grid[0][1]*x + grid[1][1]*y + grid[2][1]*z + grid[3][1]*w
@@ -342,7 +339,7 @@ Class Matrix
 		Return Self
 	End
 		
-	Method Scale(sx:Float,sy:Float,sz:Float)
+	Method Scale:Void(sx:Float,sy:Float,sz:Float)
 		
 		If sx=1.0 And sy=1.0 And sz=1.0 Then Return
 		
@@ -357,11 +354,36 @@ Class Matrix
 		grid[2][0] = grid[2][0]*sz
 		grid[2][1] = grid[2][1]*sz
 		grid[2][2] = grid[2][2]*sz
-	
+		
 	End 
 	
-	Method FastRotateScale(rx:Float,ry:Float,rz:Float,scx:Float,scy:Float,scz:Float)
-		''no need to load ident before this, no parenting
+	''special function to remove global scale after a 3x3 inverse
+	Method InverseScale:Void(sx#, sy#, sz#)
+		If sx=1.0 And sy=1.0 And sz=1.0 Then Return
+		
+		sx = 1.0/(sx*sx); sy = 1.0/(sy*sy); sz = 1.0/(sz*sz)
+		
+		''3x4
+		grid[0][0] = grid[0][0]*sx
+		grid[0][1] = grid[0][1]*sx
+		grid[0][2] = grid[0][2]*sx
+
+		grid[1][0] = grid[1][0]*sy
+		grid[1][1] = grid[1][1]*sy
+		grid[1][2] = grid[1][2]*sy
+
+		grid[2][0] = grid[2][0]*sz
+		grid[2][1] = grid[2][1]*sz
+		grid[2][2] = grid[2][2]*sz
+		
+		grid[3][0] = grid[3][0]*sx
+		grid[3][1] = grid[3][1]*sy
+		grid[3][2] = grid[3][2]*sz
+		
+	End
+	
+	Method FastRotateScale:Void(rx:Float,ry:Float,rz:Float,scx:Float,scy:Float,scz:Float)
+		''this function will overwrite current matrix
 		
 		Local sx:Float, sy:Float, sz:Float, cx:Float, cy:Float, cz:Float, theta:Float
 		
@@ -403,7 +425,7 @@ Class Matrix
 	
 	End
 	
-	Method Rotate(rx:Float,ry:Float,rz:Float)
+	Method Rotate:Void(rx:Float,ry:Float,rz:Float)
 		'' yaw-pitch-roll = y-x-z
 			
 		Local cos_ang#,sin_ang#, m20#,m21#,m22#,m00#,m01#,m02#,r1#,r2#,r3#
@@ -451,7 +473,7 @@ Class Matrix
 
 	End 
 	
-	Method RotatePitch(ang:Float)
+	Method RotatePitch:Void(ang:Float)
 	
 		Local cos_ang#=Cos(ang)
 		Local sin_ang#=Sin(ang)
@@ -470,7 +492,7 @@ Class Matrix
 
 	End 
 	
-	Method RotateYaw(ang:Float)
+	Method RotateYaw:Void(ang:Float)
 	
 		Local cos_ang#=Cos(ang)
 		Local sin_ang#=Sin(ang)
@@ -489,7 +511,7 @@ Class Matrix
 
 	End 
 	
-	Method RotateRoll(ang:Float)
+	Method RotateRoll:Void(ang:Float)
 	
 		Local cos_ang#=Cos(ang)
 		Local sin_ang#=Sin(ang)
@@ -545,19 +567,19 @@ Class Matrix
 	''
 	
 	''bbdoc: Transforms a point through the matrix, returns a float array
-	''bbdoc: external facing, so it will flip Z internally (ie. if used internally, z is not needed to flip)
+	''bbdoc: may need to negate z... p[2] = -p[2]
 	Method TransformPoint:Float[](x:Float, y:Float, z:Float, w:Float=1.0)
 		
 		Local p0:Float,p1:Float,p2:Float,p3:Float
 		
 		'' -z, opengl
 		
-		p0 = grid[0][0]*x + grid[1][0]*y + grid[2][0]*-z + grid[3][0] *w
-		p1 = grid[0][1]*x + grid[1][1]*y + grid[2][1]*-z + grid[3][1] *w
-		p2 = grid[0][2]*x + grid[1][2]*y + grid[2][2]*-z + grid[3][2] *w
+		p0 = grid[0][0]*x + grid[1][0]*y + grid[2][0]*z + grid[3][0] *w
+		p1 = grid[0][1]*x + grid[1][1]*y + grid[2][1]*z + grid[3][1] *w
+		p2 = grid[0][2]*x + grid[1][2]*y + grid[2][2]*z + grid[3][2] *w
 
 		
-		Return [p0,p1,-p2]
+		Return [p0,p1,p2]
 	End
 	
 	''bbdoc: returns a matrix class from an float array [16]
@@ -597,7 +619,7 @@ Class Matrix
 	End
 
 	
-	Method Update( a:Vector, b:Vector, c:Vector)
+	Method Update:Void( a:Vector, b:Vector, c:Vector)
 
 		grid[0] = [a.x,a.y,a.z,grid[3][0] ]
 		grid[1] = [b.x,b.y,b.z,grid[3][1] ]
@@ -607,7 +629,7 @@ Class Matrix
 		
 End 
 
-Function PrintMatrix(mat:Matrix)
+Function PrintMatrix:Void(mat:Matrix)
 	
 	Print mat.grid[0][0]+":"+mat.grid[1][0]+":"+mat.grid[2][0]+":"+mat.grid[3][0]
 	Print mat.grid[0][1]+":"+mat.grid[1][1]+":"+mat.grid[2][1]+":"+mat.grid[3][1]

@@ -5,7 +5,7 @@
 Import minib3d
 Import minib3d.monkeyutility
 Import minib3d.monkeybuffer
-
+Import mojo.data
 
 #If TARGET="html5"
 	'' set pixels to int, 
@@ -201,6 +201,7 @@ Class PreloadManager Implements IPreloadManager
 		
 		If id<1 Then Return
 		
+		f = FixDataPath(f)
 		f=f.Replace("monkey://","")
 		data[id-1] = LoadImageDataHTML(f, id)
 

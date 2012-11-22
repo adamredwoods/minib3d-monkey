@@ -6,7 +6,10 @@ Import monkey
 Import tutility
 Import minib3d
 Import minib3d.monkeybuffer
+Import os
+Import minib3d.tmodelb3d
 
+Alias LoadString = app.LoadString
 
 Const PF_RGBA8888:Int = 1
 Const PF_RGB888:Int = 2
@@ -260,6 +263,4 @@ Class Base64
 	
 
 End
-
-
 

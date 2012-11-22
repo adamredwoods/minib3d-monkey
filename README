@@ -1,4 +1,5 @@
 minib3d+monkey
+v0.32 - programmable bones, Draw(x,y) for screen, loads of bugs and stability fixes
 v0.31 - update to work with monkey v66, bug fixes.
 v0.30 - new targets, Html5, XNA, opengl2.0, GPU shaders
 v0.20 - new render encapsulation allows new render targets (opengles2.0, WebGL, etc.)

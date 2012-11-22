@@ -202,3 +202,20 @@ function GetImageInfo( image ) {
 	return [image.width, image.height];
 	
 }
+
+
+
+function CheckWebGLContext () {
+	test_gl = null;
+
+	try {
+		var canvas = document.createElement("canvas");
+		// Try to grab the standard context. If it fails, fallback to experimental.
+		test_gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+		canvas = null;
+	}
+	catch(e) {}
+	
+	if (test_gl) return 1;
+	return 0;
+}

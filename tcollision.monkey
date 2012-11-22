@@ -384,7 +384,8 @@ Class CollisionInfo
 		
 		'mat = ent.mat.Inverse()
 		''remove global scaling from matrix
-		t_mat.Scale(1/(ent.gsx*ent.gsx),1/(ent.gsy*ent.gsy),1/(ent.gsz*ent.gsz)) 
+		t_mat.InverseScale(ent.gsx,ent.gsy,ent.gsz) 
+		't_mat.Scale(1/(ent.gsx),1/(ent.gsy),1/(ent.gsz))
 		vec_v.Update(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2])
 		
 	

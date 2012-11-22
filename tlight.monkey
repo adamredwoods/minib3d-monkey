@@ -20,7 +20,7 @@ Class TLight Extends TEntity
 	Field red#=1.0,green#=1.0,blue#=1.0
 	Field inner_ang#=0.0,outer_ang#=45.0
 	Field spec_red#=0.0,spec_grn#=0.0,spec_blu#=0.0,spec_a#=0.0
-	Field const_att#=0.0,lin_att#=1.0,quad_att#=0.0
+	Field const_att#=0.5,lin_att#=1.0,quad_att#=0.0 ''quad disabled for now
 	Field spot_exp:Float = 10.0
 	
 	Global ambient_red:Float=0.1,ambient_green:Float=0.1,ambient_blue:Float=0.1
@@ -131,7 +131,7 @@ Class TLight Extends TEntity
 	
 		If no_lights>0 Then no_lights=no_lights-1
 		
-		remove_light = true
+		remove_light = True
 		
 	End 
 	
@@ -147,12 +147,15 @@ Class TLight Extends TEntity
 		no_lights=no_lights+1
 		'glEnable(gl_light[no_lights-1])
 		
-		light.lin_att = 1.0 
 	
 		light.light_link = light_list.AddLast(light)
 		light.entity_link = entity_list.EntityListAdd(light) ''for collisions
 		If parent_ent Then light.AddParent(parent_ent)
 		
+		If light.light_type=1
+			light.const_att = 10.0
+			light.lin_att = 10.0
+		Endif
 
 		' update matrix
 		If light.parent<>Null
@@ -170,6 +173,8 @@ Class TLight Extends TEntity
 	
 		actual_range = light_range
 		range=1.0/light_range
+		'const_att = range
+		If light_type>1 Then lin_att = range; const_att = 1.0 Else const_att = range
 		
 	End 
 		
@@ -204,11 +209,12 @@ Class TLight Extends TEntity
 		quad_att=val3
 
 	End
+
 	
 	Method Update(cam:TCamera)
 
 		''deprecated to trender.UpdateLight(cam,light)
 																	
 	End 		
-		
+
 End

@@ -40,7 +40,7 @@ Class TAnimation
 		
 		If mesh<>Null
 			
-			If mesh.anim=False Or mesh.Hidden() = True Then Return ' mesh contains no anim data
+			If mesh.anim=0 Or mesh.Hidden() = True Then Return ' mesh contains no anim data
 	
 			mesh.anim_render=True
 	
@@ -73,9 +73,12 @@ Class TAnimation
 				bent.kqz=quat.z
 		
 				
-				TBone(bent).Transform( temp_vec, quat)
+				TBone(bent).Transform( temp_vec, quat, False)
 								
 			Next
+			
+			' update children when all bones are placed
+			TBone.UpdateBoneChildren(mesh )
 								
 			' --- vertex deform ---
 			VertexDeform(mesh)
@@ -96,7 +99,7 @@ Class TAnimation
 		
 		If mesh<>Null
 	
-			If mesh.anim=False Or mesh.Hidden() = True Then Return ' mesh contains no anim data
+			If mesh.anim=0 Or mesh.Hidden() = True Then Return ' mesh contains no anim data
 			
 			mesh.anim_render=True
 	
@@ -315,9 +318,9 @@ Class TAnimation
 		' cycle through all surfs
 		For Local surf:TSurface=Eachin ent.surf_list
 
-			Local anim_surf:TSurface = ent.anim_surf[surf.surf_id]
+			Local anim_surf:TSurface = ent.GetAnimSurface(surf)
 			If Not anim_surf Then Continue
-		
+	
 			' mesh shape will be changed, update reset_vbo flag (1=vertices move)
 			anim_surf.reset_vbo = anim_surf.reset_vbo|1
 			anim_surf.vbo_dyn = True
@@ -341,7 +344,7 @@ Class TAnimation
 					
 					If weight > 0.0
 						' get original vertex position					
-						
+		
 						'Local j:Int = vid3*4
 						'ovx=surf.vert_data.VertexX(vid) 'surf.vert_coords.buf.PeekFloat(j+0) 'VertexX(vid)
 						'ovy=surf.vert_data.VertexY(vid) 'surf.vert_coords.buf.PeekFloat(j+4) 'VertexY(vid)
@@ -550,7 +553,7 @@ Class TAnimation
 			no_verts += surf.no_verts
 			'surf.vert_anim = surf.vert_anim.Resize(maxkeys+1)
 			
-			Local anim_surf:TSurface = mesh.anim_surf[surf.surf_id]
+			Local anim_surf:TSurface = mesh.GetAnimSurface(surf)
 			If Not anim_surf Then Continue
 			
 			anim_surf.vert_anim = New TVertexAnim[maxkeys+1]
@@ -625,7 +628,7 @@ Class TAnimation
 		
 		
 		''set new anim=2 number for vert animation
-		mesh.anim = 2
+		mesh.ActivateVertexAnim()
 
 	End
 

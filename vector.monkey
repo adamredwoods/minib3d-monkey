@@ -13,11 +13,6 @@ Class Vector
 		z=zz
 		
 	End 
-	
-	Method Delete()
-
-		
-	End 
 
 	Function Create:Vector(x#,y#,z#)
 	
@@ -172,5 +167,12 @@ Class Vector
 		x=xx; y=yy; z=zz
 	End
 	
+	Method Overwrite( xx:Float, yy:Float, zz:Float)
+		x=xx; y=yy; z=zz
+	End
+	
+	Method Overwrite( v:Vector)
+		x=v.x; y=v.y; z=v.z
+	End
 	
 End 

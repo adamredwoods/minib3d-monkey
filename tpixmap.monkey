@@ -145,12 +145,12 @@ Class TPixmapPreloader
 
 		'imagebuffer[cur_file] = New TImageBuffer(Self)
 		
-		''make sure the paths are correct
-		Local new_file$ = FixDataPath(file[cur_file-1])
+		''make sure the paths are correct --do this within tpixmap drivers
+		'Local new_file$ = FixDataPath()
 		'If Not new_file.StartsWith("monkey://") Then new_file = "monkey://data/"+new_file
 		
 		'(New AsyncDataLoader(new_file, imagebuffer[cur_file])).Start()
-		manager.PreLoadData(new_file, cur_file )
+		manager.PreLoadData(file[cur_file-1], cur_file )
 
 		
 		Return 0
