@@ -77,7 +77,7 @@ Class Game Extends App
 		EntityFX cursor,1
 
 	
-		txt = CreateText3D(camera)
+		txt = CreateText3D()
 		txt.EntityParent(cursor,False)
 		
 		'create sky sphere

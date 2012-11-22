@@ -50,95 +50,18 @@ Class TMesh Extends TEntity
 		' new mesh
 		Local mesh:TMesh=New TMesh
 		
-		' copy contents of child list before adding parent
-		For Local ent:TEntity=Eachin child_list
-			ent.CopyEntity(mesh)
-		Next
+		Self.CopyBaseMeshTo(mesh, parent_ent)
 		
-		' lists
 			
-		' add parent, add to list
-		mesh.AddParent(parent_ent)
-		mesh.entity_link = entity_list.EntityListAdd(mesh)
+		Return mesh
+		
+	End
+	
+	Method CopyBaseMeshTo:Void(mesh:TMesh, parent_ent:TEntity=Null)
+		
+		Self.CopyBaseEntityTo(mesh, parent_ent)
 
-	
-		' add to collision entity list
-		If collision_type<>0
-			TCollisionPair.ent_lists[collision_type].AddLast(mesh)
-		Endif
-		
-		' add to pick entity list
-		If pick_mode<>0
-			mesh.pick_link = TPick.ent_list.AddLast(mesh)
-		Endif
 
-	
-		' update matrix
-		If mesh.parent<>Null
-			mesh.mat.Overwrite(mesh.parent.mat)
-		Else
-			mesh.mat.LoadIdentity()
-		Endif
-		
-		' copy entity info	
-		mesh.mat.Multiply(mat)
-		
-		mesh.loc_mat = loc_mat
-		
-		mesh.px=px
-		mesh.py=py
-		mesh.pz=pz
-		mesh.sx=sx
-		mesh.sy=sy
-		mesh.sz=sz
-		mesh.rx=rx
-		mesh.ry=ry
-		mesh.rz=rz
-		mesh.qw=qw
-		mesh.qx=qx
-		mesh.qy=qy
-		mesh.qz=qz
-		
-		mesh.name=name
-		mesh.classname=classname
-		mesh.order=order
-		mesh.hide=False
-		mesh.auto_fade=auto_fade
-		mesh.fade_near=fade_near
-		mesh.fade_far=fade_far
-		
-		mesh.brush=Null
-		mesh.brush=brush.Copy()
-		
-		mesh.anim=anim
-		mesh.anim_render=anim_render
-		mesh.anim_mode=anim_mode
-		mesh.anim_time=anim_time
-		mesh.anim_speed=anim_speed
-		mesh.anim_seq=anim_seq
-		mesh.anim_trans=anim_trans
-		mesh.anim_dir=anim_dir
-		mesh.anim_seqs_first=anim_seqs_first[..]
-		mesh.anim_seqs_last=anim_seqs_last[..]
-		mesh.no_seqs=no_seqs
-		mesh.anim_update=anim_update
-	
-		mesh.cull_radius=cull_radius
-		mesh.radius_x=radius_x
-		mesh.radius_y=radius_y
-		mesh.box_x=box_x
-		mesh.box_y=box_y
-		mesh.box_z=box_z
-		mesh.box_w=box_w
-		mesh.box_h=box_h
-		mesh.box_d=box_d
-		mesh.collision_type=collision_type
-		mesh.pick_mode=pick_mode
-		mesh.obscurer=obscurer
-	
-		
-		mesh.cam_layer = cam_layer
-		mesh.use_cam_layer = use_cam_layer
 		mesh.is_sprite = is_sprite
 		mesh.is_update = is_update
 		
@@ -167,8 +90,6 @@ Class TMesh Extends TEntity
 		mesh.bones = CopyBonesList(mesh, New List<TBone>, 0).ToArray()
 		''set bones
 		ResetBones()
-	
-		Return mesh
 
 	End 
 	
@@ -998,6 +919,154 @@ Class TMesh Extends TEntity
 		
 	End 
 	
+	
+	Method CreateLine:TMesh(x:Int, y:Int, z:Int, x2:Int, y2:Int, z2:Int, thick:Float=1.0, parent_ent:TEntity=Null)
+		
+		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
+	
+		Local surf:TSurface=mesh.CreateSurface()
+			
+		surf.AddVertex(-thick,-1.0,-1.0) ' front
+		surf.AddVertex(-1.0, 1.0,-1.0)
+		surf.AddVertex( 1.0, 1.0,-1.0)
+		surf.AddVertex( 1.0,-1.0,-1.0)
+		
+		surf.AddVertex(-1.0,-1.0, 1.0) ' back
+		surf.AddVertex(-1.0, 1.0, 1.0)
+		surf.AddVertex( 1.0, 1.0, 1.0)
+		surf.AddVertex( 1.0,-1.0, 1.0)
+			
+		surf.AddVertex(-1.0,-1.0, 1.0) ' top
+		surf.AddVertex(-1.0, 1.0, 1.0)
+		surf.AddVertex( 1.0, 1.0, 1.0)
+		surf.AddVertex( 1.0,-1.0, 1.0)
+		
+		surf.AddVertex(-1.0,-1.0,-1.0) ' bottom
+		surf.AddVertex(-1.0, 1.0,-1.0)
+		surf.AddVertex( 1.0, 1.0,-1.0)
+		surf.AddVertex( 1.0,-1.0,-1.0)
+
+		surf.AddVertex(-1.0,-1.0, 1.0) ' right
+		surf.AddVertex(-1.0, 1.0, 1.0)
+		surf.AddVertex( 1.0, 1.0, 1.0)
+		surf.AddVertex( 1.0,-1.0, 1.0)
+		
+		surf.AddVertex(-1.0,-1.0,-1.0) ' left
+		surf.AddVertex(-1.0, 1.0,-1.0)
+		surf.AddVertex( 1.0, 1.0,-1.0)
+		surf.AddVertex( 1.0,-1.0,-1.0)
+
+		surf.VertexNormal(0,0.0,0.0,-1.0)
+		surf.VertexNormal(1,0.0,0.0,-1.0)
+		surf.VertexNormal(2,0.0,0.0,-1.0)
+		surf.VertexNormal(3,0.0,0.0,-1.0)
+	
+		surf.VertexNormal(4,0.0,0.0,1.0)
+		surf.VertexNormal(5,0.0,0.0,1.0)
+		surf.VertexNormal(6,0.0,0.0,1.0)
+		surf.VertexNormal(7,0.0,0.0,1.0)
+		
+		surf.VertexNormal(8,0.0,-1.0,0.0)
+		surf.VertexNormal(9,0.0,1.0,0.0)
+		surf.VertexNormal(10,0.0,1.0,0.0)
+		surf.VertexNormal(11,0.0,-1.0,0.0)
+				
+		surf.VertexNormal(12,0.0,-1.0,0.0)
+		surf.VertexNormal(13,0.0,1.0,0.0)
+		surf.VertexNormal(14,0.0,1.0,0.0)
+		surf.VertexNormal(15,0.0,-1.0,0.0)
+	
+		surf.VertexNormal(16,-1.0,0.0,0.0)
+		surf.VertexNormal(17,-1.0,0.0,0.0)
+		surf.VertexNormal(18,1.0,0.0,0.0)
+		surf.VertexNormal(19,1.0,0.0,0.0)
+				
+		surf.VertexNormal(20,-1.0,0.0,0.0)
+		surf.VertexNormal(21,-1.0,0.0,0.0)
+		surf.VertexNormal(22,1.0,0.0,0.0)
+		surf.VertexNormal(23,1.0,0.0,0.0)
+
+		surf.VertexTexCoords(0,0.0,1.0)
+		surf.VertexTexCoords(1,0.0,0.0)
+		surf.VertexTexCoords(2,1.0,0.0)
+		surf.VertexTexCoords(3,1.0,1.0)
+		
+		surf.VertexTexCoords(4,1.0,1.0)
+		surf.VertexTexCoords(5,1.0,0.0)
+		surf.VertexTexCoords(6,0.0,0.0)
+		surf.VertexTexCoords(7,0.0,1.0)
+		
+		surf.VertexTexCoords(8,0.0,1.0)
+		surf.VertexTexCoords(9,0.0,0.0)
+		surf.VertexTexCoords(10,1.0,0.0)
+		surf.VertexTexCoords(11,1.0,1.0)
+			
+		surf.VertexTexCoords(12,0.0,0.0)
+		surf.VertexTexCoords(13,0.0,1.0)
+		surf.VertexTexCoords(14,1.0,1.0)
+		surf.VertexTexCoords(15,1.0,0.0)
+	
+		surf.VertexTexCoords(16,0.0,1.0)
+		surf.VertexTexCoords(17,0.0,0.0)
+		surf.VertexTexCoords(18,1.0,0.0)
+		surf.VertexTexCoords(19,1.0,1.0)
+				
+		surf.VertexTexCoords(20,1.0,1.0)
+		surf.VertexTexCoords(21,1.0,0.0)
+		surf.VertexTexCoords(22,0.0,0.0)
+		surf.VertexTexCoords(23,0.0,1.0)
+
+		surf.VertexTexCoords(0,0.0,1.0,0.0,1)
+		surf.VertexTexCoords(1,0.0,0.0,0.0,1)
+		surf.VertexTexCoords(2,1.0,0.0,0.0,1)
+		surf.VertexTexCoords(3,1.0,1.0,0.0,1)
+		
+		surf.VertexTexCoords(4,1.0,1.0,0.0,1)
+		surf.VertexTexCoords(5,1.0,0.0,0.0,1)
+		surf.VertexTexCoords(6,0.0,0.0,0.0,1)
+		surf.VertexTexCoords(7,0.0,1.0,0.0,1)
+		
+		surf.VertexTexCoords(8,0.0,1.0,0.0,1)
+		surf.VertexTexCoords(9,0.0,0.0,0.0,1)
+		surf.VertexTexCoords(10,1.0,0.0,0.0,1)
+		surf.VertexTexCoords(11,1.0,1.0,0.0,1)
+			
+		surf.VertexTexCoords(12,0.0,0.0,0.0,1)
+		surf.VertexTexCoords(13,0.0,1.0,0.0,1)
+		surf.VertexTexCoords(14,1.0,1.0,0.0,1)
+		surf.VertexTexCoords(15,1.0,0.0,0.0,1)
+	
+		surf.VertexTexCoords(16,0.0,1.0,0.0,1)
+		surf.VertexTexCoords(17,0.0,0.0,0.0,1)
+		surf.VertexTexCoords(18,1.0,0.0,0.0,1)
+		surf.VertexTexCoords(19,1.0,1.0,0.0,1)
+				
+		surf.VertexTexCoords(20,1.0,1.0,0.0,1)
+		surf.VertexTexCoords(21,1.0,0.0,0.0,1)
+		surf.VertexTexCoords(22,0.0,0.0,0.0,1)
+		surf.VertexTexCoords(23,0.0,1.0,0.0,1)
+				
+		surf.AddTriangle(0,1,2) ' front
+		surf.AddTriangle(0,2,3)
+		surf.AddTriangle(6,5,4) ' back
+		surf.AddTriangle(7,6,4)
+		surf.AddTriangle(6+8,5+8,1+8) ' top
+		surf.AddTriangle(2+8,6+8,1+8)
+		surf.AddTriangle(0+8,4+8,7+8) ' bottom
+		surf.AddTriangle(0+8,7+8,3+8)
+		surf.AddTriangle(6+16,2+16,3+16) ' right
+		surf.AddTriangle(7+16,6+16,3+16)
+		surf.AddTriangle(0+16,1+16,5+16) ' left
+		surf.AddTriangle(0+16,5+16,4+16)
+
+		surf.CropSurfaceBuffers()
+		
+		mesh.classname = "MeshCube"
+		
+		Return mesh
+
+		
+	End
 	
 	Method CopyMesh:TMesh(parent_ent:TEntity=Null)
 	

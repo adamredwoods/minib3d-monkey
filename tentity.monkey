@@ -99,11 +99,103 @@ Class TEntity
 		loc_mat.LoadIdentity()
 		
 	End
-	
-	Method Delete()
-	
-	End
 
+	
+	Method CopyBaseEntityTo:Void(ent:TEntity, parent_ent:TEntity=Null)
+
+		' copy contents of child list before adding parent
+		For Local ent2:TEntity=Eachin child_list
+			ent2.CopyEntity(ent)
+		Next
+		
+		' lists
+			
+		' add parent, then add to list
+		ent.AddParent(parent_ent)
+		ent.entity_link = entity_list.EntityListAdd(ent)
+	
+		' add to collision entity list
+		If collision_type<>0
+			TCollisionPair.ent_lists[collision_type].AddLast(ent)
+		Endif
+		
+		' add to pick entity list
+		If pick_mode<>0
+			ent.pick_link = TPick.ent_list.AddLast(ent)
+		Endif
+
+	
+		' update matrix
+		If ent.parent<>Null
+			ent.mat.Overwrite(ent.parent.mat)
+		Else
+			ent.mat.LoadIdentity()
+		Endif
+		
+		' copy entity info	
+		ent.mat.Multiply(mat)
+		
+		ent.loc_mat = loc_mat
+		
+		ent.px=px
+		ent.py=py
+		ent.pz=pz
+		ent.sx=sx
+		ent.sy=sy
+		ent.sz=sz
+		ent.rx=rx
+		ent.ry=ry
+		ent.rz=rz
+		ent.qw=qw
+		ent.qx=qx
+		ent.qy=qy
+		ent.qz=qz
+		
+		ent.gsx = gsx
+		ent.gsy = gsy
+		ent.gsz = gsz
+		
+		ent.name=name
+		ent.classname=classname
+		ent.order=order
+		ent.hide=False
+		ent.auto_fade=auto_fade
+		ent.fade_near=fade_near
+		ent.fade_far=fade_far
+		
+		ent.brush=Null
+		ent.brush=brush.Copy()
+		
+		ent.anim=anim
+		ent.anim_render=anim_render
+		ent.anim_mode=anim_mode
+		ent.anim_time=anim_time
+		ent.anim_speed=anim_speed
+		ent.anim_seq=anim_seq
+		ent.anim_trans=anim_trans
+		ent.anim_dir=anim_dir
+		ent.anim_seqs_first=anim_seqs_first[..]
+		ent.anim_seqs_last=anim_seqs_last[..]
+		ent.no_seqs=no_seqs
+		ent.anim_update=anim_update
+	
+		ent.cull_radius=cull_radius
+		ent.radius_x=radius_x
+		ent.radius_y=radius_y
+		ent.box_x=box_x
+		ent.box_y=box_y
+		ent.box_z=box_z
+		ent.box_w=box_w
+		ent.box_h=box_h
+		ent.box_d=box_d
+		ent.collision_type=collision_type
+		ent.pick_mode=pick_mode
+		ent.obscurer=obscurer
+		
+		ent.use_cam_layer = use_cam_layer
+		ent.cam_layer = cam_layer
+	End
+	
 	Method FreeEntity()
 	
 		If entity_link Then entity_link.Remove()
@@ -171,8 +263,7 @@ Class TEntity
 		''negate z for opengl
 		z=-z
 		
-		'' treat bones differently, before global
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return
+		
 
 		' conv glob to local. x/y/z always local to parent or global if no parent
 
@@ -211,6 +302,8 @@ Class TEntity
 			z= pos[2]
 		Endif
 
+		'' treat bones differently, before global
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return
 					
 		px=x
 		py=y

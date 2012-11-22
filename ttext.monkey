@@ -6,7 +6,7 @@ Import minib3d
 
 
 
-Class TText Extends TSprite
+Class TText Extends TSprite Final
 	
 	Const ALIGN_CENTER:Int = 1
 
@@ -32,7 +32,7 @@ Class TText Extends TSprite
 	Field use3D:Bool '' is this text 2d or 3d
 	
 	Function CreateText3D:TText(str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
-		Local tt:TText = CreateText(camx,str,font,num_chars,c_pixels,pad, False)
+		Local tt:TText = CreateText(Null,str,font,num_chars,c_pixels,pad, False)
 		Return tt
 	End
 	
@@ -115,7 +115,7 @@ Class TText Extends TSprite
 	
 	Method CopyEntity:TEntity(parent_ent:TEntity = Null)
 		
-		Local txt:TText = New TText
+		Local txt:TText = New TText	
 		
 		Self.CopyBaseSpriteTo(txt, parent_ent)
 		

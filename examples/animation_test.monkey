@@ -12,7 +12,7 @@ Class Game Extends App
 	Field cam:TCamera
 	
 	Field light:TLight
-	Field cube:TMesh
+	Field cube:TMesh, ground:TMesh
 	Field zombie:TMesh[1000]
 	Field txt:TText
 	
@@ -85,9 +85,11 @@ Class Game Extends App
 		redbrush.BrushColor(200,20,20)	
 		cube.PaintEntity( redbrush)
 		
-		txt = TText.CreateText(cam)
+		txt = TText.CreateText2D()
 		'txt.NoSmooth()
 		
+		ground = CreateGrid(10,10)
+		ground.ScaleEntity(20,1.0,20)
 		
 		old_ms=Millisecs()
 		
@@ -161,9 +163,9 @@ Class Game Extends App
 		End
 
 
-
-		txt.SetMode2D()
-		txt.SetText(fps+" fps ~nhow are you",0,0)
+		txt.SetText(fps+" fps ~nhow are you")
+		txt.HideEntity()
+		txt.Draw(0,0)
 		
 		' calculate fps
 		If Millisecs()-old_ms >= 1000

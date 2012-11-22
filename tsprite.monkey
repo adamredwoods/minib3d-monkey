@@ -31,6 +31,7 @@ Class TSprite Extends TMesh
 		' new sprite
 		Local sprite:TSprite=New TSprite
 		
+		
 		Self.CopyBaseSpriteTo(sprite, parent_ent)
 
 		Return sprite
@@ -39,80 +40,9 @@ Class TSprite Extends TMesh
 	
 	Method CopyBaseSpriteTo:Void(sprite:TSprite, parent_ent:TEntity=Null)
 	
-		' copy contents of child list before adding parent
-		For Local ent:TEntity=Eachin child_list
-			ent.CopyEntity(sprite)
-		Next
-		
-		' add parent, add to list
-		sprite.AddParent(parent_ent)
-		sprite.entity_link = entity_list.EntityListAdd(sprite)
-				
-		' lists
-		
-		' add to collision entity list
-		If collision_type<>0
-			TCollisionPair.ent_lists[collision_type].AddLast(sprite)
-		Endif
-		
-		' add to pick entity list
-		If pick_mode<>0
-			sprite.pick_link = TPick.ent_list.AddLast(sprite)
-		Endif
-		
-		' update matrix
-		If sprite.parent<>Null
-			sprite.mat.Overwrite(sprite.parent.mat)
-		Else
-			sprite.mat.LoadIdentity()
-		Endif
-		
-		' copy entity info
-			
-		sprite.mat.Multiply(mat)
-		
-		sprite.px=px
-		sprite.py=py
-		sprite.pz=pz
-		sprite.sx=sx
-		sprite.sy=sy
-		sprite.sz=sz
-		sprite.rx=rx
-		sprite.ry=ry
-		sprite.rz=rz
-		sprite.qw=qw
-		sprite.qx=qx
-		sprite.qy=qy
-		sprite.qz=qz
 
-		sprite.name=name
-		sprite.classname=classname
-		sprite.order=order
-		sprite.hide=False
-		sprite.auto_fade=auto_fade
-		sprite.fade_near=fade_near
-		sprite.fade_far=fade_far
-		
-		sprite.brush=Null
-		sprite.brush=brush.Copy()
-		
-		sprite.cull_radius=cull_radius
-		sprite.radius_x=radius_x
-		sprite.radius_y=radius_y
-		sprite.box_x=box_x
-		sprite.box_y=box_y
-		sprite.box_z=box_z
-		sprite.box_w=box_w
-		sprite.box_h=box_h
-		sprite.box_d=box_d
-		sprite.collision_type=collision_type
-		sprite.pick_mode=pick_mode
-		sprite.obscurer=obscurer
-	
-		' copy mesh info
-		
-		sprite.no_surfs=no_surfs
-		sprite.surf_list=surf_list ' pointer to surf list
+		Self.CopyBaseMeshTo(sprite, parent_ent)
+
 
 		' copy sprite info
 		
@@ -123,9 +53,6 @@ Class TSprite Extends TMesh
 		sprite.handle_x=handle_x
 		sprite.handle_y=handle_y
 		sprite.view_mode=view_mode
-		
-		sprite.use_cam_layer = use_cam_layer
-		sprite.cam_layer = cam_layer
 		
 	End
 		

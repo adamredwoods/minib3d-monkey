@@ -64,63 +64,20 @@ Public
 		' new bone
 		Local bone:TBone=New TBone
 		
-		' copy contents of child list before adding parent
-		For Local ent:TEntity=Eachin child_list
-			ent.CopyEntity(bone)
-		Next
-		
-		' add parent, add to list so children are at least visible
-		bone.AddParent(parent_ent)
+		Self.CopyBaseBoneTo(bone,parent_ent)
 		
 		'*** removed bones from entity_list... how will this effect things?
 		'bone.entity_link = entity_list.EntityListAdd(bone)
+		bone.entity_link.Remove()
 		
-		' update matrix
-		If bone.parent<>Null
-			bone.mat.Overwrite(bone.parent.mat)
-		Else
-			bone.mat.LoadIdentity()
-		Endif
-		
-		' copy entity info
-		
-		bone.mat.Multiply(mat)
-
-		bone.px=px
-		bone.py=py
-		bone.pz=pz
-		bone.sx=sx
-		bone.sy=sy
-		bone.sz=sz
-		bone.rx=rx
-		bone.ry=ry
-		bone.rz=rz
-		bone.qw=qw
-		bone.qx=qx
-		bone.qy=qy
-		bone.qz=qz
-		
-		bone.name=name
-		bone.classname=classname
-		bone.order=order
-		bone.hide=False
-		
-		' copy bone info
-		
-		bone.n_px=n_px
-		bone.n_py=n_py
-		bone.n_pz=n_pz
-		bone.n_sx=n_sx
-		bone.n_sy=n_sy
-		bone.n_sz=n_sz
-		bone.n_rx=n_rx
-		bone.n_ry=n_ry
-		bone.n_rz=n_rz
-		bone.n_qw=n_qw
-		bone.n_qx=n_qx
-		bone.n_qy=n_qy
-		bone.n_qz=n_qz
+		Return bone
 	
+	End 
+	
+	Method CopyBaseBoneTo:Void(bone:TBone, parent_ent:TEntity=Null)
+		
+		Self.CopyBaseEntityTo(bone, parent_ent)
+
 		bone.keys=keys.Copy()
 		
 		bone.kx=kx
@@ -143,10 +100,9 @@ Public
 		'bone.chainQuat = chainQuat.Copy()
 		'bone.chainPos = chainPos.Copy()
 		'bone.basePos = basePos.Copy()
-
-		Return bone
+		
+	End
 	
-	End 
 		
 	Method FreeEntity()
 	
@@ -208,28 +164,6 @@ Public
 	End 
 
 	
-	Method RotateBone(x#,y#,z#,glob=False)
-
-		rx=x; ry=y; rz=z
-		
-		''use rest matrix
-		Local t_mat:Matrix = New Matrix
-		t_mat.Overwrite(rest_mat)
-		t_mat.grid[3][0] = (px+rest_mat.grid[3][0]); t_mat.grid[3][1] = (py+rest_mat.grid[3][1]); t_mat.grid[3][2] = (pz+rest_mat.grid[3][2]);
-		
-		t_mat.Rotate(x,y,z)
-		
-		'loc_mat.Overwrite(t_mat) 'retain new local mat
-
-		
-		If Not glob Then UpdateMatrix(t_mat) Else UpdateMatrixGlobal(t_mat, 1, t_mat.ToArray() )
-
-		
-		
-		If TBone(Self).child_list.IsEmpty()<>True Then UpdateBoneChildren(Self)
-
-	End
-	
 	Method PositionBone(x#,y#,z#,glob=False)
 
 		px=x; py=y; pz=z
@@ -252,6 +186,30 @@ Public
 
 
 	End
+	
+	
+	Method RotateBone(x#,y#,z#,glob=False)
+
+		rx=x; ry=y; rz=z
+		
+		''use rest matrix
+		Local t_mat:Matrix = New Matrix
+		t_mat.Overwrite(rest_mat)
+		t_mat.grid[3][0] = (px+rest_mat.grid[3][0]); t_mat.grid[3][1] = (py+rest_mat.grid[3][1]); t_mat.grid[3][2] = (pz+rest_mat.grid[3][2]);
+		
+		t_mat.Rotate(x,y,z)
+		
+		'loc_mat.Overwrite(t_mat) 'retain new local mat
+
+		
+		If Not glob Then UpdateMatrix(t_mat) Else UpdateMatrixGlobal(t_mat, 1, t_mat.ToArray() )
+
+		
+		
+		If TBone(Self).child_list.IsEmpty()<>True Then UpdateBoneChildren(Self)
+
+	End
+	
 	
 	Method ScaleBone(x#,y#,z#,glob=False)
 
@@ -467,25 +425,27 @@ Public
 			
 		Endif
 		
+		If glob=0
 		
+			new_mat.Overwrite(parent.mat)
+			'new_mat.Inverse()
+			'Local p#[] = new_mat.TransformPoint(grid[0],grid[1],grid[2])
+			mat2.grid[3][0] = parent.mat.grid[0][0]*grid[0] + parent.mat.grid[1][0]*grid[1] + parent.mat.grid[2][0]*grid[2] + parent.mat.grid[3][0]
+			mat2.grid[3][1] = parent.mat.grid[0][1]*grid[0] + parent.mat.grid[1][1]*grid[1] + parent.mat.grid[2][1]*grid[2] + parent.mat.grid[3][1]
+			mat2.grid[3][2] = parent.mat.grid[0][2]*grid[0] + parent.mat.grid[1][2]*grid[1] + parent.mat.grid[2][2]*grid[2] + parent.mat.grid[3][2]
+			'mat2.grid[3][0] = parent.mat.grid[3][0]+grid[0]
+			'mat2.grid[3][1] = parent.mat.grid[3][1]+grid[1]
+			'mat2.grid[3][2] = parent.mat.grid[3][2]+grid[2]
 
-		' set tform mat
-		' A tform mat is needed to transform vertices, and is basically the bone mat multiplied by the inverse reference pose mat
-		tform_mat.Overwrite(mat2)
-		tform_mat.Multiply(inv_mat)
-If glob=0
-			new_mat.grid[3][0] = grid[0]
-			new_mat.grid[3][1] = grid[1]
-			new_mat.grid[3][2] = grid[2]
-			mat.grid[3][0] = grid[0]
-			mat.grid[3][1] = grid[1]
-			mat.grid[3][2] = grid[2]
-			tform_mat.grid[3][0] = grid[0]
-			tform_mat.grid[3][1] = grid[1]
-			tform_mat.grid[3][2] = grid[2]
-'Print grid[0]+" "+grid[1]+" "+grid[2]
-			mat2.Overwrite(new_mat)
+			mat.grid[3][0] = mat2.grid[3][0]
+			mat.grid[3][1] = mat2.grid[3][1]
+			mat.grid[3][2] = mat2.grid[3][2]
+
+Print mat.grid[3][0]+" "+mat.grid[3][1]+" "+mat.grid[3][2]
+			'mat2.Overwrite(new_mat)
+			
 		Else If glob=1
+		
 			new_mat.grid[0][0] = grid[0]
 			new_mat.grid[0][1] = grid[1]
 			new_mat.grid[0][2] = grid[2]
@@ -496,10 +456,19 @@ If glob=0
 			new_mat.grid[2][1] = grid[7]
 			new_mat.grid[2][2] = grid[8]
 			mat2.Overwrite(new_mat)
+			
 		Else If glob=2
+		
 			new_mat.Scale(sx/parent.gsx,sy/parent.gsy,sz/parent.gsz)
 			mat2.Overwrite(new_mat)
+			
 		Endif
+
+		' set tform mat
+		' A tform mat is needed to transform vertices, and is basically the bone mat multiplied by the inverse reference pose mat
+		tform_mat.Overwrite(mat2)
+		'tform_mat.Multiply(inv_mat)
+
 		
 	End
 

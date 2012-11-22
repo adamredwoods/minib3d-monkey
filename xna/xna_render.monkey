@@ -155,9 +155,9 @@ Public
 		For Local pass:= Eachin passes
 
 ''debugging
-Print mesh.classname		
-Print "effect: "+_xna.CurrentEffect()._name+"  2d:"+cam.draw2D+"  alphapass:"+alpha_pass
-Print "cam: "+cam.name
+'Print mesh.classname		
+'Print "effect: "+_xna.CurrentEffect()._name+"  2d:"+cam.draw2D+"  alphapass:"+alpha_pass
+'Print "cam: "+cam.name
 			
 			''run through surfaces twice, sort alpha surfaces for second pass
 			For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs

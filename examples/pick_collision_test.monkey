@@ -34,7 +34,7 @@ Class Game Extends App
 	Method OnCreate()
 	
 		SetUpdateRate 30
-		SetRender()', DISABLE_VBO)
+		SetRender()
 		
 	End
 
@@ -65,6 +65,7 @@ Class Game Extends App
 		
 		txt = TText.CreateText(cam)
 		txt.NoSmooth()
+		txt.HideEntity()
 		
 		light.PositionEntity 0,3,-3
 		cam.PositionEntity 0.5,1,-5
@@ -176,8 +177,8 @@ Class Game Extends App
 		Endif
 
 		txt.SetMode2D()	
-		txt.SetText(fps+" fps ~nhow are you", 0,0)
-	
+		txt.SetText(fps+" fps ~nhow are you")
+		txt.Draw(0,0)
 		
 		' calculate fps
 		If Millisecs()-old_ms >= 1000

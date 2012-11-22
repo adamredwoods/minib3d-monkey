@@ -495,7 +495,7 @@ Function CreateSurface:TSurface(mesh:TMesh,brush:TBrush=Null)
 End 
 
 Function CreateText3D:TText(str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
-	Local tt:TText = TText.CreateText(camx,str,font,num_chars,c_pixels,pad, False)
+	Local tt:TText = TText.CreateText(Null, str,font,num_chars,c_pixels,pad, False)
 	Return tt
 End
 
