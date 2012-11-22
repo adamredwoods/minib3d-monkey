@@ -302,7 +302,7 @@ Class TEntity
 			z= pos[2]
 		Endif
 
-		'' treat bones differently, before global
+		'' treat bones differently
 		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return
 					
 		px=x
@@ -367,9 +367,6 @@ Class TEntity
 		'Local ty#=y
 		tz=-tz
 		
-		'' treat bones differently and bypass global
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return
-		
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
 						
@@ -389,6 +386,9 @@ Class TEntity
 		py=py+ty
 		pz=pz+tz
 		
+		
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return
 		
 
 		If parent<>Null
@@ -419,6 +419,15 @@ Class TEntity
 		sy=y
 		sz=z
 
+		' conv glob to local. x/y/z always local to parent or global if no parent
+		If glob=True And parent<>Null
+
+			sx = sx/parent.gsx
+			sy = sy/parent.gsy
+			sz = sz/parent.gsz
+	
+		Endif
+		
 		'' treat bones differently
 		If TBone(Self) <> Null
 			gsx=parent.gsx*sx
@@ -428,15 +437,7 @@ Class TEntity
 			TBone(Self).ScaleBone(sx,sy,sz,glob)
 			Return
 		Endif
-
-		' conv glob to local. x/y/z always local to parent or global if no parent
-		If glob=True And parent<>Null
-
-			sx = sx/parent.gsx
-			sy = sy/parent.gsy
-			sz = sz/parent.gsz
-	
-		Endif
+		
 
 		If parent<>Null	
 			gsx=parent.gsx*sx
@@ -473,9 +474,6 @@ Class TEntity
 		ry=y
 		rz=z
 		
-		'' treat bones differently, and bypass global
-		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz, glob); Return
-		
 		' conv glob to local. pitch/yaw/roll always local to parent or global if no parent
 		If glob=True And parent<>Null
 
@@ -484,6 +482,9 @@ Class TEntity
 			rz=rz-parent.EntityRoll(True)
 		
 		Endif
+		
+		'' treat bones differently
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz, glob); Return
 		
 		If parent<>Null
 		
@@ -592,8 +593,11 @@ Class TEntity
 
 
 		If angle < 0.00001
-			mat.LoadIdentity()
-			mat.Scale(sx,sy,sz)
+			'mat.LoadIdentity()
+			mat.grid[0][0]=gsx; mat.grid[1][0]=0.0; mat.grid[2][0]=0.0
+			mat.grid[0][1]=0.0; mat.grid[1][1]=gsy; mat.grid[2][1]=0.0
+			mat.grid[0][2]=0.0; mat.grid[1][2]=0.0; mat.grid[2][2]=gsz
+			'mat.Scale(gsx,gsy,gsz)
 			Return
 		Elseif angle > 179.9999
 			''flip
@@ -630,9 +634,9 @@ Class TEntity
 		temp_mat.grid[2][1] = (tmp1 + tmp2) *Self.sz
 		temp_mat.grid[1][2] = (tmp1 - tmp2) *Self.sy
 		
-		temp_mat.grid[3][0] = Self.px
-		temp_mat.grid[3][1] = Self.py
-		temp_mat.grid[3][2] = Self.pz
+		temp_mat.grid[3][0] = mat.grid[3][0] 'Self.px
+		temp_mat.grid[3][1] = mat.grid[3][1] 'Self.py
+		temp_mat.grid[3][2] = mat.grid[3][2] 'Self.pz
 		temp_mat.grid[3][3] = 1.0
 		
 		If parent<>Null
@@ -1954,7 +1958,11 @@ Class TEntity
 		
 			If load_identity Then loc_mat.Overwrite(mat)
 			
-
+			If parent
+				gsx=parent.gsx*sx
+				gsy=parent.gsy*sy
+				gsz=parent.gsz*sz
+			Endif
 	End 
 	
 	Method UpdateMatTrans(load_identity:Bool =False)
@@ -2008,6 +2016,11 @@ Class TEntity
 			mat.FastRotateScale(rx,ry,rz,sx,sy,sz)
 		Endif
 		
+		If parent
+			gsx=parent.gsx*sx
+			gsy=parent.gsy*sy
+			gsz=parent.gsz*sz
+		Endif
 		
 		If load_identity Then loc_mat.Overwrite(mat)
 
