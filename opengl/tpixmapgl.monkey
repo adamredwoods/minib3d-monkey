@@ -10,7 +10,7 @@ Import mojo.data
 
 'Alias DataBuffer = databuffer.DataBuffer
 
-#If OPENGL_GLES20_ENABLED="true" Or TARGET="html5"
+#If OPENGL_GLES20_ENABLED=Int(True) Or TARGET="html5"
 
 	Import opengl.gles20
 	

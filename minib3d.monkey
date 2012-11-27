@@ -25,7 +25,7 @@ Import mojo
 
 #MINIB3D_DRIVER=""
 #MINIB3D_DEBUG_MODEL=0
-
+'#OPENGL_GLES20_ENABLED=False ''this screws up opengl20 on html5
 
 ''to choose opengles20, must specify it
 #If MINIB3D_DRIVER=""
@@ -42,7 +42,6 @@ Import mojo
 
 '' global
 Import trender
-'Import tglobal ''depricated
 
 
 '' entity

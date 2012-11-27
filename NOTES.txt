@@ -19,7 +19,8 @@ minib3d v0.32
 - added TEntity.Draw(x,y) command:
 	Draw works much like Mojo's DrawImage command where it must be updated per frame to work, and renders the order of all objects layered when RenderWorld() is called. It can be placed in OnRender() but before RenderWorld(). 
 	The use of Draw is pixel perfect, but will automatically scale based on TPixmap's width and height. To override auto-scaling use Draw(x,y,true).
-	Also beware, that you need to use HideEntity() to keep the object from appearing in multiple cameras.
+	Also beware, that you need to use HideEntity() to keep the object from appearing in multiple cameras or when not drawn. Draw() will auto-unhide.
+	In XNA & some HTML5, the TText scaling is off, not sure why. Either smooth textures or increase TText entity scale.
 
 	Example:
 	local txt:TText = CreateText2D("Some text here")

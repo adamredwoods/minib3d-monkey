@@ -6,6 +6,13 @@
 Import mojo
 Import opengl.gles20
 
+
+#OPENGL_GLES20_ENABLED=True
+#OPENGL_DEPTH_BUFFER_ENABLED=True
+#MINIB3D_DRIVER="opengl20"
+#ANDROID_NATIVE_GL_ENABLED=True ''*************************PROBLEMATIC? only used on Android 2.2*****************************
+
+
 Import minib3d.trender
 Import minib3d.opengl.tshaderglsl
 Import minib3d.opengl.tpixmapgl
@@ -20,10 +27,6 @@ Import minib3d.opengl.framebuffergl
 
 #Print "miniB3D OpenglES20"
 
-#OPENGL_GLES20_ENABLED="true"
-#OPENGL_DEPTH_BUFFER_ENABLED="true"
-#MINIB3D_DRIVER="opengl20"
-#ANDROID_NATIVE_GL_ENABLED=True ''*************************PROBLEMATIC? only used on Android 2.2*****************************
 
 #If TARGET="html5"
 	Extern

@@ -1,6 +1,7 @@
 ' Original firepaint3d.bb program by Mark Sibly
 
-Import minib3d.opengl.opengles20
+'Import minib3d.opengl.opengles20
+Import minib3d
 
 
 Function Main()
