@@ -1,6 +1,8 @@
 ****************************************
 minib3d v0.32
 
+-added "minib3d.app" template. to use, import minib3d.app and override methods (Create, Init, Update).
+
 - added function TEntity GetChildren(recursive = true)
 - update movement functions to allow bone deformation. should work with Entity commands as well.(PositionEntity, RotateEntity, ScaleEntity, etc.) To animate with bones you must use myEntity.ActivateBones() or myEntity.Animate(4). You cannot combine B3D animation and programmable bone animation.
 
