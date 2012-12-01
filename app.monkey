@@ -38,7 +38,7 @@ Class Minib3dApp Extends App
 	
 	Method Minib3dInit:Void()
 		If init Then Return
-		If Not PreLoadPixmap(preload_list.ToArray()) Then Return
+		If Not TPixmap.PreLoadPixmap(preload_list.ToArray()) Then Return
 		init=1
 		Init()
 		init=2
