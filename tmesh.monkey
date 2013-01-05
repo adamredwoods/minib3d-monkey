@@ -2020,6 +2020,7 @@ Class TMesh Extends TEntity
 		''position
 		Local w# = TRender.width*0.5
 		Local h# = TRender.height*0.5
+		If parent<>Null Then EntityParent(Null)
 		PositionEntity((x-w), (h-y), 1.99999)
 
 					

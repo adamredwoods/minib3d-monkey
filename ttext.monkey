@@ -8,6 +8,7 @@ Import minib3d
 
 Class TText Extends TSprite Final
 	
+	Const ALIGN_LEFT:Int = 0
 	Const ALIGN_CENTER:Int = 1
 
 	
@@ -150,12 +151,13 @@ Class TText Extends TSprite Final
 		If uv < 0 Then uv = 0; uv2 = 0.001
 		
 		
+		'Local kern:Float = 0.3 * x + offset
 		Local kern:Float = 0.3 * x + offset
 		
-		surf.AddVertex( 0+x-kern, 0+y,0, uv, uv2)
-		surf.AddVertex( 0+x-kern, 1+y,0, uv, 0.0)
-		surf.AddVertex( 1.0+x-kern, 1+y,0, uv+char_uvwidth, 0.0)
-		surf.AddVertex( 1.0+x-kern, 0+y,0, uv+char_uvwidth, uv2)
+		surf.AddVertex( 0.0+x-kern, 0.0+y,0, uv, uv2)
+		surf.AddVertex( 0.0+x-kern, 1.0+y,0, uv, 0.0)
+		surf.AddVertex( 1.0+x-kern, 1.0+y,0, uv+char_uvwidth, 0.0)
+		surf.AddVertex( 1.0+x-kern, 0.0+y,0, uv+char_uvwidth, uv2)
 		Local v:Int = num*4
 		surf.AddTriangle(0+v,1+v,2+v)
 		surf.AddTriangle(0+v,2+v,3+v)
@@ -233,7 +235,7 @@ Class TText Extends TSprite Final
 		
 		''alignment
 		Local offset:Float = 0
-		If align = 1 Then offset = str.Length()*0.5 ''(0.5 times kern(0.3))
+		If align = 1 Then offset = str.Length()*0.15 ''(0.5 times kern(0.3))
 		
 		For Local i:= 0 To str.Length()-1
 	

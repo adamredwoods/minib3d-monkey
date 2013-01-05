@@ -9,13 +9,12 @@ Import minib3d
 	#Error "Need glfw, ios, android, or mingw target"
 #Endif
 
-#Print "miniB3D OpenglES11"
+
 
 #OPENGL_GLES20_ENABLED=False
 #OPENGL_DEPTH_BUFFER_ENABLED=True
 #MINIB3D_DRIVER="opengl11"
-
-
+#Print "miniB3D "+MINIB3D_DRIVER
 
 Const VBO_MIN_TRIS=1	' if USE_VBO=True and vbos are supported by hardware, then surface must also have this minimum no. of tris before vbo is used for surface (vbos work best with surfaces with high amount of tris)
 
