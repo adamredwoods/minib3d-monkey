@@ -25,16 +25,18 @@ Import mojo
 
 #MINIB3D_DRIVER=""
 #MINIB3D_DEBUG_MODEL=0
-'#OPENGL_GLES20_ENABLED=False ''this screws up opengl20 on html5
+
 
 ''to choose opengles20, must specify it
 #If MINIB3D_DRIVER=""
 	#if TARGET="glfw" Or TARGET="ios" Or TARGET="android" Or TARGET="mingw"
-		Import minib3d.opengl.opengles11
+		Import minib3d.opengl.opengles20
 	#Elseif TARGET="html5"
 		Import minib3d.opengl.opengles20
 	#Elseif TARGET="xna"
 		Import minib3d.xna
+	#ElseIf TARGET="win8"
+		Import minib3d.d3d11
 	#endif
 #endif
 
@@ -42,6 +44,7 @@ Import mojo
 
 '' global
 Import trender
+'Import tglobal ''depricated
 
 
 '' entity
@@ -51,6 +54,7 @@ Import tlight
 Import tpivot
 Import tmesh
 Import tsprite
+Import tterrain
 Import ttext ''new in monkey minib3d
 
 '' mesh structure
