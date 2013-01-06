@@ -278,11 +278,11 @@ Class XNABlendState = "XNABlendState"
 	Method ColorDestinationBlend:Void(value%) Property = "SetColorDestinationBlend"
 	Method ColorSourceBlend:Void(value%) Property = "SetColorSourceBlend"
 		
-	Function Create:XNABlendState() = "XNABlendState.Create"
-	Function Additive:XNABlendState()= "XNABlendState.Additive"
-	Function AlphaBlend:XNABlendState()= "XNABlendState.AlphaBlend"
-	Function Premultiplied:XNABlendState()= "XNABlendState.NonPremultiplied"
-	Function Opaque:XNABlendState()= "XNABlendState.Opaque"
+	Function Create:XNABlendState() = "Create"
+	Function Additive:XNABlendState()= "Additive"
+	Function AlphaBlend:XNABlendState()= "AlphaBlend"
+	Function Premultiplied:XNABlendState()= "NonPremultiplied"
+	Function Opaque:XNABlendState()= "Opaque"
 End
 
 '----------------------------------------------------------------------------------------------------------
@@ -301,10 +301,10 @@ Class XNARasterizerState = "XNARasterizerState"
 	Method ScissorTestEnable:Void(value?)= "SetScissorTestEnable"
 	Method SlopeScaleDepthBias:Void(value#)= "SetSlopeScaleDepthBias"
 	
-	Function Create:XNARasterizerState() = "XNARasterizerState.Create"
-	Function CullClockwise:XNARasterizerState() = "XNARasterizerState.CullClockwise"
-	Function CullCounterClockwise:XNARasterizerState() = "XNARasterizerState.CullCounterClockwise"
-	Function CullNone:XNARasterizerState() = "XNARasterizerState.CullNone"
+	Function Create:XNARasterizerState() = "Create"
+	Function CullClockwise:XNARasterizerState() = "CullClockwise"
+	Function CullCounterClockwise:XNARasterizerState() = "CullCounterClockwise"
+	Function CullNone:XNARasterizerState() = "CullNone"
 End
 
 '----------------------------------------------------------------------------------------------------------
@@ -325,13 +325,13 @@ Class XNASamplerState = "XNASamplerState"
 	Method MaxMipLevel:Void(value%)Property = "SetMaxMipLevel"
 	Method MipMapLevelOfDetailBias:Void(value%)Property = "SetMipMapLevelOfDetailBias"
 	
-	Function Create:XNASamplerState() = "XNASamplerState.Create"
-	Function Create:XNASamplerState(filter, adressU, adressV) = "XNASamplerState.Create"
-	Function AnisotropicWrap:XNASamplerState() = "XNASamplerState.AnisotropicClamp"
-	Function LinearClamp:XNASamplerState() = "XNASamplerState.AnisotropicWrap"
-	Function LinearWrap:XNASamplerState() = "XNASamplerState.LinearClamp"
-	Function PointClamp:XNASamplerState() = "XNASamplerState.PointClamp"
-	Function PointWrap:XNASamplerState() = "XNASamplerState.PointWrap"
+	Function Create:XNASamplerState() = "Create"
+	Function Create:XNASamplerState(filter, adressU, adressV) = "Create"
+	Function AnisotropicWrap:XNASamplerState() = "AnisotropicClamp"
+	Function LinearClamp:XNASamplerState() = "AnisotropicWrap"
+	Function LinearWrap:XNASamplerState() = "LinearClamp"
+	Function PointClamp:XNASamplerState() = "PointClamp"
+	Function PointWrap:XNASamplerState() = "PointWrap"
 End 
 
 '----------------------------------------------------------------------------------------------------------
@@ -370,10 +370,10 @@ Class XNADepthStencilState = "XNADepthStencilState"
 	Method StencilWriteMask:Void(value%) Property = "SetStencilWriteMask"	
 	Method TwoSidedStencilMode:Void(value?) Property = "SetTwoSidedStencilMode"	
 	
-	Function Create:XNADepthStencilState() = "XNADepthStencilState.Create"
-	Function _Default:XNADepthStencilState() = "XNADepthStencilState.Default"	
-	Function DepthRead:XNADepthStencilState() = "XNADepthStencilState.DepthRead"
-	Function None:XNADepthStencilState() = "XNADepthStencilState.None"
+	Function Create:XNADepthStencilState() = "Create"
+	Function _Default:XNADepthStencilState() = "Default"	
+	Function DepthRead:XNADepthStencilState() = "DepthRead"
+	Function None:XNADepthStencilState() = "None"
 End
 
 '----------------------------------------------------------------------------------------------------------
@@ -622,9 +622,18 @@ End
 
 Extern	
 	'Function EndMojoRender:Void() = "gxtkApp.game.app.GraphicsDevice().EndRender"
-	Function EndMojoRender:Void(target:Object = Null) = "gxtkApp.game.app.GraphicsDevice().device.SetRenderTarget"
+	Function EndMojoRender:Void(target:Object = Null) = "BBXnaGame.XnaGame().GetXNAGame().GraphicsDevice.SetRenderTarget"
 	
+
+Class AnimUtil
+	Function UpdateVertexDataBufferPositions:Void(destVertexDataBuffer:DataBuffer,  floatBuffer:DataBuffer, count)
+End 
 
 
 #End
 
+Public 
+
+Function UpdateVertexDataBufferPositions:Void(destVertexDataBuffer:DataBuffer, floatBuffer:DataBuffer, count)
+	AnimUtil.UpdateVertexDataBufferPositions(destVertexDataBuffer, floatBuffer, count)
+End

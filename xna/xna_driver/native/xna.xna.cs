@@ -1,4 +1,72 @@
 
+
+public class AnimUtil
+{
+	struct B3DVertex
+	{
+		float x,y,z,w;
+		float nx,ny,nz,nw;
+		float r,g,b,a;
+		float u0,v0,u1,v1;
+	};
+	
+	struct B3DVector
+	{
+		float x,y,z;
+	};
+
+
+	public static void UpdateVertexDataBufferPositions(BBDataBuffer destVertexDataBuffer, BBDataBuffer floatBuffer, int count)
+	{
+#if WINDOWS_PHONE
+	
+        for (int i = 0; i < count; ++i)
+        {
+            int vid0 = i * 64;
+            int vid1 = i * 12;
+            
+            destVertexDataBuffer._data[vid0 + 0] = floatBuffer._data[vid1 + 0];
+            destVertexDataBuffer._data[vid0 + 1] = floatBuffer._data[vid1 + 1];
+            destVertexDataBuffer._data[vid0 + 2] = floatBuffer._data[vid1 + 2];
+            destVertexDataBuffer._data[vid0 + 3] = floatBuffer._data[vid1 + 3];
+            destVertexDataBuffer._data[vid0 + 4] = floatBuffer._data[vid1 + 4];
+            destVertexDataBuffer._data[vid0 + 5] = floatBuffer._data[vid1 + 5];
+            destVertexDataBuffer._data[vid0 + 6] = floatBuffer._data[vid1 + 6];
+            destVertexDataBuffer._data[vid0 + 7] = floatBuffer._data[vid1 + 7];
+            destVertexDataBuffer._data[vid0 + 8] = floatBuffer._data[vid1 + 8];
+            destVertexDataBuffer._data[vid0 + 9] = floatBuffer._data[vid1 + 9];
+            destVertexDataBuffer._data[vid0 + 10] = floatBuffer._data[vid1 + 10];
+            destVertexDataBuffer._data[vid0 + 11] = floatBuffer._data[vid1 + 11];
+        }
+
+#else
+
+        unsafe
+        {
+            fixed (byte* pDest = &destVertexDataBuffer._data[0])
+            {
+                fixed (byte* pSrc = &floatBuffer._data[0])
+                {
+                    B3DVertex* dest = (B3DVertex*)pDest;
+                    B3DVector* src = (B3DVector*)pSrc;
+                    B3DVector* end = src + count;
+
+                    do
+                    {
+                        *(B3DVector*)dest++ = *src++;
+                    }
+                    while (src != end);
+
+
+                }
+            }
+        }
+
+#endif
+
+    }
+}
+
 public class XNAGraphicsResource : IDisposable 
 {
     public XNAGraphicsDevice _device;
@@ -62,8 +130,7 @@ public class XNAGraphicsDevice
 	
     public XNAGraphicsDevice()
     {
-        //_device = gxtkApp.game.app.graphics.device;
-		_device = gxtkApp.game.app.GraphicsDevice().device;
+		_device = BBXnaGame.XnaGame().GetXNAGame().GraphicsDevice;
         _effect = new BasicEffect(_device);
         _effect.VertexColorEnabled = false;
         _effect.PreferPerPixelLighting = false;
@@ -73,7 +140,7 @@ public class XNAGraphicsDevice
 
     public XNATexture LoadTexture(string fileName)
     {
-        var texture = MonkeyData.LoadTexture2D(fileName, gxtkApp.game.Content);
+        var texture = BBXnaGame.XnaGame().LoadTexture2D(fileName);
         if (texture != null) return new XNATexture(texture,fileName);
         return null;
     }
