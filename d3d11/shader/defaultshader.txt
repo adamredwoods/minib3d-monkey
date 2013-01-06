@@ -1,0 +1,317 @@
+
+Texture2D shaderTexture[4]: register( t0 );
+SamplerState samplerType[4]: register( s0 );
+
+
+struct CLight
+{
+	float3 	Position;				
+	float 	Range;
+	float3 	Dir;
+	float 	InnerAngle;
+	float3 	Color;
+	float 	OuterAngle;
+	int 	Type;
+	float3  pad;
+};
+
+struct CTextureStageStage
+{
+	float2 scale;
+	float2 offset;
+	int blend;
+	int coords;
+	float angle;
+	float padpad;
+};
+
+cbuffer cbPerMaterial : register( b0 )
+{
+	bool fog;
+	bool vertexcolor;
+	bool lighting;
+	bool textures;	
+	float shine;
+	int textureCount;	
+	float pad;
+	float4 color;
+	float4 ambientColor;	
+	CTextureStageStage textureStages[4];
+};
+
+cbuffer cbPerObject : register( b1 )
+{
+	float3	EyePosition;
+	float1 __pad;
+	float4x4 world;
+};
+
+cbuffer cbPerCamera : register( b2 )
+{
+	float4x4 projection;		
+	float4x4 view;					
+	float3 fogColor;			
+	float fogFar;	
+			
+	float fogNear;		
+	int lightCount;
+	int lightDirIni;
+	int lightDirNum;
+	
+	int lightPointIni;
+	int lightPointNum;
+	int lightSpotIni;
+	int lightSpotNum;
+
+	CLight lights[8];
+};
+
+
+struct COLOR_PAIR
+{
+   float3 Color;
+   float3 ColorSpec;
+};
+
+
+//-----------------------------------------------------------------------------
+// Compute point light
+//-----------------------------------------------------------------------------
+
+COLOR_PAIR DoPointLight(float3 lightDir, float3 E, float3 N, float att)
+{
+	COLOR_PAIR r = (COLOR_PAIR)0;
+	float3 L = normalize(lightDir);
+
+	float lambertTerm = clamp(dot(N,L),0.f,1.f);
+	if(lambertTerm > 0.0) 
+	{
+		r.Color = lambertTerm * att;
+		r.ColorSpec = shine * pow(saturate(dot(reflect(-L, N),E)),  80.0f)* att;
+	}
+	return r;
+}
+
+//-----------------------------------------------------------------------------
+// Compute spot light
+//-----------------------------------------------------------------------------
+
+COLOR_PAIR DoSpotLight(float3 lightDir,float3 E, float3 N, float3 dir, float att, float theta, float pi)
+{
+	COLOR_PAIR r = (COLOR_PAIR)0;
+	float3 L = normalize(lightDir);
+	
+	float lambertTerm = clamp(dot(N,L),0.f,1.f);
+	if(lambertTerm > 0.0)
+	{
+		float angle = acos(dot(-normalize(lightDir.xyz),normalize(dir)));
+		float f = smoothstep( pi,theta,angle );
+		r.Color = lambertTerm * att *f;
+		r.ColorSpec =  shine * pow(saturate(dot(reflect(-L, N),E)),  80.0f)* att*f;
+	}
+	return r;
+}
+
+//-----------------------------------------------------------------------------
+// Compute directional light
+//-----------------------------------------------------------------------------
+
+COLOR_PAIR DoDirLight(float3 lightDir,float3 E, float3 N)
+{
+	COLOR_PAIR r = (COLOR_PAIR)0;
+	float3 L = normalize(-lightDir);
+	float lambertTerm =  clamp(dot(N,L),0.f,1.f);
+	r.Color = lambertTerm;
+	r.ColorSpec = 10*shine * pow(saturate(dot(reflect(-L,N),E)),  80.0f);
+	return r;
+}
+
+
+///////////////////////////////////////////////////////////////
+
+struct VertexShaderInput{
+
+	float4 Position 	: POSITION;
+	float3 Normal 		: NORMAL;
+	float4 color 		: COLOR0;
+	float2 tex0 		: TEXCOORD0;
+	float2 tex1 		: TEXCOORD1;
+};
+
+struct VertexShaderOutput{
+
+	float4 Position 	 : SV_POSITION;
+	float3 Normal 		 : NORMAL;
+	float4 Color 		 : COLOR0;
+	float2 Tex0 		 : TEXCOORD0;
+	float2 Tex1 		 : TEXCOORD1;
+	float4 Shading 		 : TEXCOORD2;	
+	float fog			 : TEXCOORD3;	
+};
+
+VertexShaderOutput vs_main( VertexShaderInput input )
+{
+	VertexShaderOutput output = (VertexShaderOutput)0;
+	float4 worldPosition = mul(input.Position, world);
+	float4 viewPosition = mul(worldPosition, view);
+	output.Position=mul( viewPosition, projection);
+	
+	if( textures )
+	{
+		output.Tex0 = input.tex0;
+		output.Tex1 = input.tex1;
+	}
+	
+	output.Color=input.color;
+
+	if( lighting ) 
+	{
+		float3 shading = ambientColor.xyz;
+		float3 specular = 0;
+		int index,i;
+	 	COLOR_PAIR p;
+		
+	 	float3 N = normalize(mul(input.Normal,(float3x3)world));
+		float3 E = normalize(EyePosition - worldPosition.xyz);
+	
+		
+		for( i = 0; i< lightDirNum; ++i)
+		{
+		
+			index = lightDirIni+i;
+			p = DoDirLight(lights[index].Dir,E,N);
+			shading += p.Color * lights[index].Color;
+			specular += p.ColorSpec;
+		
+		}
+			
+		for( i = 0; i< lightPointNum; ++i) 
+		{
+		
+			index = lightPointIni+i;
+			float3 lightdir = lights[index].Position - worldPosition.xyz;
+			float att = 1.0f/(lights[index].Range*length(lightdir));	
+			
+			p =  DoPointLight(lightdir,E,N,att);
+			shading += p.Color * lights[index].Color;
+			specular += p.ColorSpec;
+		
+		}
+		
+
+	 	for( i = 0; i< lightSpotNum; ++i)
+		{
+			index = lightSpotIni+i;
+			
+			float3 lightdir = lights[index].Position - worldPosition.xyz;
+			float att = 1.0f/(lights[index].Range*length(lightdir));	
+			
+	  		p =  DoSpotLight(	lightdir, E,N, 
+								lights[index].Dir, 
+								att, 
+								lights[index].InnerAngle,
+								lights[index].OuterAngle);
+		
+	 		shading += p.Color * lights[index].Color;
+			specular += p.ColorSpec;
+		}
+	
+		output.Shading.rgb = saturate(shading);
+		output.Shading.w = specular.x;
+	}
+	else
+	{
+		output.Shading.xyz = float3(1.0f,1.0f,1.0f);
+	}
+	
+
+	if(fog)
+	{
+		output.fog  = saturate((length(EyePosition-worldPosition.xyz) - fogNear)/(fogFar - fogNear)); 
+	}
+
+	return output;
+}
+
+///////////////////////////////////////////////////////////////
+
+void BlendFunction(int layer, float2 Tex0, float2 Tex1, inout float4 color, float4 vertColor)
+{
+	CTextureStageStage stage = textureStages[layer];
+	float4 textColor = shaderTexture[layer].Sample(samplerType[layer], stage.coords == 0 ? Tex0 : Tex1);
+
+	if(stage.blend == 1 )
+	{
+		color.xyz = lerp(color.xyz, textColor.xyz, textColor.w );
+		color.w = vertColor.w;	
+	}
+	if(stage.blend == 2 ) 
+	{
+		color *= textColor;
+	}
+	else if(stage.blend == 3 ) 
+	{
+		float4 mod = (vertColor * textColor);
+		color += float4( mod.xyz, textColor.w*vertColor.w);	
+	}
+	else if(stage.blend==4) 
+	{	
+		float4 mod = (vertColor * textColor);
+		color += float4( mod.xyz, textColor.w*vertColor.w);
+	} 
+}
+
+
+float4 ps_main( VertexShaderOutput input ) : SV_TARGET
+{
+	float4 finalcolor;
+	
+	if( vertexcolor )
+	{
+		finalcolor = input.Color;
+	}
+	else
+	{
+		finalcolor=color;
+	}
+	
+	if( textures )
+	{
+		if( textureCount == 1 )
+		{
+			BlendFunction(0, input.Tex0, input.Tex1, finalcolor, input.Color);
+		}
+		else if( textureCount == 2 )
+		{
+			BlendFunction(0, input.Tex0, input.Tex1, finalcolor, input.Color);
+			BlendFunction(1, input.Tex0, input.Tex1, finalcolor, input.Color);
+		}
+		else if( textureCount == 3 )
+		{
+			BlendFunction(0, input.Tex0, input.Tex1, finalcolor, input.Color);
+			BlendFunction(1, input.Tex0, input.Tex1, finalcolor, input.Color);
+			BlendFunction(2, input.Tex0, input.Tex1, finalcolor, input.Color);
+		}
+		else if( textureCount == 4 )
+		{
+			BlendFunction(0, input.Tex0, input.Tex1, finalcolor, input.Color);
+			BlendFunction(1, input.Tex0, input.Tex1, finalcolor, input.Color);
+			BlendFunction(2, input.Tex0, input.Tex1, finalcolor, input.Color);
+			BlendFunction(3, input.Tex0, input.Tex1, finalcolor, input.Color);
+		}
+	}
+	
+	finalcolor.rgb*=input.Shading.xyz;
+	if( lighting )
+	{
+		finalcolor.rgb+=input.Shading.w; // Specular
+	}
+
+	if( fog )
+	{
+		finalcolor.rgb  = lerp(finalcolor.rgb ,fogColor, input.fog);
+	}
+	 
+	return finalcolor;
+}
+
