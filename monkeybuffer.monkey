@@ -7,14 +7,14 @@ Import minib3d.vector
 
 #If TARGET="html5" Or TARGET="glfw" Or TARGET="mingw" Or TARGET="ios" Or TARGET="android"
 
-	'Import brl.databuffer
-	Import opengl.databuffer
+	Import brl.databuffer
+	'Import opengl.databuffer
 
 	Function CreateDataBuffer:DataBuffer(i:Int)
-		Return DataBuffer.Create(i)
+		Return New DataBuffer(i)
 	End
 	Function GetBufferLength:Int(buf:DataBuffer)
-		Return buf.Size()
+		Return buf.Length()
 	End
 #rem	
 	Class DataBuffer Extends DataBuffer
@@ -28,7 +28,7 @@ Import minib3d.vector
 	End
 #end
 
-#elseif TARGET="xna"
+#Elseif TARGET="xna" Or TARGET="win8"
 	
 	'Import xna.xna_driver.databuffer	
 	Import brl.databuffer
@@ -255,7 +255,7 @@ Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataB
 	Return dest
 End
 
-Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataBuffer, begin:Int=0, bend:Int=0 )
+Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataBuffer, begin:Int, bend:Int  ) 'begin:Int=0, bend:Int=0 )
 	
 	If src.buf = Null Then Return dest
 	

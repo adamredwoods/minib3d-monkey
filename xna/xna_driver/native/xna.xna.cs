@@ -41,6 +41,28 @@ public class AnimUtil
 
 #else
 
+		for (int i = 0; i < count; ++i)
+        {
+            int vid0 = i * 64;
+            int vid1 = i * 12;
+            
+            destVertexDataBuffer._data[vid0 + 0] = floatBuffer._data[vid1 + 0];
+            destVertexDataBuffer._data[vid0 + 1] = floatBuffer._data[vid1 + 1];
+            destVertexDataBuffer._data[vid0 + 2] = floatBuffer._data[vid1 + 2];
+            destVertexDataBuffer._data[vid0 + 3] = floatBuffer._data[vid1 + 3];
+            destVertexDataBuffer._data[vid0 + 4] = floatBuffer._data[vid1 + 4];
+            destVertexDataBuffer._data[vid0 + 5] = floatBuffer._data[vid1 + 5];
+            destVertexDataBuffer._data[vid0 + 6] = floatBuffer._data[vid1 + 6];
+            destVertexDataBuffer._data[vid0 + 7] = floatBuffer._data[vid1 + 7];
+            destVertexDataBuffer._data[vid0 + 8] = floatBuffer._data[vid1 + 8];
+            destVertexDataBuffer._data[vid0 + 9] = floatBuffer._data[vid1 + 9];
+            destVertexDataBuffer._data[vid0 + 10] = floatBuffer._data[vid1 + 10];
+            destVertexDataBuffer._data[vid0 + 11] = floatBuffer._data[vid1 + 11];
+        }
+        
+        // Enable unsafe code for speedup
+        
+        /*
         unsafe
         {
             fixed (byte* pDest = &destVertexDataBuffer._data[0])
@@ -61,6 +83,7 @@ public class AnimUtil
                 }
             }
         }
+        */
 
 #endif
 

@@ -54,7 +54,6 @@ Import tlight
 Import tpivot
 Import tmesh
 Import tsprite
-Import tterrain
 Import ttext ''new in monkey minib3d
 
 '' mesh structure

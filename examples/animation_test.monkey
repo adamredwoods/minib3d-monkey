@@ -1,3 +1,5 @@
+#MINIB3D_D3D11_RELEASE="false" 
+#MINIB3D_D3D11_PER_PIXEL_LIGHTING="false"
 
 Import minib3d
 
@@ -29,11 +31,14 @@ Class Game Extends App
 	Field init_gl:Bool = False
 	
 	Field zombie_tex:TTexture
-	
+	Field terrain:TTerrain
+
+Const ZOMBIES = 30
+
 	Method OnCreate()
 	
 		SetRender()	
-		SetUpdateRate 30
+		SetUpdateRate 60
 		
 	End
 
@@ -45,15 +50,19 @@ Class Game Extends App
 			Return
 		Endif
 		
-		
 		init_gl = True
-
+		
+		Print DeviceWidth + "/" + DeviceHeight
 		
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,80)
 		cam.PositionEntity 0,4,-10
+		cam.CameraViewport(0,0,DeviceWidth,DeviceHeight)'TODO
+		cam.CameraFogColor(64,64,96)
+		cam.CameraFogRange(100,200)
+		cam.CameraFogMode(1)
 		
-		
+		AmbientLight( 32,32,65)
 		
 		zombie[0]=LoadAnimMesh("zombie_b3d_base64.txt")
 		TAnimation.NormaliseWeights(zombie[0])
@@ -61,22 +70,23 @@ Class Game Extends App
 		
 		ScaleEntity zombie[0],0.4,0.4,0.4
 		Local xx:Int=1, zx:Int=0
-		For Local zz:Int = 1 To 3
+		For Local zz:Int = 1 To ZOMBIES
 
 			zombie[zz] = TMesh(zombie[0].CopyEntity())
 			zombie[zz].SetAnimTime(zz*10)
-			zombie[zz].PositionEntity(xx*2,0,zx*2)
+			zombie[zz].PositionEntity(xx*3,0,zx*3)
 			xx = xx+1
-			If xx > 9 Then xx=0; zx +=2
+			If xx > 30 Then xx=0; zx +=3
 		Next
 		
-	
 		anim_time=0
 		
-		light=CreateLight(1)
+		light=CreateLight(3)
 		light.PositionEntity 0,3,-3
-		
-		cube=CreateCube()
+		light.LightRange(5)
+		light.RotateEntity(45,0,0)
+
+		cube=CreateSphere(16)
 		cube.ScaleEntity(0.5,0.5,0.5)
 		cube.name = "cube"
 		PositionEntity cube,-2,2,2
@@ -88,8 +98,8 @@ Class Game Extends App
 		txt = TText.CreateText2D()
 		'txt.NoSmooth()
 		
-		ground = CreateGrid(10,10)
-		ground.ScaleEntity(20,1.0,20)
+		ground = CreateGrid(100,100)
+		ground.ScaleEntity(1,1.0,1)
 		
 		old_ms=Millisecs()
 		
@@ -135,25 +145,29 @@ Class Game Extends App
 			touchBegin = 0
 		Endif
 		
-		TurnEntity cube,turnzx*2,0,0
+		TurnEntity cam,turnzx*2,0,0
 		MoveEntity cube,(lr)*0.2,0,ud*0.1'camup,0,camin
-		
+		'light.PositionEntity 0,3,-3
 		cam.MoveEntity camup,0,camin
-		cam.TurnEntity cu,cr,0
-
-		For Local zz:Int=0 To 3
+		cam.TurnEntity 0,cr,0
+		light.PositionEntity cube.EntityX(1),3,cube.EntityZ(1)
+		
+		light.TurnEntity cu,0,0
+	
+		For Local zz:Int=0 To ZOMBIES
 			zombie[zz].AlignToVector(cube.EntityX(1) - zombie[zz].EntityX(1), 0,cube.EntityZ(1) - zombie[zz].EntityZ(1), 3,0.10)
 		Next	
-	
-		
+
 		If Not zombie[0].Animating()
 			Local speed# = 1.0
-			For Local zz:Int=0 To 3
+			For Local zz:Int=0 To ZOMBIES
 				zombie[zz].Animate(1,speed)
-				speed -= 0.25
+				speed = 0.5
 			Next
+			
+	
+
 		Endif
-		
 		
 		If KeyDown(187)
 			anim_time += 1
@@ -161,12 +175,8 @@ Class Game Extends App
 		If KeyDown(189)
 			anim_time -= 1
 		End
-
-
-		txt.SetText(fps+" fps ~nhow are you")
-		txt.HideEntity()
-		txt.Draw(0,0)
 		
+
 		' calculate fps
 		If Millisecs()-old_ms >= 1000
 			old_ms=Millisecs()
@@ -174,12 +184,28 @@ Class Game Extends App
 			renders=0
 		Endif
 		
+		Local time:= Millisecs()
+		
+		
 		UpdateWorld()
+		
+		time = Millisecs - time
+		
+		
+		txt.SetText(fps+" fps ~nhow are you~nupdateworld: "+time+"~nrenderworld: " + rendertime)
+		txt.HideEntity()
+		txt.Draw(0,0)
 	End
+	
+	Field rendertime:Int 
 	
 	Method OnRender()
 
+		Local t = Millisecs
+		
 		RenderWorld()
+		
+		rendertime = Millisecs - t
 		renders=renders+1
 					
 	End
