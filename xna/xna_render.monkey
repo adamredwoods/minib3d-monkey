@@ -19,6 +19,8 @@ Hardare caps		-	http://msdn.microsoft.com/en-us/library/ff604995.aspx
 vbos - xna must use vbo, as data is loaded in via byte buffer (yes, in xna)
 lights - no point or spotlight or multiple light without HLSL
 
+-- make sure to clear states before returning to mojo
+
 #end 
 
 
@@ -207,14 +209,16 @@ Public
 		
 		Next ' effect passes
 			
-		temp_list = Null	
+		temp_list = Null
+		
+		'' clear some states as we return to mojo, or else we'll get the clamp error
+		_xna.ClearStates()
+		
 	End
 
 	Method Finish:Void()
 	
-		'' clear some states as we return to mojo
-		_xna.ClearStates()
-		
+
 	End
 	
 	Method EnableStates:Void()
@@ -413,7 +417,7 @@ Private
 
 		' update surf vbo if necessary
 		If vbo
-			
+					
 			' update vbo
 			If surf.reset_vbo<>0
 				UpdateVBO(surf)
@@ -425,7 +429,7 @@ Private
 		Endif
 		
 		If mesh.anim
-	
+		
 			' get anim_surf
 			Local anim_surf2:= mesh.anim_surf[surf.surf_id] 
 			
@@ -521,17 +525,19 @@ Public
 		_depthStencilNoDepth	= XNADepthStencilState.Create ''is same as "none"
 		_depthStencilNoDepth.DepthBufferEnable = False
 		_depthStencilNoDepth.DepthBufferWriteEnable = False
-		
-		_blendStates 		= [XNABlendState.AlphaBlend, XNABlendState.AlphaBlend, XNABlendState.Premultiplied, XNABlendState.Additive, XNABlendState.Opaque]
+
+		_blendStates =[XNABlendState.Premultiplied, XNABlendState.Premultiplied, XNABlendState.AlphaBlend, XNABlendState.Additive, XNABlendState.Opaque]
 		_st_uvNormal 		= UVSamplerState.Create( TextureFilter_Point )
 		_st_uvSmooth 		= UVSamplerState.Create( TextureFilter_LinearMipPoint  )
 
 	End
 
+	Field _cam:TCamera
+	
 	Method Reset()
 
 		ClearStates()
-		_device.DepthStencilState = _depthStencilDefault	
+			
 		_lastEffect = _basicEffect
 		_basicEffect.Reset()
 		tex_count=0
@@ -593,6 +599,7 @@ Public
 	
 	Method SetStates(ent:TEntity, surf:TSurface, cam:TCamera )
 		
+		_cam = cam
 		''for some reason, we get null textures coming through...
 
 		Local filter:UVSamplerState, state:XNASamplerState
@@ -687,8 +694,14 @@ Public
 	Method ClearStates()
 		
 		 _device.SamplerState(0, _st_uvNormal._cU_cV )
-		_lastSamplerState = Null
+		_lastSamplerState = _st_uvNormal._cU_cV
+		_device.DepthStencilState = _depthStencilDefault
+		_device.BlendState = _blendStates[0]
 		
+		If _cam And _basicEffect
+			_basicEffect.Effect().FogEnabled = _cam.fog_mode > 0
+		End 
+			
 	End
 	
 	
@@ -757,9 +770,6 @@ Public
 
 		' preserve texture states
 		If cur_tex = _lastTexture
-			'_lastTexture = cur_tex
-		'Else
-			''same texture, return
 			Return		
 		Endif
 		
@@ -799,7 +809,7 @@ Public
 		
 		If cam.draw2D
 			
-			'e= _draw2DEffect   '''********* DOES NOT WORK! (No textures on TSprite) Cannot extend BasicEffect? ************
+			'e= _draw2DEffect   '''********* DOES NOT WORK! Cam problem ************
 
 		Else
 		
@@ -816,13 +826,14 @@ Public
 
 			CurrentEffect(e)
 			TRender.render.UpdateCamera(cam)
-			e.Update(cam,ent,CurrentEffect() )
+			e.Update(cam,ent,CurrentEffect )
 			
 		Endif
 		
 		If cam.draw2D
 			If BasicEffect(e) Then BasicEffect(e).NoLighting
 		Endif
+		
 	End
 	
 	
@@ -901,7 +912,7 @@ Class UVSamplerState
 	Field _cU_cV:XNASamplerState
 	Field _wU_cV:XNASamplerState
 	Field _cU_wV:XNASamplerState
-	Field _wU_wV:XNASamplerState	
+	Field _wU_wV:XNASamplerState
 	
 	Function Create:UVSamplerState(filter:Int)
 	
@@ -1054,6 +1065,7 @@ Class BasicEffect Extends EffectContainer
 		effect.LightingEnabled = True
 		effect.TextureEnabled = False 
 		_lastTexture = Null
+		
 	End
 	
 	Method Bind(ent:TEntity, surf:TSurface, _red#,_green#,_blue#, _alpha#, _shine#, _fx%, tex_count, textures:TTexture[]  )
@@ -1065,7 +1077,7 @@ Class BasicEffect Extends EffectContainer
 			effect.AmbientLightColor(1,1,1)
 			effect.LightingEnabled = False
 			effect.SpecularPower(0)
-			'effect.Alpha = _alpha
+			effect.Alpha = 1.0
 		Else 
 			effect.AmbientLightColor(TLight.ambient_red, TLight.ambient_green, TLight.ambient_blue)
 			effect.LightingEnabled = True
@@ -1090,8 +1102,7 @@ Class BasicEffect Extends EffectContainer
 			effect.FogEnabled = False 
 		End 
 		
-		' turn off textures if no textures
-		effect.TextureEnabled = False
+		
 		
 		If tex_count > 0
 	
@@ -1108,7 +1119,12 @@ Class BasicEffect Extends EffectContainer
 				Endif
 				
 			Endif
-
+		Else
+			
+			' turn off textures if no textures
+			effect.TextureEnabled = False
+			'_lastTexture = Null
+			
 		Endif
 		
 	End
