@@ -104,7 +104,7 @@ Class TModelObj
 			
 			If Line.Length() <0 Then Continue
 				
-			If Line[0] = "#" Then
+			If Line[0..1] = "#" Then
 			
 				If DEBUG Then Dprint(".Obj Comment : " + Line) 
 				
@@ -326,8 +326,6 @@ Class TModelObj
 			Dprint "--------------------------"
 		Endif
 	
-		
-
 		'FlipMesh Mesh
 		
 		stream.data = ""
@@ -337,7 +335,8 @@ Class TModelObj
 			surfx.CropSurfaceBuffers()
 		Next
 		
-		mesh.UpdateNormals()
+		'' this destroys normal sometimes
+		''mesh.UpdateNormals()
 		
 		Return mesh
 		
@@ -532,6 +531,8 @@ Class TObjNormal
 	
 	Method GetValues(data:String) 
 			
+		data = data.Replace(",", ".")
+		
 		Local f:Float[3]
 		For Local i:Int = 0 To 2
 			'Print "Before : " + Data
@@ -541,12 +542,17 @@ Class TObjNormal
 			Else
 				f[i] = Float(data) 
 			Endif
+			
+			
+			
 			data = data[fl+1..]
 			'Print "After : " + Data
 		Next
-		nx = f[0]
-		ny = f[1]
-		nz = f[2]
+		 
+
+		nx = (f[0])
+		ny = (f[1])
+		nz = (f[2])
 		'Dprint ("X:"+nx+" Y:"+ny + " Z:"+nz)
 		
 	End Method
@@ -557,6 +563,8 @@ Class TObjTexCoord
 	
 	Method GetValues(data:String)
 	
+		data = data.Replace(",", ".")
+		
 		'Dprint "OrigUV : " + data
 		Local f:Float[2]
 		For Local i:Int = 0 To 1
@@ -570,8 +578,9 @@ Class TObjTexCoord
 			data = data[fl+1..]
 			'Print "After : " + data
 		Next
-		u = f[0]
-		v = f[1]
+
+		u = (f[0])
+		v = (f[1])
 		
 		'Dprint ("X:"+u+" Y:"+v)
 	End Method	
@@ -582,23 +591,26 @@ Class TObjVertex
 	Field x# , y# , z#
 	
 	Method GetValues(data:String)
-	 
-			Local f:Float[3]
-			For Local i:Int = 0 To 2
-				'Print "Before : " + Data
-				Local fl:Int = data.Find(" ")
-				If i < 2 Then
-					f[i] = Float(data[..fl])
-				Else
-					f[i] = Float(data) 
-				Endif
-				data = data[fl+1..]
-				'Print "After : " + data
-			Next
-			x = f[0]
-			y = f[1]
-			z = f[2]
-			'Dprint ("X:"+x+" Y:"+y + " Z:"+z)
+	 	data = data.Replace(",", ".")
+	 	
+		Local f:Float[3]
+		For Local i:Int = 0 To 2
+			'Print "Before : " + Data
+			Local fl:Int = data.Find(" ")
+			If i < 2 Then
+				f[i] = Float(data[..fl])
+			Else
+				f[i] = Float(data) 
+			Endif
+			data = data[fl+1..]
+			'Print "After : " + data
+		Next
+		
+		
+		x = (f[0])
+		y = (f[1])
+		z = (f[2])
+		'Dprint ("X:"+x+" Y:"+y + " Z:"+z)
 					
 	End Method	
 End 
