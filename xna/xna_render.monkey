@@ -23,9 +23,10 @@ lights - no point or spotlight or multiple light without HLSL
 
 #end 
 
-
 #XNA_PERPIXEL_LIGHNING=True
+#XNA_MIPMAP_FILTER=1' 0 for point(deafult) / 1 for linear
 
+Const XNA_MIPMAP_BIAS# = 0
 
 Interface IRender
 	Method GetVersion:Float() 
@@ -527,8 +528,14 @@ Public
 		_depthStencilNoDepth.DepthBufferWriteEnable = False
 
 		_blendStates =[XNABlendState.Premultiplied, XNABlendState.Premultiplied, XNABlendState.AlphaBlend, XNABlendState.Additive, XNABlendState.Opaque]
-		_st_uvNormal 		= UVSamplerState.Create( TextureFilter_Point )
-		_st_uvSmooth 		= UVSamplerState.Create( TextureFilter_LinearMipPoint  )
+		
+		_st_uvNormal = UVSamplerState.Create(TextureFilter_Point, XNA_MIPMAP_BIAS)
+		
+		#if XNA_MIPMAP_FILTER=1 then
+			_st_uvSmooth = UVSamplerState.Create(TextureFilter_Linear, XNA_MIPMAP_BIAS)
+		#else
+			_st_uvSmooth = UVSamplerState.Create(TextureFilter_LinearMipPoint, XNA_MIPMAP_BIAS)
+		#End 
 
 	End
 
@@ -914,14 +921,21 @@ Class UVSamplerState
 	Field _cU_wV:XNASamplerState
 	Field _wU_wV:XNASamplerState
 	
-	Function Create:UVSamplerState(filter:Int)
+	Function Create:UVSamplerState(filter:Int, bias:Float)
 	
 		Local s:UVSamplerState = New UVSamplerState
 		
-		s._cU_cV 		= XNASamplerState.Create( filter, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
-		s._wU_cV 		= XNASamplerState.Create( filter, TextureAddressMode_Wrap , TextureAddressMode_Clamp)
-		s._cU_wV 		= XNASamplerState.Create( filter, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
-		s._wU_wV 		= XNASamplerState.Create( filter, TextureAddressMode_Wrap, TextureAddressMode_Wrap)
+		s._cU_cV = XNASamplerState.Create(filter, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
+		s._cU_cV.MipMapLevelOfDetailBias = bias
+		
+		s._wU_cV = XNASamplerState.Create(filter, TextureAddressMode_Wrap, TextureAddressMode_Clamp)
+		s._wU_cV.MipMapLevelOfDetailBias = bias
+		
+		s._cU_wV = XNASamplerState.Create(filter, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
+		s._cU_wV.MipMapLevelOfDetailBias = bias
+		
+		s._wU_wV = XNASamplerState.Create(filter, TextureAddressMode_Wrap, TextureAddressMode_Wrap)
+		s._wU_wV.MipMapLevelOfDetailBias = bias
 		
 		Return s
 		

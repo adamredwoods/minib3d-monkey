@@ -509,9 +509,9 @@ public class XNASamplerState
         return (int)_state.MaxMipLevel;
     }
 
-	public int GetMipMapLevelOfDetailBias()
+	public float GetMipMapLevelOfDetailBias()
     {
-        return (int)_state.MipMapLevelOfDetailBias;
+        return _state.MipMapLevelOfDetailBias;
     }
 
 	public void SetAddressU(int value)
@@ -544,7 +544,7 @@ public class XNASamplerState
         _state.MaxMipLevel = value;
     }
 
-    public void SetMipMapLevelOfDetailBias(int value)
+    public void SetMipMapLevelOfDetailBias(float value)
     {
         _state.MipMapLevelOfDetailBias = value;
     }

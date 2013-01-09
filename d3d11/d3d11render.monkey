@@ -7,6 +7,9 @@
 Import minib3d
 Import minib3d.d3d11
 
+
+Const D3D11_MIPMAP_BIAS# = -0.5
+
 Function SetRender(flags:Int=0)
 	TRender.render = New D3D11Graphics
 	TRender.render.GraphicsInit(flags)
@@ -127,10 +130,10 @@ Public
 			D3D11.CreateD3D11BlendState(0,D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD)]
 		
 		'' point filter uv sampler states
-		_st_uvNormal = new UVSamplerState( _device, D3D11_FILTER_MIN_MAG_MIP_POINT )
+		_st_uvNormal = New UVSamplerState( D3D11_FILTER_MIN_MAG_MIP_POINT,D3D11_MIPMAP_BIAS )
 		
 		'' linear filter uv sampler states		
-		_st_uvSmooth = New UVSamplerState( _device, D3D11_FILTER_MIN_MAG_MIP_LINEAR )
+		_st_uvSmooth = New UVSamplerState( D3D11_FILTER_MIN_MAG_MIP_LINEAR,D3D11_MIPMAP_BIAS )
 		
 		 
 		'' prevent shader EXECUTION WARNING #352: DEVICE_DRAW_SAMPLER_NOT_SET
@@ -791,12 +794,12 @@ Class UVSamplerState
 	Field _cU_wV:D3D11SamplerState
 	Field _wU_wV:D3D11SamplerState	
 
-	Method New(device:D3D11Device,filter:Int)
+	Method New(filter:Int,bias#)
 	
-		_cU_cV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_CLAMP ,D3D11_TEXTURE_ADDRESS_CLAMP)
-		_wU_wV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_WRAP ,D3D11_TEXTURE_ADDRESS_WRAP)
-		_wU_cV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_WRAP ,D3D11_TEXTURE_ADDRESS_CLAMP)
-		_cU_wV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_CLAMP ,D3D11_TEXTURE_ADDRESS_WRAP)
+		_cU_cV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_CLAMP ,D3D11_TEXTURE_ADDRESS_CLAMP,D3D11_TEXTURE_ADDRESS_CLAMP,bias)
+		_wU_wV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_WRAP ,D3D11_TEXTURE_ADDRESS_WRAP,D3D11_TEXTURE_ADDRESS_CLAMP,bias)
+		_wU_cV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_WRAP ,D3D11_TEXTURE_ADDRESS_CLAMP,D3D11_TEXTURE_ADDRESS_CLAMP,bias)
+		_cU_wV = D3D11.CreateD3D11SamplerState( filter, D3D11_TEXTURE_ADDRESS_CLAMP ,D3D11_TEXTURE_ADDRESS_WRAP,D3D11_TEXTURE_ADDRESS_CLAMP,bias)
 		
 	End
 	

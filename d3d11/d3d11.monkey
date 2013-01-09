@@ -222,7 +222,7 @@ Class D3D11
 		
 	End 
 	
-	Function CreateD3D11SamplerState:D3D11SamplerState(filter, u,v, w = D3D11_TEXTURE_ADDRESS_CLAMP)
+	Function CreateD3D11SamplerState:D3D11SamplerState(filter, u,v, w , bias#)
 		
 		local desc:= new D3D11_SAMPLER_DESC 
 		desc.AddressU = u
@@ -230,6 +230,7 @@ Class D3D11
 		desc.AddressW = D3D11_TEXTURE_ADDRESS_CLAMP        
 		desc.Filter = filter 
 		desc.ComparisonFunc = D3D11_COMPARISON_NEVER
+		desc.MipLODBias = bias
 		
 		If Device.GetFeatureLevel() > D3D_FEATURE_LEVEL_9_1 Then 
 			desc.MaxAnisotropy = 16
