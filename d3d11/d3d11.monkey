@@ -8,20 +8,22 @@
 
 Notes:
 
-	Installation:
-	--------------------------------------------------------
-	
-	- copy D3Dcompiler_46.dll to '..\Release\MonkeyGame\AppX'
-	- make sure that #MINIB3D_D3D11_RELEASE is set to "false" during development
-	
 	Limmitations:
 	--------------------------------------------------------
 	
 	- Needs at least feature level 9.3 hardware capabilities for the implemented default shaders.
 	- Runtime shader compilation is not supported for deployment.(handled internally)
 	- No write access to 'monkey://data/' = manual shader copy before redistribution 
+	
+	
+	Using custom shaders:
+	--------------------------------------------------------
+	
+	- copy D3Dcompiler_46.dll to '..\Release\MonkeyGame\AppX'
+	- make sure that #MINIB3D_D3D11_RELEASE is set to "false" during development
 
-	Redistributing application:
+
+	Redistributing applications with custom shaders:
 	--------------------------------------------------------
 	
 	See build output for app specific 'monkey://internal/' path!
@@ -35,7 +37,7 @@ Notes:
 #end 
 
 #MINIB3D_DRIVER="d3d11"
-#MINIB3D_D3D11_RELEASE="false" 
+#MINIB3D_D3D11_RELEASE="true" ' set to false for runtime shader compilation during development
 #MINIB3D_D3D11_PER_PIXEL_LIGHTING="false"
 
 #Print "miniB3D D3D11"
@@ -63,9 +65,9 @@ Import minib3d.d3d11.d3d11texture
 Import minib3d.d3d11.d3d11render
 Import minib3d.d3d11.d3d11mesh
 Import minib3d.d3d11.d3d11shader
-Import minib3d.d3d11.d3d11shader_default
 Import minib3d.d3d11.d3d11shader_reflection
-
+Import minib3d.d3d11.d3d11shader_default
+Import minib3d.d3d11.d3d11shader_fast
 
 Class D3D11
 

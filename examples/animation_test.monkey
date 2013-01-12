@@ -1,6 +1,3 @@
-#MINIB3D_D3D11_RELEASE="false" 
-#MINIB3D_D3D11_PER_PIXEL_LIGHTING="false"
-
 Import minib3d
 
 ''note: if your models look weird, config.h depth buffer bits=32
@@ -31,8 +28,7 @@ Class Game Extends App
 	Field init_gl:Bool = False
 	
 	Field zombie_tex:TTexture
-	Field terrain:TTerrain
-
+	
 Const ZOMBIES = 30
 
 	Method OnCreate()
@@ -54,16 +50,21 @@ Const ZOMBIES = 30
 		
 		Print DeviceWidth + "/" + DeviceHeight
 		
+
+		
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,80)
 		cam.PositionEntity 0,4,-10
-		cam.CameraViewport(0,0,DeviceWidth,DeviceHeight)'TODO
+		cam.RotateEntity(15,0,0)
+		cam.CameraRange(0.001,200)
+		cam.CameraZoom(0.75)
 		cam.CameraFogColor(64,64,96)
 		cam.CameraFogRange(100,200)
 		cam.CameraFogMode(1)
 		
 		AmbientLight( 32,32,65)
 		
+
 		zombie[0]=LoadAnimMesh("zombie_b3d_base64.txt")
 		TAnimation.NormaliseWeights(zombie[0])
 		TAnimation.BoneToVertexAnim(zombie[0])
@@ -184,30 +185,21 @@ Const ZOMBIES = 30
 			renders=0
 		Endif
 		
-		Local time:= Millisecs()
-		
-		
 		UpdateWorld()
-		
-		time = Millisecs - time
-		
-		
-		txt.SetText(fps+" fps ~nhow are you~nupdateworld: "+time+"~nrenderworld: " + rendertime)
+
+		txt.SetText(fps+" fps ~nhow are you")
 		txt.HideEntity()
 		txt.Draw(0,0)
 	End
 	
-	Field rendertime:Int 
-	
 	Method OnRender()
-
-		Local t = Millisecs
+	
+		If ( Not init_gl) Return
 		
 		RenderWorld()
-		
-		rendertime = Millisecs - t
+	
 		renders=renders+1
-					
 	End
 
 End
+

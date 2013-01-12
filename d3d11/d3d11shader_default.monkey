@@ -1,4 +1,3 @@
-
 ''--------------------------------------------------------
 '' Windows 8 MiniB3D Driver
 '' (C) 2012 Sascha Schmidt
@@ -6,8 +5,33 @@
 
 Import minib3d
 
-Import "shader\defaultshader.txt"
-Import "shader\perpixel.txt"
+#If MINIB3D_D3D11_RELEASE="true" 
+	#If MINIB3D_D3D11_PER_PIXEL_LIGHTING="false"
+	
+		Import "shader\compiled\defaultshader.ps.bin"
+		Import "shader\compiled\defaultshader.vs.bin"
+		Import "shader\compiled\defaultshader.ps.refl.bin"
+		Import "shader\compiled\defaultshader.vs.refl.bin"
+	
+	#Else
+	
+		Import "shader\compiled\perpixel.ps.bin"
+		Import "shader\compiled\perpixel.vs.bin"
+		Import "shader\compiled\perpixel.ps.refl.bin"
+		Import "shader\compiled\perpixel.vs.refl.bin"
+	
+	#End 
+#Else
+	#If MINIB3D_D3D11_PER_PIXEL_LIGHTING="false"
+	
+		Import "shader\defaultshader.txt"
+	
+	#Else
+	
+		Import "shader\perpixel.txt"
+	
+	#End 
+#End 
 
 Class D3D11DefaultShader Extends D3D11Shader Implements  IShaderColor, IShaderTexture, IShaderLights, IShaderMatrices, IShaderFog
 

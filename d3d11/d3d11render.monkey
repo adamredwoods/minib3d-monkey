@@ -47,6 +47,8 @@ Private
 	Field _shaderTexture:IShaderTexture
 	Field _shaderLights:IShaderLights
 	Field _shaderMatrices:IShaderMatrices
+	Field _fastBrightShader:D3D11FastShader
+	
 	
 	'' last combined brush values
 	Field _tex_count%
@@ -104,7 +106,8 @@ Public
 				TShader.LoadDefaultShader(New D3D11DefaultShader())	
 		End 
 		
-
+		_fastBrightShader = New D3D11FastShader
+		
 		'' states
 		_rasterizerStates = [ 
 			D3D11.CreateD3D11RasterizerState(D3D11_CULL_NONE, D3D11_FILL_SOLID),
@@ -147,11 +150,18 @@ Public
 		_lights.Clear()
 		_initializedShader.Clear()
 		UpdateShader(Null)'' force per frame constants update
+		TShader.DefaultShader()
 	End 
 	
 	Method Finish:Void() 
 	End 
 	
+	Method SetDrawShader:Void()
+		
+		TShader.SetShader(_fastBrightShader)
+
+	End
+
 	Method Render:Void(ent:TEntity, cam:TCamera = Null) 	
 
 		Local mesh:TMesh = TMesh(ent)
@@ -216,7 +226,7 @@ Public
 
 				' Update vertex & index buffers
 				UpdateBuffers(surf, mesh)
-				
+
 				' skip per material constants update if nothing changed
 				CombineBrushes(ent.brush, surf.brush)
 				If Not CompareBrushes() Then 
@@ -228,8 +238,10 @@ Public
 					_shine2 = _shine
 					_blend2 = _blend
 					_fx2    = _fx
-					_textures2 = _textures
 					_tex_count2 = _tex_count
+					For local i= 0 Until _tex_count
+						_textures2[i] = _textures[i]
+					End 
 					
 					''batch optimizations (sprites/meshes)
 					Local skip_sprite_state? = False
@@ -245,9 +257,12 @@ Public
 						SetPerObjConstants()
 						
 					End 
-
+					
 					SetTextures(surf, ent, skip_sprite_state)
+					
 				End 
+				
+				
 				
 				shader.Update()
 				shader.Apply()
@@ -709,7 +724,8 @@ Private
 					_initializedShader.Set(shader.shader_id,shader)
 					
 					SetPerFrameConstants()
-
+					SetPerObjConstants()
+					
 				End 
 				
 			End 

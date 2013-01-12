@@ -30,7 +30,7 @@ Import mojo
 ''to choose opengles20, must specify it
 #If MINIB3D_DRIVER=""
 	#if TARGET="glfw" Or TARGET="ios" Or TARGET="android" Or TARGET="mingw"
-		Import minib3d.opengl.opengles10
+		Import minib3d.opengl.opengles11
 	#Elseif TARGET="html5"
 		Import minib3d.opengl.opengles20
 	#Elseif TARGET="xna"

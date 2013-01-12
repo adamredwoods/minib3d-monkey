@@ -473,7 +473,7 @@ Class TRender
 	End
 	
 	
-	Function SetDrawShader:Void()
+	Method SetDrawShader:Void()
 		
 		'' set a fast, bright shader, used with drawing 2D, text
 		

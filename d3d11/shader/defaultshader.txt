@@ -1,4 +1,10 @@
 
+//--------------------------------------------------------
+// Windows 8 MiniB3D Driver
+// (C) 2013 Sascha Schmidt
+//--------------------------------------------------------
+
+
 Texture2D shaderTexture[4]: register( t0 );
 SamplerState samplerType[4]: register( s0 );
 

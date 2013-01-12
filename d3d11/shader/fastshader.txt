@@ -1,0 +1,56 @@
+
+//--------------------------------------------------------
+// Windows 8 MiniB3D Driver
+// (C) 2013 Sascha Schmidt
+//--------------------------------------------------------
+
+
+Texture2D shaderTexture: register( t0 );
+SamplerState samplerType: register( s0 );
+
+cbuffer cbPerObject : register( b0 )
+{
+	float4x4 world;
+};
+
+cbuffer cbPerCamera : register( b1 )
+{
+	float4x4 projection;		
+	float4x4 view;					
+};
+
+struct VertexShaderInput{
+
+	float4 Position 	: POSITION;
+	float3 Normal 		: NORMAL;
+	float4 color 		: COLOR0;
+	float2 tex0 		: TEXCOORD0;
+	float2 tex1 		: TEXCOORD1;
+};
+
+struct VertexShaderOutput{
+
+	float4 Position 	 : SV_POSITION;
+	float4 Color 		 : COLOR0;
+	float2 Tex0 		 : TEXCOORD0;
+	float2 Tex1 		 : TEXCOORD1;
+};
+
+VertexShaderOutput vs_main( VertexShaderInput input )
+{
+	VertexShaderOutput output = (VertexShaderOutput)0;
+	float4 worldPosition = mul(input.Position, world);
+	float4 viewPosition = mul(worldPosition, view);
+	output.Position=mul( viewPosition, projection);
+	output.Tex0 = input.tex0;
+	output.Tex1 = input.tex1;
+	output.Color=input.color;
+	return output;
+}
+
+float4 ps_main( VertexShaderOutput input ) : SV_TARGET
+{
+	float4 texColor =shaderTexture.Sample(samplerType, input.Tex0);
+	return input.Color * texColor;;
+}
+

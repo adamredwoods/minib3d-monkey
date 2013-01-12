@@ -2,6 +2,7 @@
 
 Import mojo
 Import xna 
+
 Import xna_pixmap
 Import minib3d.trender
 Import minib3d
@@ -23,44 +24,10 @@ lights - no point or spotlight or multiple light without HLSL
 
 #end 
 
+
 #XNA_PERPIXEL_LIGHNING=True
 #XNA_MIPMAP_FILTER=1' 0 for point(deafult) / 1 for linear
-
-Const XNA_MIPMAP_BIAS# = 0
-
-Interface IRender
-	Method GetVersion:Float() 
-	Method Reset:Void()  
-	Method Finish:Void()  
-	Method GraphicsInit:Int(flags:Int=0)  
-	Method Render:Void(ent:TEntity, cam:TCamera = Null)  
-	Method ClearErrors:Int() 
-	Method BindTexture:TTexture(tex:TTexture,flags:Int) 
-	Method DeleteTexture(glid:Int[]) 
-	Method UpdateLight(cam:TCamera, light:TLight) 
-	Method DisableLight(light:TLight) 
-	Method UpdateCamera(cam:TCamera) 
-End
-
-Interface ITextureDriver
-	Method Load(file?)
-	Method Create(width, height, flags)
-	Method Create(buffer:DataBuffer, flags)
-	Method Free()
-	Method Width()
-	Method Height()
-End
-
-Interface ISurfaceDriver			
-End
-
-
-Class XNATextureDriver
-End
-
-Class XNASurfaceDriver
-End
-
+#XNA_MIPMAP_QUALITY=2 ' sets bias to 0=0.5, 1=0, 2=-0.5
 
 Function SetRender(flags:Int=0)
 	
@@ -68,8 +35,6 @@ Function SetRender(flags:Int=0)
 	TRender.render.GraphicsInit(flags)
 	
 End
-
-
 
 Class XNARender Extends TRender
 	
@@ -98,6 +63,11 @@ Public
 		_xna		= New XNAController(_device)
 	End
 	
+	Method GetTexture:XNATexture(tex:TTexture)
+		Return _textures.Get( tex.gltex[0] )
+	End
+	
+
 	Method ClearErrors:Int()
 	End
 	
@@ -218,8 +188,6 @@ Public
 	End
 
 	Method Finish:Void()
-	
-
 	End
 	
 	Method EnableStates:Void()
@@ -395,7 +363,37 @@ Public
 	Method BackBufferToTex(mipmap_no=0,frame=0)
 	End 
 	
-	'################################################################################
+	Field _spriteBatch:XNASpriteBatch
+	Field _xnaTex:XNATexture
+	Field _lastTex:TTexture 
+	
+	Method Begin2D()
+		if Not _spriteBatch Then 
+			_spriteBatch = New XNASpriteBatch	
+		End 
+		_spriteBatch.BeginRender()
+	End
+	
+	Method DrawTexture(tex:TTexture,x#,y#, _r#,_g#,_b#,_a#, _angle#, _hx#, _hy#, _sx#,_sy#)
+	
+		if tex <> _lastTex Then 
+		
+			_lastTex = tex
+			_xnaTex = GetTexture(tex)
+			
+			_spriteBatch.EndRender()
+			_spriteBatch.BeginRender()
+		
+		EndIf
+			
+		 _spriteBatch.Draw(_xnaTex,x,y, _r,_g,_b,_a, _angle, _hx, _hy, _sx,_sy)
+		 
+	End
+	
+	Method End2D()
+		_spriteBatch.EndRender()
+		Self.Reset()
+	End
 	
 Private 
 	
@@ -451,11 +449,6 @@ Private
 
 	
 End
-
-
-
-
-
 
 
 ' First of all for managing different XNAEffects
@@ -528,14 +521,25 @@ Public
 		_depthStencilNoDepth.DepthBufferWriteEnable = False
 
 		_blendStates =[XNABlendState.Premultiplied, XNABlendState.Premultiplied, XNABlendState.AlphaBlend, XNABlendState.Additive, XNABlendState.Opaque]
+
+		#if XNA_MIPMAP_QUALITY=0 then 
+			Local bias:Float = 0.5
+		#else if XNA_MIPMAP_QUALITY=1 then 
+			Local bias:Float = 0
+		#else if XNA_MIPMAP_QUALITY=2 then 
+			Local bias:Float = -0.5
+			Print bias
+		#End 
 		
-		_st_uvNormal = UVSamplerState.Create(TextureFilter_Point, XNA_MIPMAP_BIAS)
+		_st_uvNormal = UVSamplerState.Create(TextureFilter_Point, bias)
 		
 		#if XNA_MIPMAP_FILTER=1 then
-			_st_uvSmooth = UVSamplerState.Create(TextureFilter_Linear, XNA_MIPMAP_BIAS)
+			_st_uvSmooth = UVSamplerState.Create(TextureFilter_Linear, bias)
 		#else
-			_st_uvSmooth = UVSamplerState.Create(TextureFilter_LinearMipPoint, XNA_MIPMAP_BIAS)
+			_st_uvSmooth = UVSamplerState.Create(TextureFilter_LinearMipPoint, bias)
 		#End 
+		
+		
 
 	End
 
@@ -544,11 +548,14 @@ Public
 	Method Reset()
 
 		ClearStates()
-			
+		
+		_device.RasterizerState = XNARasterizerState.CullClockwise;
+        _device.DepthStencilState = XNADepthStencilState.None;
+
 		_lastEffect = _basicEffect
 		_basicEffect.Reset()
-		tex_count=0
 		_lastTexture = Null
+		tex_count=0
 	End
 	
 	Method SetLightEnable(id, enable?)
