@@ -1025,7 +1025,7 @@ Class OpenglES11 Extends TRender
 		''
 		'' --PIXMAP MUST BE POWER OF TWO
 		''
-		
+	
 		TRender.render.ClearErrors()	
 		
 		''retrieve bind flags from stack

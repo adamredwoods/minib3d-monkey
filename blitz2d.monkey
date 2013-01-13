@@ -2,63 +2,7 @@
 
 Import minib3d
 
-Class Blitz2D 
-
 Private 
-
-	Global _batch:BBSpriteBatch
-
-Public 
-
-	Function BeginRender(blend = 1)
-		if Not _batch Then 
-			_batch = New BBSpriteBatch
-		EndIf
-		_batch.BeginBatch(blend)
-	End 
-	
-	Function SetHandle:Void(x#,y#)
-		_batch.SetHandle(x,y)
-	End
-	
-	Function DrawTexture( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight)
-		_batch.Draw( texture,x,y,srcX,srcY,srcWidth,srcHeight)
-	End 
-	
-	Function DrawTextureRect( image:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight,rotation#,scaleX#,scaleY#)
-		_batch.Draw( texture,x,y,srcX,srcY,srcWidth,srcHeight, angle,sx, sy)
-	End 
-	
-	Function DrawTexture(tex:TTexture, x#, y#)
-		_batch.Draw(tex,x,y)
-	End
-	
-	Function DrawTexture(tex:TTexture, x#, y#, rotation#,scaleX#,scaleY#)
-		_batch.Draw(tex, x,y, scaleX, scaleY, rotation)
-	End 
-	
-	Function SetScale(sx#,sy#)
-		_batch.SetScale(sx,sy)
-	End 
-	
-	Function SetColor(r#,g#,b#)
-		_batch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
-	End 
-	
-	Function SetAlpha(a#)
-		_batch.SetAlpha(a)
-	End 
-	
-	Function SetRotation(angle#)
-		_batch.SetRotation((angle + 360 ) Mod 360)
-	End 
-	
-	Function EndRender()
-		_batch.EndBatch()
-	End
-	
-End 
-
 
 Class SpriteInfo
 	Field textrue:TTexture 
@@ -71,10 +15,12 @@ Class SpriteInfo
 	Field width, height
 End 
 
+Public 
+
 Class BBSpriteBatch
 	
 	Const MAX_BATCH_SIZE = 2048
-	Const MIN_BATCH_SIZE = 128
+	Const MIN_BATCH_SIZE = 16
 	
 	Field _spriteCnt:Int
 	Field _sprites:SpriteInfo[MAX_BATCH_SIZE]
@@ -102,6 +48,7 @@ Class BBSpriteBatch
 		_dummy = CreateSptite()
 		_mesh = CreateMesh(MAX_BATCH_SIZE)
 		_mesh.name ="blitz2d"
+		
 		' init sprite array
 		For Local i = 0 until MAX_BATCH_SIZE
 			_sprites[i] = new SpriteInfo 
@@ -114,12 +61,8 @@ Class BBSpriteBatch
 		
 	End
 	
-	Method BeginBatch:Void(blend = 1)
-	
-		if _begin Then 
-			Error "Cannot nest Begin calls"
-		Endif
-		
+	Method BeginRender:Void(blend = 1)
+
 		_dummy.brush.blend = blend
 		_mesh.brush.blend = blend
 		
@@ -131,15 +74,12 @@ Class BBSpriteBatch
 		_mesh.Update(TRender.camera2D ) 
 		
 		_begin = True 
+		_spriteCnt = 0
 		
 	End
 	
-	Method EndBatch:Void()
+	Method EndRender:Void()
 	
-		if Not _begin Then 
-			Error "Begin must be called before End"
-		EndIf
-		
 		 FlushBatch()
 		 
 		 TShader.DefaultShader()
@@ -148,6 +88,26 @@ Class BBSpriteBatch
 		 _begin = False 
 	End
 	
+	
+	Method RenderBatch(blend = 1)
+	
+		_dummy.brush.blend = blend
+		_mesh.brush.blend = blend
+		_mesh.Update(TRender.camera2D ) 
+		
+		TRender.render.Reset()
+		TRender.render.SetDrawShader()
+		TRender.render.UpdateCamera(TRender.render.camera2D)
+		TRender.alpha_pass = 1
+
+		TRender.camera2D.draw2D = 1
+		TRender.render.Render(_mesh,TRender.render.camera2D)
+	 
+		TShader.DefaultShader()
+		TRender.render.Reset()
+		 
+	End 
+
 	Method SetScale:Void(x#,y#)
 		_sx = x; _sy = y
 		UpdateTransform()
@@ -224,10 +184,6 @@ Class BBSpriteBatch
 	End
 	
 	Method Draw:Void(texture:TTexture,x#, y#,width#,height#, ix#,iy#,jx#,jy#, u0# , v0#, u1# , v1# )
-
-		if Not _begin Then 
-			Error "Begin must be called before End"
-		EndIf
 
 		'' check if spritearray is big enough
 		UpdateSpriteArray()
@@ -362,23 +318,7 @@ Private
 			
 				if i > batchStart Then 
 				
-					If count < MIN_BATCH_SIZE Then 
-						For Local j = batchStart Until i
-							Local sprite:= _sprites[j]
-							
-							'' uv scaling makes no sense, since not supported in xna.
-							'' so batch... (maybe internal xna.SpriteBatch if TARGET="xna" is better)
-							If sprite.u0 <> 0 Or sprite.v0 <> 0 Or sprite.u1 <> 1 Or sprite.u1 <> 1 Then 
-								RenderBatch(batchTexture, batchStart, i )
-								Exit 
-							else 
-								RenderDummy(batchTexture, j )
-							End 
-							
-						End 
-					Else
-						RenderBatch(batchTexture, batchStart, i )
-					Endif
+					Render( batchTexture, batchStart, i, count )
 					
 				End 
 				
@@ -387,18 +327,33 @@ Private
 			End 
 			
 		Next
-	
-		if count < MIN_BATCH_SIZE Then 
-			For Local j = batchStart Until _spriteCnt
-				RenderDummy(batchTexture , j )
-			End 
-		Else
-			RenderBatch(batchTexture, batchStart, _spriteCnt )
-		Endif
-		
-		_spriteCnt = 0
+
+		Render( batchTexture, batchStart, _spriteCnt, count )
+
 	End
 
+	Method Render( tex:TTexture, index, _end , count)
+
+		If count < MIN_BATCH_SIZE Then 
+			
+			For Local j = index Until _end
+				Local sprite:= _sprites[j]
+				
+				'' uv scaling makes no sense, since not supported in xna.
+				'' so batch or maybe internal xna.SpriteBatch if TARGET="xna" is better.
+				If sprite.u0 <> 0 Or sprite.v0 <> 0 Or sprite.u1 <> 1 Or sprite.u1 <> 1 Then 
+					RenderBatch(tex, j, _end )
+					Exit 
+				else 
+					RenderDummy(tex, j )
+				End 
+				
+			End 
+		Else
+			RenderBatch(tex, index, _end )
+		Endif
+	End 
+	
 	Method RenderDummy:Void(tex:TTexture, index)
 	
 		Local sprite:= _sprites[index]
@@ -479,3 +434,103 @@ Private
 	End 
 	
 End
+
+
+Global Batch:BBSpriteBatch
+
+Function B2DBeginRender(blend = 1)
+	if Not Batch Then 
+		Batch = New BBSpriteBatch
+	EndIf
+	Batch.BeginRender(blend)
+End 
+
+Function B2DSetHandle:Void(x#,y#)
+	Batch.SetHandle(x,y)
+End
+
+Function B2DDrawTexture( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight)
+	Batch.Draw( texture,x,y,srcX,srcY,srcWidth,srcHeight)
+End 
+
+Function B2DDrawTextureRect( image:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight,rotation#,scaleX#,scaleY#)
+	Batch.Draw( texture,x,y,srcX,srcY,srcWidth,srcHeight, angle,sx, sy)
+End 
+
+Function B2DDrawTexture(tex:TTexture, x#, y#)
+	Batch.Draw(tex,x,y)
+End
+
+Function B2DDrawTexture(tex:TTexture, x#, y#, rotation#,scaleX#,scaleY#)
+	Batch.Draw(tex, x,y, scaleX, scaleY, rotation)
+End 
+
+Function B2DSetScale(sx#,sy#)
+	Batch.SetScale(sx,sy)
+End 
+
+Function B2DSetColor(r#,g#,b#)
+	Batch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
+End 
+
+Function B2DSetAlpha(a#)
+	Batch.SetAlpha(a)
+End 
+
+Function B2DSetRotation(angle#)
+	Batch.SetRotation((angle + 360 ) Mod 360)
+End 
+
+Function B2DEndRender()
+	Batch.EndRender()
+End
+
+#rem
+Global b2dfont:TTexture
+
+Function SetFont( font:Image,firstChar=32 )
+	If Not b2dfont
+		b2dfont=LoadTexture( "mojo_font.png",96,Image.XPadding )
+		firstChar=32
+	Endif
+	context.font=font
+	context.firstChar=firstChar
+End
+
+Function GetFont:Image()
+	Return context.font
+End
+
+Function TextWidth#( text$ )
+	If b2dfont Return text.Length * context.font.Width
+End
+
+Function TextHeight#()
+	If context.font Return context.font.Height
+End
+
+Function FontHeight#()
+	If context.font Return context.font.Height
+End
+
+Function DrawText( text$,x#,y#,xalign#=0,yalign#=0 )
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+	If Not context.font Return
+	
+	Local w=context.font.Width
+	Local h=context.font.Height
+	
+	x-=Floor( w * text.Length * xalign )
+	y-=Floor( h * yalign )
+	
+	For Local i=0 Until text.Length
+		Local ch=text[i]-context.firstChar
+		If ch>=0 And ch<context.font.Frames
+			DrawImage context.font,x+i*w,y,ch
+		Endif
+	Next
+
+End
+#end 

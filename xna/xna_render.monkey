@@ -236,7 +236,7 @@ Public
 	' Here is a tip for rendering objects within the Draw method of an Xbox 360 game. 
 	' Do not use SetData when writing data to vertex buffers, index buffers, and textures: http://msdn.microsoft.com/en-us/library/bb198834
 	Method BindTexture:TTexture(tex:TTexture,flags:Int)
-	
+
 		' if mask flag is true, mask pixmap
 		If flags&4
 			tex.pixmap.MaskPixmap(0,0,0)
