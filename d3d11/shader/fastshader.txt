@@ -11,6 +11,7 @@ SamplerState samplerType: register( s0 );
 cbuffer cbPerObject : register( b0 )
 {
 	float4x4 world;
+	float4 color;	
 };
 
 cbuffer cbPerCamera : register( b1 )
@@ -48,9 +49,10 @@ VertexShaderOutput vs_main( VertexShaderInput input )
 	return output;
 }
 
+
 float4 ps_main( VertexShaderOutput input ) : SV_TARGET
 {
 	float4 texColor =shaderTexture.Sample(samplerType, input.Tex0);
-	return input.Color * texColor;;
+	return input.Color * texColor * color;
 }
 

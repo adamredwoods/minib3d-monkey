@@ -464,6 +464,7 @@ Print s
 			If fx&2
 				'glEnable(GL_COLOR_MATERIAL)
 				red=1.0; green=1.0; blue=1.0; alpha=1.0
+				
 			Else
 				'glDisable(GL_COLOR_MATERIAL)
 			Endif

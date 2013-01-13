@@ -766,7 +766,7 @@ Class OpenglES11 Extends TRender
 			If cam.draw2D
 				glDisable(GL_DEPTH_TEST)
 				glDisable(GL_FOG)
-				glDisable(GL_LIGHTING)
+				glDisable(GL_LIGHTING) '' if disabled, EntityColor does not work. fullbright does the job!
 			Endif
 
 			If TRender.render.wireframe

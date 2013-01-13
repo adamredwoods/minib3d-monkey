@@ -15,7 +15,7 @@ Import minib3d
 	Import "shader\fastshader.txt"
 #End 
 
-Class D3D11FastShader Extends D3D11Shader Implements   IShaderTexture, IShaderMatrices
+Class D3D11FastShader Extends D3D11Shader Implements   IShaderTexture, IShaderMatrices,  IShaderColor
 
 Private 
 
@@ -25,7 +25,8 @@ Private
 	Field _pView:IShaderParameter
 	Field _pProj:IShaderParameter
 	Field _pWorld:IShaderParameter
-
+	Field _pDiffuseColor:IShaderParameter
+	
 Public 
 
 	Method New()
@@ -35,6 +36,8 @@ Public
 	  	_pView = Parameters.Get("view")
 		_pProj = Parameters.Get("projection")
 		_pWorld = Parameters.Get("world")		
+		_pDiffuseColor =  Parameters.Get("color")
+		
 	End
 	
 	'' IShaderMatrices
@@ -51,6 +54,27 @@ Public
 	End 
 
 	Method EyePosition(x#,y#,z#)
+	End 
+	
+	'' -- ok. these emty methods suck... 
+	'' => more interfaces or different approach!
+	
+	'' IShaderColor
+	
+	Method VertexColorEnabled(val?)
+	End 
+	
+	Method DiffuseColor(r#,g#,b#,a#) 
+		_pDiffuseColor.SetValue(r,g,b,a)
+	End 
+	
+	Method AmbientColor(r#,g#,b#)
+	End 
+	
+	Method Shine(val#)
+	End 
+	
+	Method ShinwPower(val#)
 	End 
 	
 	'' IShaderTexture

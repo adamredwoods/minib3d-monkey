@@ -116,9 +116,7 @@ Public
 		Else
 			_xna.WorldMatrix(ent.mat.ToArray())
 		Endif
-		
-		
-		
+
 		'' update camera, effects
 		_xna.UpdateEffect(ent, cam)
 					
@@ -1113,7 +1111,6 @@ Class BasicEffect Extends EffectContainer
 			effect.VertexColorEnabled = False 
 			effect.DiffuseColor(_red,_green,_blue)
 	        effect.Alpha = _alpha
-			effect.SpecularPower(_shine)
 		Endif
 		
 		' fx flag 4 - flatshaded

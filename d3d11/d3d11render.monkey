@@ -49,7 +49,6 @@ Private
 	Field _shaderMatrices:IShaderMatrices
 	Field _fastBrightShader:D3D11FastShader
 	
-	
 	'' last combined brush values
 	Field _tex_count%
 	Field _red#,_green#,_blue#,_alpha#
@@ -254,16 +253,15 @@ Public
 					If Not skip_sprite_state Then 
 					
 						SetPerObjRenderStates(ent, surf)
-						SetPerObjConstants()
 						
 					End 
+					
+					SetPerObjConstants()
 					
 					SetTextures(surf, ent, skip_sprite_state)
 					
 				End 
-				
-				
-				
+
 				shader.Update()
 				shader.Apply()
 
@@ -645,9 +643,10 @@ Private
 				_shaderColor.VertexColorEnabled(True)
 			Else
 				_shaderColor.VertexColorEnabled(False)
-				_shaderColor.DiffuseColor(_red, _green, _blue, _alpha)
 			Endif
 
+			_shaderColor.DiffuseColor(_red, _green, _blue, _alpha)
+			
 			' fx flag 1 - full bright 
 			If Not _cam.draw2D Then 
 				If _fx&1 
