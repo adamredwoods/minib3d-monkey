@@ -16,7 +16,7 @@ End
 Class B2DFrame
 
 	Field x,y
-	
+
 	Method New( x,y )
 		Self.x=x
 		Self.y=y
@@ -29,7 +29,7 @@ Public
 Class B2DImage
 
 	Const MidHandle=1
-	
+
 	Const XPadding=2
 	Const YPadding=4
 	Const XYPadding=XPadding|YPadding
@@ -47,7 +47,7 @@ Class B2DImage
 	Method Frames()
 		Return frames.Length
 	End
-	
+
 	Method Flags()
 		Return flags
 	End
@@ -55,30 +55,30 @@ Class B2DImage
 	Method HandleX#()
 		Return tx
 	End
-	
+
 	Method HandleY#()
 		Return ty
 	End
-	
+
 	Method GrabImage:B2DImage( x,y,width,height,frames=1,flags=DefaultFlags )
 		If Self.frames.Length<>1 Return
 		Return (New B2DImage).Grab( x,y,width,height,frames,flags,Self )
 	End
-	
+
 	Method SetHandle( tx#,ty# )
 		Self.tx=tx
 		Self.ty=ty
 		Self.flags=Self.flags & ~MidHandle
 	End
-	
+
 	Method Discard()
 		If surface And Not source
 			surface.FreeTexture()
 			surface=Null
 		Endif
 	End
-	
-	
+
+
 Private
 
 	Const FullFrame=65536	'$10000
@@ -88,36 +88,36 @@ Private
 	Field width,height,flags
 	Field frames:B2DFrame[]
 	Field tx#,ty#
-	
+
 	Method Init:B2DImage( pix:TPixmap,nframes,iflags,tex_flags )
-	
+
 		surface = TTexture.LoadTexture(pix,tex_flags)
-		
+
 		width=pix.width/nframes
 		height=pix.height
 		surface.width = width 
 		surface.height = height
-		
+
 		frames=New B2DFrame[nframes]
 		For Local i=0 Until nframes
 			frames[i]=New B2DFrame( i*width,0 )
 		Next
-		
+
 		ApplyFlags iflags
 		Return Self
 	End
-	
+
 	Method Grab:B2DImage( x,y,iwidth,iheight,nframes,iflags,source:B2DImage )
 		Self.source=source.source
 		Self.surface=source.source
 
 		width=iwidth
 		height=iheight
-		
+
 		frames=New B2DFrame[nframes]
-		
+
 		Local ix:=x,iy:=y
-		
+
 		For Local i=0 Until nframes
 			If ix+width>source.width
 				ix=0
@@ -129,32 +129,32 @@ Private
 			frames[i]=New B2DFrame( ix+source.frames[0].x,iy+source.frames[0].y )
 			ix+=width
 		Next
-		
+
 		ApplyFlags iflags
 		Return Self
 	End
-	
+
 	Method ApplyFlags( iflags )
 		flags=iflags
-		
+
 		If flags & XPadding
 			For Local f:=Eachin frames
 				f.x+=1
 			Next
 			width-=2
 		Endif
-		
+
 		If flags & YPadding
 			For Local f:=Eachin frames
 				f.y+=1
 			Next
 			height-=2
 		Endif
-		
+
 		If flags & Image.MidHandle
 			SetHandle width/2.0,height/2.0
 		Endif
-		
+
 		If frames.Length=1 And frames[0].x=0 And frames[0].y=0 And width=surface.width And height=surface.height
 			flags|=FullFrame
 		Endif
@@ -199,7 +199,7 @@ Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 	Local f:=image.frames[frame]
 
 	If Batch.IsTransformed Then 
-	
+
 		B2DPushMatrix
 		B2DTranslate x-image.tx,y-image.ty
 
@@ -208,19 +208,19 @@ Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 		Else
 			Batch.Draw image.surface,0,0,f.x,f.y,image.width,image.height
 		Endif
-		
+
 		B2DPopMatrix
-		
+
 	Else
-	
+
 		If image.flags & B2DImage.FullFrame
 			Batch.Draw image.surface,x-image.tx,y-image.ty
 		Else
 			Batch.Draw image.surface,x-image.tx,y-image.ty,f.x,f.y,image.width,image.height
 		Endif
-		
+
 	Endif
-	
+
 End
 
 Function B2DDrawImage( image:B2DImage,x#,y#,rotation#,scaleX#,scaleY#,frame=0 )
@@ -234,12 +234,12 @@ Function B2DDrawImage( image:B2DImage,x#,y#,rotation#,scaleX#,scaleY#,frame=0 )
 	Local f:=image.frames[frame]
 
 	B2DPushMatrix
-	
+
 	B2DTranslate x,y
 	B2DRotate rotation
 	B2DScale scaleX, scaleY
 	B2DTranslate -image.tx,-image.ty
-	
+
 	If image.flags & B2DImage.FullFrame
 		Batch.Draw(image.surface, 0,0)
 	Else
@@ -247,7 +247,7 @@ Function B2DDrawImage( image:B2DImage,x#,y#,rotation#,scaleX#,scaleY#,frame=0 )
 	Endif
 
 	B2DPopMatrix
-	
+
 End
 
 Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,frame=0 )
@@ -262,17 +262,17 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,fra
 
 	If Batch.IsTransformed Then 
 		B2DPushMatrix
-		
+
 		B2DTranslate -image.tx+x,-image.ty+y
-		
+
 		Batch.Draw image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
-		
+
 		B2DPopMatrix
 	Else
-	
+
 		Batch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 	Endif
-	
+
 End
 
 Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,rotation#,scaleX#,scaleY#,frame=0 )
@@ -285,22 +285,22 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,rot
 
 
 	Local f:=image.frames[frame]
-	
+
 	If Batch.IsTransformed Then 
-	
+
 		B2DPushMatrix
 		B2DTranslate -image.tx+x,-image.ty+y
 
 		Batch.Drawimage image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
-		
+
 		B2DPopMatrix
-		
+
 	Else
-	
+
 		Batch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
-		
+
 	End 
-	
+
 End
 
 Function B2DDrawTextureRect( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight)

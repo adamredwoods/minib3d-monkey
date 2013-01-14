@@ -577,7 +577,7 @@ Class TTexture
 	End 
 		
 	Function AdjustPixmap:TPixmap(pixmap:TPixmap, resize_smooth:Bool = True)
-
+		
 		' adjust width and height size to next biggest power of 2 size
 		Local width=Pow2Size(pixmap.width)
 		Local height=Pow2Size(pixmap.height)

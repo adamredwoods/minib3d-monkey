@@ -22,18 +22,18 @@ Global sparkImg:B2DImage
 Global show_debug,color_rot#
 
 Class Game Extends App
-	
+
 	Field cam:TCamera
 	Field light:TLight
 	Field txt:TText
-	
+
 	' used by fps code
 	Field old_ms:Int
 	Field renders:Int
 	Field fps:Int
 	Field init_gl:Bool = False
 	Field blitz2dTime = 0
-	
+
 	Method OnCreate()
 		SetRender()	
 		SetUpdateRate 60
@@ -44,61 +44,61 @@ Class Game Extends App
 	End
 
 	Method Init()
-		
+
 		If init_gl Then Return
-		
+
 		Local preloadImages:String[] = ["player.png", "bullet.png", "stars.png", "spark.png","mojo_font.png"]
-				
+
 		If Not TPixmap.PreLoadPixmap(preloadImages)	
 			Return
 		Endif
-		
-		
+
+
 		init_gl = True
 
 		dude=B2DLoadImage( "player.png" ,1,B2DImage.MidHandle,4)
 		dude.SetHandle(16,17)
 		bull=B2DLoadImage( "bullet.png" ,1,B2DImage.MidHandle,4)
 		stars=B2DLoadImage( "stars.png" ,1,B2DImage.MidHandle,4)
-		sparkImg=B2DLoadImage("spark.png",1,B2DImage.MidHandle,4)
+		sparkImg=B2DLoadImage("spark.png",1,B2DImage.MidHandle,2)' alphablend
 
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,0)
 		cam.PositionEntity 0,2.75,-5.5
 		cam.RotateEntity(15,0,0)
-		
+
 		light=CreateLight(1)
 		light.PositionEntity 0,3,-3
 		light.TurnEntity(45,45,45)
 		light.LightColor(196,196,196)
-		
+
 		AmbientLight( 150,150,150)
-		
+
 		txt = TText.CreateText2D()	
 		old_ms=Millisecs()
-		
+
 		Print "main: init done"
 	End
 
 	Method OnUpdate()
-		
+
 		If Not init_gl Then Init(); Return
-		
+
 		stars_y+=1
-		
+
 		If MouseDown(MOUSE_LEFT)
 			color_rot+=1.5
 			color_rot= color_rot Mod 360
-			 
+
 			Local color:TRGBColor=HSVColor( color_rot,1.0,1.0 ).RGBColor()
 			Local rgb[]=[Int(color.RED()*255.0),Int(color.GREEN()*255),Int(color.BLUE()*255.0)]
-	
+
 			For Local k=1 To SPARKS_PER_FRAME
 				TSpark.CreateSpark MouseX(),MouseY(),rgb
 			Next
 
 		Endif
-		
+
 		If KeyDown( KEY_LEFT )
 			dude_x-=5
 		Else If  KeyDown( KEY_RIGHT )
@@ -113,7 +113,7 @@ Class Game Extends App
 		txt.SetText(fps+" fps ~nhow are you ~nBlitz2D: " + blitz2dTime + "~nSparks: " + TSpark.Count)
 		txt.HideEntity()
 		txt.Draw(0,0)
-		
+
 		' calculate fps
 		If Millisecs()-old_ms >= 1000
 			old_ms=Millisecs()
@@ -129,30 +129,30 @@ Class Game Extends App
 		If ( Not init_gl) Return
 
 		RenderWorld()
-		
+
 		Local t:= Millisecs 
 
 		B2DBeginRender(1)' alpha blend
-			
+
 			B2DSetColor(255,255,255)
 			B2DSetAlpha(1)
 			B2DDrawImage( dude,dude_x, dude_y)
-			
+
 			UpdateEntities bullets
-			
+
 		B2DEndRender()
-	
-			
+
+
 		B2DBeginRender(3)' additive blend
-		 
+
 			UpdateEntities sparks
-			
+
 		B2DEndRender()
-		
+
 		blitz2dTime = ( Millisecs -t )
 		renders=renders+1
 	End
-	
+
 End
 
 
@@ -181,7 +181,7 @@ End
 Class TSpark Extends TEntity2
 
 	Global Count = 0
-	
+
 	Field x#,y#,xs#,ys#
 	Field color[3],rot#,rots#
 
@@ -202,7 +202,7 @@ Class TSpark Extends TEntity2
 		B2DSetAlpha 1.0-y/Float(HEIGHT)
 		B2DSetColor color[0],color[1],color[2]
 		B2DDrawImage sparkImg,x,y, rot,1,1
-		
+
 
 	End Method
 
@@ -308,7 +308,7 @@ Class TRGBColor Extends TColor
 	Method BLUE#()
 		Return _blu
 	End Method
-	
+
 	Method Set(r#,g#,b#)
 		_red=r
 		_grn=g
@@ -326,7 +326,7 @@ Class TRGBColor Extends TColor
 End Class
 
 Class TCMYColor Extends TColor
-	
+
 	Field _cyn#,_mag#,_yel#
 
 	Method RGBColor:TRGBColor()
