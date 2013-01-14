@@ -1,6 +1,6 @@
-'Author Sascha Schmidt
+' Author Sascha Schmidt
 
-Import minib3d
+Import minib3d 
 
 Private 
 
@@ -25,29 +25,32 @@ Class BBSpriteBatch
 	Field _spriteCnt:Int
 	Field _sprites:SpriteInfo[MAX_BATCH_SIZE]
 
-	Field _ix:Float,_iy:Float, _jx:Float, _jy:Float
+	Field _ix# = 1,_iy#, _jx#, _jy# = 1
 	Field _angle#=0
 	Field _sx#=1
 	Field _sy#=1
 	Field _tx#= 0, _ty# = 0
 	Field _r# = 1, _g# = 1, _b# = 1, _a# = 1
 	Field _begin?
-	Field w,h
+	Field _w,_h
 	
 	Field _mesh:TMesh 
 	Field _dummy:TSprite
 	
+	Field matrixStack:=New Float[6*32],matrixSp
+	Field IsTransformed?
+	Field matDirty
+	
 	Method New()
 	
 		' init transform
-		UpdateTransform()
-		w = TRender.width*0.5
-		h = TRender.height*0.5
+		_w = TRender.width*0.5
+		_h = TRender.height*0.5
 
 		' init mesh
 		_dummy = CreateSptite()
 		_mesh = CreateMesh(MAX_BATCH_SIZE)
-		_mesh.name ="blitz2d"
+		_mesh.name ="spritebatch"
 		
 		' init sprite array
 		For Local i = 0 until MAX_BATCH_SIZE
@@ -107,16 +110,6 @@ Class BBSpriteBatch
 		TRender.render.Reset()
 		 
 	End 
-
-	Method SetScale:Void(x#,y#)
-		_sx = x; _sy = y
-		UpdateTransform()
-	End 
-	
-	Method SetRotation:Void(angle#)
-		_angle = angle
-		UpdateTransform()
-	End 
 	
 	Method SetColor:Void(r#,g#,b#)
 		_r = r
@@ -128,63 +121,68 @@ Class BBSpriteBatch
 		_a = a
 	End 
 	
-	Method SetHandle:Void(x#,y#)
-		_tx = x
-		_ty = y
+	Method PushMatrix()
+		Local sp=matrixSp
+		matrixStack[sp+0]=_ix
+		matrixStack[sp+1]=_iy
+		matrixStack[sp+2]=_jx
+		matrixStack[sp+3]=_jy
+		matrixStack[sp+4]=_tx
+		matrixStack[sp+5]=_ty
+		matrixSp=sp+6
+	End 
+	
+	Method PopMatrix()
+		Local sp=matrixSp-6
+		SetMatrix matrixStack[sp+0],matrixStack[sp+1],matrixStack[sp+2],matrixStack[sp+3],matrixStack[sp+4],matrixStack[sp+5]
+		matrixSp=sp
+	End 
+	
+	Method SetMatrix(ix#,iy#,jx#,jy#,tx#,ty#)
+		_ix = ix
+		_iy = iy
+		_jx = jx
+		_jy = jy
+		_tx = tx
+		_ty = ty
+		IsTransformed=(ix<>1 Or iy<>0 Or jx<>0 Or jy<>1 Or tx<>0 Or ty<>0)
+	End 
+	
+	Method Transform(ix#,iy#,jx#,jy#,tx#,ty# )
+		Local ix2#=ix*_ix+iy*_jx
+		Local iy2#=ix*_iy+iy*_jy
+		Local jx2#=jx*_ix+jy*_jx
+		Local jy2#=jx*_iy+jy*_jy
+		Local tx2#=tx*_ix+ty*_jx+_tx
+		Local ty2#=tx*_iy+ty*_jy+_ty
+		SetMatrix ix2,iy2,jx2,jy2,tx2,ty2
 	End 
 	
 	Method Draw:Void(texture:TTexture,x:Float, y:Float)
-		Draw(texture,x, y, texture.width, texture.height, _ix,_iy,_jx,_jy,0,0,1,1)
+
+		Draw2(texture,x, y, texture.width, texture.height, 0,0,1,1 )
+	
 	End
 	
 	Method Draw:Void( texture:TTexture,x#,y#,srcX#,srcY#,srcWidth#,srcHeight#)
 	
-		Local u0# = srcX / Float(texture.width)
-		Local v0# = srcY / Float(texture.height)
-		Local u1# = u0 + srcWidth / Float(texture.width)
-		Local v1# = v0 + srcHeight / Float(texture.height)
-	
-		Draw(texture,x, y,srcWidth, srcHeight, _ix,_iy,_jx,_jy ,u0,v0,u1,v1)
+		Draw(texture,x, y,texture.width, texture.height,srcX,srcY,srcWidth,srcHeight)
 		
 	End 
 	
-	Method Draw:Void( texture:TTexture,x#,y#,srcX#,srcY#,srcWidth#,srcHeight#,sx#, sy#, angle#)
+	Method Draw:Void( texture:TTexture,x#,y#,width#, height#,srcX#,srcY#,srcWidth#,srcHeight#)
 	
 		Local u0# = srcX / Float(texture.width)
 		Local v0# = srcY / Float(texture.height)
 		Local u1# = u0 + srcWidth / Float(texture.width)
 		Local v1# = v0 + srcHeight / Float(texture.height)
-	
-		Local s# = Sin(angle)
-		Local c# = Cos(angle)
 		
-		' push angle
-		Local tmp = _angle
-		_angle = angle
-		
-		Draw(texture,x, y,srcWidth, srcHeight, c * sx,-s * sy,s * sx,c * sy ,u0,v0,u1,v1)
-		
-		' pop angle
-		_angle = tmp
+		Draw2(texture,x, y,width, height, u0,v0,u1,v1)
 		
 	End 
 	
-	Method Draw:Void(texture:TTexture,x:Float, y:Float,  sx#, sy#, angle#)
-		Local s# = Sin(angle)
-		Local c# = Cos(angle)
-		
-		' push angle
-		Local tmp = _angle
-		_angle = angle
-		
-		Draw(texture,x, y, texture.width, texture.height, c * sx,-s * sy,s * sx,c * sy,0,0,1,1)
-		
-		' pop angle
-		_angle = tmp
-	End
+	Method Draw2:Void(texture:TTexture,x#, y#,width#,height#, u0# , v0#, u1# , v1# )
 	
-	Method Draw:Void(texture:TTexture,x#, y#,width#,height#, ix#,iy#,jx#,jy#, u0# , v0#, u1# , v1# )
-
 		'' check if spritearray is big enough
 		UpdateSpriteArray()
 
@@ -194,10 +192,10 @@ Class BBSpriteBatch
 		sprite.y = y
 		sprite.tx = _tx
 		sprite.ty = _ty
-		sprite.ix =  ix
-		sprite.iy =  iy
-		sprite.jx =  jx
-		sprite.jy =  jy
+		sprite.ix = _ix
+		sprite.iy = _iy
+		sprite.jx = _jx
+		sprite.jy = _jy
 		sprite.textrue = texture 
 		sprite.angle = _angle
 		sprite.r = _r
@@ -269,15 +267,6 @@ Private
 		Return sprite
 	End 
 	
-	Method UpdateTransform:Void()
-		local s# = Sin(_angle)
-		local c# = Cos(_angle)
-		_ix =  c * _sx
-		_iy = -s * _sy
-		_jx =  s * _sx
-		_jy =  c * _sy
-	End 
-	
 	Method UpdateSpriteArray:Void()
 		
 		if _spriteCnt >= _sprites.Length Then 
@@ -334,6 +323,7 @@ Private
 
 	Method Render( tex:TTexture, index, _end , count)
 
+		#rem
 		If count < MIN_BATCH_SIZE Then 
 			
 			For Local j = index Until _end
@@ -350,8 +340,9 @@ Private
 				
 			End 
 		Else
+		#end
 			RenderBatch(tex, index, _end )
-		Endif
+		'Endif
 	End 
 	
 	Method RenderDummy:Void(tex:TTexture, index)
@@ -362,7 +353,7 @@ Private
 		Local ty# = sprite.height * 0.5 * sprite.sy
 		
 		_dummy.EntityTexture(tex)
-		_dummy.PositionEntity((sprite.x-w), (h-sprite.y), 1.99999)
+		_dummy.PositionEntity((sprite.x-_w), (_h-sprite.y), 1.99999)
 		_dummy.angle = sprite.angle
 		_dummy.Update(TRender.camera2D )
 		_dummy.brush.red = sprite.r
@@ -385,42 +376,55 @@ Private
 		_surface.no_tris = 0
 		_surface.no_verts = 0
 				
+			 
+			
 		For Local index = start until _end 
 		
 			Local sprite:SpriteInfo = _sprites[index]
 
-			Local x:= sprite.x - DeviceWidth / 2
-			Local y:= sprite.y - DeviceHeight / 2
+			Local x:= sprite.x 
+			Local y:= sprite.y 
 			
-			local x0:= - sprite.tx 
-			local y0:= - sprite.ty;
-			local x1:= x0 + sprite.width;
-			local y1:= y0 + sprite.height;
-
+			Local w# = sprite.width
+			Local h# = sprite.height
+			Local x0#=x,x1#=x+w,x2#=x+w,x3#=x;
+			Local y0#=y,y1#=y,y2#=y+h,y3#=y+h;
+			
+			
+			Local tx0#=x0,tx1#=x1,tx2#=x2,tx3#=x3;
+			x0=tx0 * sprite.ix + y0 * sprite.jx + sprite.tx-_w;
+			y0=tx0 * sprite.iy + y0 * sprite.jy + sprite.ty-_h;
+			x1=tx1 * sprite.ix + y1 * sprite.jx + sprite.tx-_w;
+			y1=tx1 * sprite.iy + y1 * sprite.jy + sprite.ty-_h;
+			x2=tx2 * sprite.ix + y2 * sprite.jx + sprite.tx-_w;
+			y2=tx2 * sprite.iy + y2 * sprite.jy + sprite.ty-_h;
+			x3=tx3 * sprite.ix + y3 * sprite.jx + sprite.tx-_w;
+			y3=tx3 * sprite.iy + y3 * sprite.jy + sprite.ty-_h;
+			
 			_surface.no_verts=_surface.no_verts+4
 
 			Local vid:Int = _surface.no_verts-4
 			Local v0 = vid
 			
-			_surface.vert_data.PokeVertCoords(vid,x0*sprite.ix+y0*sprite.iy + x,x0*sprite.jx+y0*sprite.jy + y,0)
+			_surface.vert_data.PokeVertCoords(vid,x0,y0,0)
 			_surface.vert_data.PokeTexCoords(vid, sprite.u0,sprite.v0,0,0)		
 			_surface.vert_data.PokeColor(vid,sprite.r, sprite.g, sprite.b, sprite.a)
 			
 			vid+= 1
 			
-			_surface.vert_data.PokeVertCoords(vid,x1*sprite.ix+y0*sprite.iy + x,x1*sprite.jx+y0*sprite.jy + y,0)
+			_surface.vert_data.PokeVertCoords(vid,x1,y1,0)
 			_surface.vert_data.PokeTexCoords(vid, sprite.u1,sprite.v0,0,0)		
 			_surface.vert_data.PokeColor(vid,sprite.r, sprite.g, sprite.b, sprite.a)
 			
 			vid+= 1
 			
-			_surface.vert_data.PokeVertCoords(vid,x1*sprite.ix+y1*sprite.iy + x,x1*sprite.jx+y1*sprite.jy + y,0)
+			_surface.vert_data.PokeVertCoords(vid,x2,y2,0)
 			_surface.vert_data.PokeTexCoords(vid, sprite.u1,sprite.v1,0,0)		
 			_surface.vert_data.PokeColor(vid,sprite.r, sprite.g, sprite.b, sprite.a)
 			
 			vid+= 1
 			
-			_surface.vert_data.PokeVertCoords(vid,x0*sprite.ix+y1*sprite.iy + x,x0*sprite.jx+y1*sprite.jy + y,0)
+			_surface.vert_data.PokeVertCoords(vid,x3,y3,0)
 			_surface.vert_data.PokeTexCoords(vid, sprite.u0,sprite.v1,0,0)		
 			_surface.vert_data.PokeColor(vid,sprite.r, sprite.g, sprite.b, sprite.a)
 			
@@ -434,103 +438,3 @@ Private
 	End 
 	
 End
-
-
-Global Batch:BBSpriteBatch
-
-Function B2DBeginRender(blend = 1)
-	if Not Batch Then 
-		Batch = New BBSpriteBatch
-	EndIf
-	Batch.BeginRender(blend)
-End 
-
-Function B2DSetHandle:Void(x#,y#)
-	Batch.SetHandle(x,y)
-End
-
-Function B2DDrawTexture( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight)
-	Batch.Draw( texture,x,y,srcX,srcY,srcWidth,srcHeight)
-End 
-
-Function B2DDrawTextureRect( image:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight,rotation#,scaleX#,scaleY#)
-	Batch.Draw( texture,x,y,srcX,srcY,srcWidth,srcHeight, angle,sx, sy)
-End 
-
-Function B2DDrawTexture(tex:TTexture, x#, y#)
-	Batch.Draw(tex,x,y)
-End
-
-Function B2DDrawTexture(tex:TTexture, x#, y#, rotation#,scaleX#,scaleY#)
-	Batch.Draw(tex, x,y, scaleX, scaleY, rotation)
-End 
-
-Function B2DSetScale(sx#,sy#)
-	Batch.SetScale(sx,sy)
-End 
-
-Function B2DSetColor(r#,g#,b#)
-	Batch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
-End 
-
-Function B2DSetAlpha(a#)
-	Batch.SetAlpha(a)
-End 
-
-Function B2DSetRotation(angle#)
-	Batch.SetRotation((angle + 360 ) Mod 360)
-End 
-
-Function B2DEndRender()
-	Batch.EndRender()
-End
-
-#rem
-Global b2dfont:TTexture
-
-Function SetFont( font:Image,firstChar=32 )
-	If Not b2dfont
-		b2dfont=LoadTexture( "mojo_font.png",96,Image.XPadding )
-		firstChar=32
-	Endif
-	context.font=font
-	context.firstChar=firstChar
-End
-
-Function GetFont:Image()
-	Return context.font
-End
-
-Function TextWidth#( text$ )
-	If b2dfont Return text.Length * context.font.Width
-End
-
-Function TextHeight#()
-	If context.font Return context.font.Height
-End
-
-Function FontHeight#()
-	If context.font Return context.font.Height
-End
-
-Function DrawText( text$,x#,y#,xalign#=0,yalign#=0 )
-#If CONFIG="debug"
-	DebugRenderDevice
-#End
-	If Not context.font Return
-	
-	Local w=context.font.Width
-	Local h=context.font.Height
-	
-	x-=Floor( w * text.Length * xalign )
-	y-=Floor( h * yalign )
-	
-	For Local i=0 Until text.Length
-		Local ch=text[i]-context.firstChar
-		If ch>=0 And ch<context.font.Frames
-			DrawImage context.font,x+i*w,y,ch
-		Endif
-	Next
-
-End
-#end 

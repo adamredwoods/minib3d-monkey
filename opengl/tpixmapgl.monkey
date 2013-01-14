@@ -113,7 +113,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
-	
+
 		''simple average 4pixel
 		''softer
 		Local enlarge:Int=0
