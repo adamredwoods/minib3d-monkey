@@ -108,8 +108,8 @@ Private
 	End
 
 	Method Grab:B2DImage( x,y,iwidth,iheight,nframes,iflags,source:B2DImage )
-		Self.source=source.source
-		Self.surface=source.source
+		Self.source=source.surface
+		Self.surface=source.surface
 
 		width=iwidth
 		height=iheight
@@ -170,7 +170,7 @@ Function B2DLoadImage:B2DImage( path$,frameCount=1,flags=B2DImage.DefaultFlags)
 	End 
 End
 
-Function B2DLoadImage:B2DImage( path$,frameWidth,frameHeight,frameCount,flags)
+Function B2DLoadImage:B2DImage( path$,frameWidth,frameHeight,frameCount,flags= B2DImage.DefaultFlags)
 	Local atlas:=B2DLoadImage( path,1,flags )
 	If atlas Return atlas.GrabImage( 0,0,frameWidth,frameHeight,frameCount)
 End
@@ -213,7 +213,7 @@ Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 		If image.flags & B2DImage.FullFrame
 			Batch.Draw image.surface,0,0
 		Else
-			Batch.Draw image.surface,0,0,f.x,f.y,image.width,image.height
+			Batch.Draw image.surface,0,0,image.width, image.height,f.x,f.y,image.width,image.height
 		Endif
 
 		B2DPopMatrix
@@ -223,7 +223,7 @@ Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 		If image.flags & B2DImage.FullFrame
 			Batch.Draw image.surface,x-image.tx,y-image.ty
 		Else
-			Batch.Draw image.surface,x-image.tx,y-image.ty,f.x,f.y,image.width,image.height
+			Batch.Draw image.surface,x-image.tx,y-image.ty,image.width, image.height,f.x,f.y,image.width,image.height
 		Endif
 
 	Endif
@@ -250,7 +250,7 @@ Function B2DDrawImage( image:B2DImage,x#,y#,rotation#,scaleX#,scaleY#,frame=0 )
 	If image.flags & B2DImage.FullFrame
 		Batch.Draw(image.surface, 0,0)
 	Else
-		Batch.Draw( image.surface,x,y,f.x,f.y,image.width,image.height)
+		Batch.Draw( image.surface,0,0,image.width, image.height,f.x,f.y,image.width,image.height)
 	Endif
 
 	B2DPopMatrix

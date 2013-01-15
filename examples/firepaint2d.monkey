@@ -65,7 +65,7 @@ Class Game Extends App
 			Return
 		Endif
 
-		B2DInit()
+		B2DInit() '' Needs to be called before RenderWorld!!!
 		
 		init_gl = True
 
@@ -73,7 +73,7 @@ Class Game Extends App
 		dude.SetHandle(16,17)
 		bull=B2DLoadImage( "bullet.png")
 		stars=B2DLoadImage( "stars.png")
-		sparkImg=B2DLoadImage("spark.png")' alphablend
+		sparkImg=B2DLoadImage("spark.png")
 
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,0)
@@ -121,7 +121,6 @@ Class Game Extends App
 		If KeyHit( KEY_SPACE )
 			TBullet.CreateBullet dude_x,dude_y-16,bull
 		EndIf
-
 
 		txt.SetText(fps+" fps ~nhow are you ~nBlitz2D: " + blitz2dTime + "~nSparks: " + TSpark.Count)
 		txt.HideEntity()

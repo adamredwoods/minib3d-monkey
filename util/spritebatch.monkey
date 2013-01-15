@@ -120,13 +120,7 @@ Class BBSpriteBatch
 		Draw2(texture,x, y, texture.width, texture.height, 0,0,1,1 )
 
 	End
-
-	Method Draw:Void( texture:TTexture,x#,y#,srcX#,srcY#,srcWidth#,srcHeight#)
-
-		Draw(texture,x, y,texture.width, texture.height,srcX,srcY,srcWidth,srcHeight)
-
-	End 
-
+	
 	Method Draw:Void( texture:TTexture,x#,y#,width#, height#,srcX#,srcY#,srcWidth#,srcHeight#)
 
 		Local u0# = srcX / Float(texture.width)
