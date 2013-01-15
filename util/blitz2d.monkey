@@ -165,7 +165,7 @@ End
 Function B2DLoadImage:B2DImage( path$,frameCount=1,flags=B2DImage.DefaultFlags, tex_flags = 2 )
 	Local pix:= TPixmap.LoadPixmap(path)
 	If pix Then 
-		Local img:= New B2DImage().Init(pix,frameCount,flags,tex_flags )
+		Local img:= New B2DImage().Init(pix,frameCount,flags,tex_flags | 16 | 32 )
 		Return img
 	End 
 End
@@ -198,7 +198,7 @@ Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 
 	Local f:=image.frames[frame]
 
-	If Batch.IsTransformed Then 
+	If Batch.tformed Then 
 
 		B2DPushMatrix
 		B2DTranslate x-image.tx,y-image.ty
@@ -260,7 +260,7 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,fra
 
 	Local f:=image.frames[frame]
 
-	If Batch.IsTransformed Then 
+	If Batch.tformed Then 
 		B2DPushMatrix
 
 		B2DTranslate -image.tx+x,-image.ty+y
@@ -286,7 +286,7 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,rot
 
 	Local f:=image.frames[frame]
 
-	If Batch.IsTransformed Then 
+	If Batch.tformed Then 
 
 		B2DPushMatrix
 		B2DTranslate -image.tx+x,-image.ty+y
@@ -304,6 +304,11 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,rot
 End
 
 Function B2DDrawTextureRect( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+
 	textureContainer.surface = texture
 	textureContainer.width = texture.width
 	textureContainer.height = texture.height
@@ -311,6 +316,11 @@ Function B2DDrawTextureRect( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight
 End 
 
 Function B2DDrawTextureRect( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight,rotation#,scaleX#,scaleY#)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+
 	textureContainer.surface = texture
 	textureContainer.width = texture.width
 	textureContainer.height = texture.height
@@ -318,6 +328,10 @@ Function B2DDrawTextureRect( texture:TTexture,x#,y#,srcX,srcY,srcWidth,srcHeight
 End 
 
 Function B2DDrawTexture(texture:TTexture, x#, y#)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
 	textureContainer.surface = texture
 	textureContainer.width = texture.width
 	textureContainer.height = texture.height
@@ -325,11 +339,54 @@ Function B2DDrawTexture(texture:TTexture, x#, y#)
 End
 
 Function B2DDrawTexture(texture:TTexture, x#, y#, rotation#,scaleX#,scaleY#)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
 	textureContainer.surface = texture
 	textureContainer.width = texture.width
 	textureContainer.height = texture.height
 	B2DDrawImage(textureContainer,x,y,rotation,scaleX,scaleY)
 End 
+
+Function B2DDrawRect(x#,y#,width#,height#)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+
+	Batch.Draw2(Null,x, y,width,height, 0,0,1,1 )
+End 
+
+Function B2DDrawLine(x0#,y0#,x1#,y1#, linewidth# = 1 )
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+
+	Batch.DrawLine(x0,y0,x1,y1,linewidth)
+
+End 
+
+Function B2DDrawOval(x#,y#,w#,h#)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+
+	Batch.DrawOval(x,y,w,h)
+	
+End 
+
+
+Function B2DDrawCircle( x#,y#,r# )
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+
+	Batch.DrawOval(x-r,y-r,r*2,r*2)
+	
+End
 
 Function B2DPushMatrix()
 	Batch.PushMatrix
@@ -363,4 +420,8 @@ End
 
 Function B2DEndRender()
 	Batch.EndRender()
+End
+
+Function B2DTransform( ix#,iy#,jx#,jy#,tx#,ty# )
+	Batch.Transform ix,iy,jx,jy,tx,ty
 End

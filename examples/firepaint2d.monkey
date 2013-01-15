@@ -6,6 +6,18 @@ Hold down mouse button to emit *FIRE*!
 
 #End
 
+#GLFW_WINDOW_TITLE="Monkey Game"
+#GLFW_WINDOW_WIDTH=1280
+#GLFW_WINDOW_HEIGHT=720
+#GLFW_WINDOW_RESIZABLE=false
+#GLFW_WINDOW_FULLSCREEN=false
+
+
+#XNA_WINDOW_WIDTH=1280
+#XNA_WINDOW_HEIGHT=720
+#XNA_WINDOW_RESIZABLE=false
+#XNA_WINDOW_FULLSCREEN=False
+
 Import minib3d
 Import minib3d.util.blitz2d
 
@@ -147,6 +159,37 @@ Class Game Extends App
 
 			UpdateEntities sparks
 
+			B2DSetColor(150,150,75)
+			B2DSetAlpha(0.5)
+			B2DDrawRect(0,0,200,100)
+
+			B2DSetColor(255,0,0)
+			B2DSetAlpha(1.0)
+			
+			B2DPushMatrix
+			B2DTranslate(100,200)
+			B2DRotate(Millisecs*0.1)
+			B2DTranslate(-50,-25)
+			B2DDrawLine(0,0,100, 0,4)
+			B2DDrawLine(0,50,100, 50,4)
+			B2DDrawLine(0,0,0,50,4)
+			B2DDrawLine(100, 0,100,50,4)
+			B2DPopMatrix()
+			
+			B2DSetColor(0,0,255)
+			B2DDrawLine(10,110, DeviceWidth-10,110,1)
+			B2DDrawLine(10,DeviceHeight-5, DeviceWidth-10,DeviceHeight-5,1)
+			B2DDrawLine(10,110,10,DeviceHeight-5,1)
+			B2DDrawLine(DeviceWidth-10,110,DeviceWidth-10,DeviceHeight-5,1)
+
+			B2DPushMatrix
+			B2DTranslate(120,360)
+			B2DRotate(Millisecs*0.1)
+			B2DTranslate(-100,-50)
+			B2DSetColor(0,255,0)
+			B2DDrawOval(0,0,200,100)
+			B2DPopMatrix()
+		
 		B2DEndRender()
 
 		blitz2dTime = ( Millisecs -t )
@@ -157,7 +200,7 @@ End
 
 
 Const DEPTH=32,HERTZ=60
-Const GRAVITY#=.15,SPARKS_PER_FRAME=35
+Const GRAVITY#=.15,SPARKS_PER_FRAME=55
 Global sparks:List<TEntity2>=New List<TEntity2>
 Global bullets:List<TEntity2>=New List<TEntity2>
 
@@ -201,9 +244,10 @@ Class TSpark Extends TEntity2
 
 		B2DSetAlpha 1.0-y/Float(HEIGHT)
 		B2DSetColor color[0],color[1],color[2]
+		
 		B2DDrawImage sparkImg,x,y, rot,1,1
 
-
+		
 	End Method
 
 	Function CreateSpark:TSpark( x#,y#,color[] )
