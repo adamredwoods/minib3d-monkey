@@ -97,14 +97,12 @@ Public
 		_depthStencilView = D3D11.CreateD3D11DepthStencilView(_depthBuffer, DXGI_FORMAT_D24_UNORM_S8_UINT)
 		
 		'' check for level 9.3 hardware capabilities 
-		'' and try to load the default shader
 		Select _featureLevel
 			Case D3D_FEATURE_LEVEL_9_1, D3D_FEATURE_LEVEL_9_2
-				Error "Win8 miniB3D default shader needs at least D3D_FEATURE_LEVEL_9_3."
-			Default
-				TShader.LoadDefaultShader(New D3D11DefaultShader())	
+				Error "Win8 miniB3D default shader needs at least D3D_FEATURE_LEVEL_9_3."	
 		End 
 		
+		TShader.LoadDefaultShader(New D3D11DefaultShader())	
 		_fastBrightShader = New D3D11FastShader
 		
 		'' states
@@ -130,23 +128,6 @@ Public
 			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_SRC_COLOR, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD),
 			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD),
 			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD)]
-		#rem
-		//Additive blend state
-	D3D11_BLEND_DESC pbdesc;
-	ZEROMEM( pbdesc );
-	memset( &pbdesc,0,sizeof(pbdesc) );
-	pbdesc.AlphaToCoverageEnable=FALSE;
-	pbdesc.IndependentBlendEnable=FALSE;
-	pbdesc.RenderTarget[0].BlendEnable=TRUE;
-	pbdesc.RenderTarget[0].SrcBlend=D3D11_BLEND_ONE;
-	pbdesc.RenderTarget[0].DestBlend=D3D11_BLEND_ONE;
-	pbdesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
-	pbdesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_ONE;
-	pbdesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ZERO;
-	pbdesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
-	pbdesc.RenderTarget[0].RenderTargetWriteMask=D3D11_COLOR_WRITE_ENABLE_ALL;
-	DXASS( d3dDevice->CreateBlendState( &pbdesc,&additiveBlendState ) );
-	#end 
 	
 		'' point filter uv sampler states
 		_st_uvNormal = New UVSamplerState( D3D11_FILTER_MIN_MAG_MIP_POINT,D3D11_MIPMAP_BIAS )
@@ -154,7 +135,6 @@ Public
 		'' linear filter uv sampler states		
 		_st_uvSmooth = New UVSamplerState( D3D11_FILTER_MIN_MAG_MIP_LINEAR,D3D11_MIPMAP_BIAS )
 		
-		 
 		'' prevent shader EXECUTION WARNING #352: DEVICE_DRAW_SAMPLER_NOT_SET
 		'' ??
 		For Local i= 0 Until 8; _sampleStates[i] = _st_uvSmooth._wU_wV; End 
@@ -407,7 +387,7 @@ Public
 							Elseif tex_count>0 
 								_sampleStates[ix] = filter._wU_wV ''only use wrap with power-of-two textures 							
 							End
-
+							
 						Endif ''end preserve skip_sprite_state-------------------------------
 		
 						_shaderTexture.TextureBlend(ix, tex_blend)

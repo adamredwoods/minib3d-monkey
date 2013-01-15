@@ -7,8 +7,8 @@ Hold down mouse button to emit *FIRE*!
 #End
 
 #GLFW_WINDOW_TITLE="Monkey Game"
-#GLFW_WINDOW_WIDTH=1280
-#GLFW_WINDOW_HEIGHT=720
+#GLFW_WINDOW_WIDTH=640
+#GLFW_WINDOW_HEIGHT=480
 #GLFW_WINDOW_RESIZABLE=false
 #GLFW_WINDOW_FULLSCREEN=false
 
@@ -65,14 +65,15 @@ Class Game Extends App
 			Return
 		Endif
 
-
+		B2DInit()
+		
 		init_gl = True
 
-		dude=B2DLoadImage( "player.png" ,1,B2DImage.MidHandle,4)
+		dude=B2DLoadImage( "player.png")
 		dude.SetHandle(16,17)
-		bull=B2DLoadImage( "bullet.png" ,1,B2DImage.MidHandle,4)
-		stars=B2DLoadImage( "stars.png" ,1,B2DImage.MidHandle,4)
-		sparkImg=B2DLoadImage("spark.png",1,B2DImage.MidHandle,2)' alphablend
+		bull=B2DLoadImage( "bullet.png")
+		stars=B2DLoadImage( "stars.png")
+		sparkImg=B2DLoadImage("spark.png")' alphablend
 
 		cam = CreateCamera()
 		cam.CameraClsColor(0,0,0)
@@ -153,7 +154,6 @@ Class Game Extends App
 			UpdateEntities bullets
 
 		B2DEndRender()
-
 
 		B2DBeginRender(3)' additive blend
 

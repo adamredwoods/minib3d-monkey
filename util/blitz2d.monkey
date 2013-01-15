@@ -89,9 +89,9 @@ Private
 	Field frames:B2DFrame[]
 	Field tx#,ty#
 
-	Method Init:B2DImage( pix:TPixmap,nframes,iflags,tex_flags )
+	Method Init:B2DImage( pix:TPixmap,nframes,iflags )
 
-		surface = TTexture.LoadTexture(pix,tex_flags)
+		surface = TTexture.LoadTexture(pix,2+16+32)
 
 		width=pix.width/nframes
 		height=pix.height
@@ -162,20 +162,20 @@ Private
 
 End	
 
-Function B2DLoadImage:B2DImage( path$,frameCount=1,flags=B2DImage.DefaultFlags, tex_flags = 2 )
+Function B2DLoadImage:B2DImage( path$,frameCount=1,flags=B2DImage.DefaultFlags)
 	Local pix:= TPixmap.LoadPixmap(path)
 	If pix Then 
-		Local img:= New B2DImage().Init(pix,frameCount,flags,tex_flags | 16 | 32 )
+		Local img:= New B2DImage().Init(pix,frameCount,flags )
 		Return img
 	End 
 End
 
-Function B2DLoadImage:B2DImage( path$,frameWidth,frameHeight,frameCount,flags, tex_flags = 2 )
-	Local atlas:=B2DLoadImage( path,1,flags,tex_flags )
-	If atlas Return atlas.GrabImage( 0,0,frameWidth,frameHeight,frameCount,flags )
+Function B2DLoadImage:B2DImage( path$,frameWidth,frameHeight,frameCount,flags)
+	Local atlas:=B2DLoadImage( path,1,flags )
+	If atlas Return atlas.GrabImage( 0,0,frameWidth,frameHeight,frameCount)
 End
 
-Function B2DBeginRender(blend = 1)
+Function B2DInit()
 	if Not Batch Then 
 		Batch = New BBSpriteBatch
 		textureContainer = New B2DImage
@@ -185,6 +185,13 @@ Function B2DBeginRender(blend = 1)
 		textureContainer.frames[0].x = 0
 		textureContainer.frames[0].y = 0
 	EndIf
+End 
+
+Function B2DEnd()
+	Batch = Null
+End 
+
+Function B2DBeginRender(blend = 1)
 	Batch.BeginRender(blend)
 End 
 
