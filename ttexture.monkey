@@ -17,6 +17,8 @@ End
 
 Class TTexture
 
+	Const PRESERVE_SIZE = 256
+
 	Global render:TTextureDriver '' reserved for future use for target extendability
 	
 	Global tex_bind_stack:TextureStack = New TextureStack ''texture bind stack, runs in OnRender()
@@ -99,8 +101,10 @@ Class TTexture
 		Local x=0
 	
 		Local pixmap:TPixmap = tex.pixmap
+		If tex.flags & PRESERVE_SIZE = 0 Then 
+			pixmap=AdjustPixmap(pixmap, tex.resize_smooth)
+		End 
 		
-		pixmap=AdjustPixmap(pixmap, tex.resize_smooth)
 		tex.width=pixmap.width
 		tex.height=pixmap.height
 		
@@ -133,7 +137,9 @@ Class TTexture
 
 		
 		''poweroftwo
-		tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth)
+		If tex.flags & PRESERVE_SIZE = 0 Then 
+			pixmap=AdjustPixmap(pixmap, tex.resize_smooth)
+		End 
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 		
@@ -184,8 +190,10 @@ Class TTexture
 	
 		oldw = tex.pixmap.width; oldh=tex.pixmap.width
 		
-		
-		tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth)
+		Local pixmap:TPixmap = tex.pixmap
+		If tex.flags & PRESERVE_SIZE = 0 Then 
+			pixmap=AdjustPixmap(pixmap, tex.resize_smooth)
+		End 
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 	

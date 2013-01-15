@@ -59,13 +59,15 @@ Class Game Extends App
 
 		If init_gl Then Return
 
-		Local preloadImages:String[] = ["player.png", "bullet.png", "stars.png", "spark.png","mojo_font.png"]
+		Local preloadImages:String[] = ["player.png", "bullet.png", "stars.png", 
+										"spark.png","mojo_font2.png", "_pad_.png"]
 
 		If Not TPixmap.PreLoadPixmap(preloadImages)	
 			Return
 		Endif
 
-		B2DInit() '' Needs to be called before RenderWorld!!!
+		B2DInit() 
+		B2DSetFont( Null )
 		
 		init_gl = True
 
@@ -87,7 +89,6 @@ Class Game Extends App
 
 		AmbientLight( 150,150,150)
 
-		txt = TText.CreateText2D()	
 		old_ms=Millisecs()
 
 		Print "main: init done"
@@ -122,10 +123,6 @@ Class Game Extends App
 			TBullet.CreateBullet dude_x,dude_y-16,bull
 		EndIf
 
-		txt.SetText(fps+" fps ~nhow are you ~nBlitz2D: " + blitz2dTime + "~nSparks: " + TSpark.Count)
-		txt.HideEntity()
-		txt.Draw(0,0)
-
 		' calculate fps
 		If Millisecs()-old_ms >= 1000
 			old_ms=Millisecs()
@@ -154,7 +151,7 @@ Class Game Extends App
 
 		B2DEndRender()
 
-		B2DBeginRender(3)' additive blend
+		B2DBeginRender(3)' lightblend
 
 			UpdateEntities sparks
 
@@ -190,7 +187,15 @@ Class Game Extends App
 			B2DPopMatrix()
 		
 		B2DEndRender()
-
+		
+		B2DBeginRender(1)' alphablend
+		
+			B2DSetColor(255,255,255)
+			B2DDrawText("Fps: " + fps,0,0)
+			B2DDrawText("B2D: " + blitz2dTime,0,13)
+		
+		B2DEndRender()
+		
 		blitz2dTime = ( Millisecs -t )
 		renders=renders+1
 	End

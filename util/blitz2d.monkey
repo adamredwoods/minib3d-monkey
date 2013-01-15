@@ -24,6 +24,33 @@ Class B2DFrame
 
 End
 
+Class GraphicsContext
+
+	'Field color_r#,color_g#,color_b#
+	'Field alpha#
+	'Field blend
+	'Field ix#=1,iy#,jx#,jy#=1,tx#,ty#,tformed,matDirty
+	'Field scissor_x#,scissor_y#,scissor_width#,scissor_height#
+	'Field matrixStack:=New Float[6*32],matrixSp
+	
+	Field font:B2DImage,firstChar,defaultFont:B2DImage
+
+#rem
+	Method Validate()
+		If matDirty
+			renderDevice.SetMatrix context.ix,context.iy,context.jx,context.jy,context.tx,context.ty
+			matDirty=0
+		Endif
+	End
+#end 
+
+End
+
+'Global device:GraphicsDevice
+'Global renderDevice:GraphicsDevice
+
+Global context:GraphicsContext=New GraphicsContext
+
 Public 
 
 Class B2DImage
@@ -83,21 +110,18 @@ Private
 
 	Const FullFrame=65536	'$10000
 
-	Field source:TTexture
+	Field source:B2DImage
 	Field surface:TTexture
 	Field width,height,flags
 	Field frames:B2DFrame[]
 	Field tx#,ty#
 
-	Method Init:B2DImage( pix:TPixmap,nframes,iflags )
+	Method Init:B2DImage( surf:TTexture,nframes,iflags )
 
-		surface = TTexture.LoadTexture(pix,2+16+32)
-
-		width=pix.width/nframes
-		height=pix.height
-		surface.width = width 
-		surface.height = height
-
+		surface = surf
+		width=surface.width/nframes
+		height=surface.height
+		
 		frames=New B2DFrame[nframes]
 		For Local i=0 Until nframes
 			frames[i]=New B2DFrame( i*width,0 )
@@ -108,7 +132,7 @@ Private
 	End
 
 	Method Grab:B2DImage( x,y,iwidth,iheight,nframes,iflags,source:B2DImage )
-		Self.source=source.surface
+		Self.source=source
 		Self.surface=source.surface
 
 		width=iwidth
@@ -163,11 +187,8 @@ Private
 End	
 
 Function B2DLoadImage:B2DImage( path$,frameCount=1,flags=B2DImage.DefaultFlags)
-	Local pix:= TPixmap.LoadPixmap(path)
-	If pix Then 
-		Local img:= New B2DImage().Init(pix,frameCount,flags )
-		Return img
-	End 
+	Local surf:= LoadTexture(path, 2 | 16 | 32 | TTexture.PRESERVE_SIZE)
+	If surf Then Return New B2DImage().Init(surf,frameCount,flags )
 End
 
 Function B2DLoadImage:B2DImage( path$,frameWidth,frameHeight,frameCount,flags= B2DImage.DefaultFlags)
@@ -431,4 +452,54 @@ End
 
 Function B2DTransform( ix#,iy#,jx#,jy#,tx#,ty# )
 	Batch.Transform ix,iy,jx,jy,tx,ty
+End
+
+Function B2DSetFont( font:B2DImage,firstChar=32 )
+	If Not font
+		If Not context.defaultFont
+			context.defaultFont=B2DLoadImage( "mojo_font2.png",96,Image.XPadding )
+		Endif
+		font=context.defaultFont
+		font.surface.NoSmooth()
+		firstChar=32
+	Endif
+	context.font=font
+	context.firstChar=firstChar
+End
+
+Function B2DGetFont:Image()
+	Return context.font
+End
+
+Function B2DTextWidth#( text$ )
+	If context.font Return text.Length * context.font.Width
+End
+
+Function B2DTextHeight#()
+	If context.font Return context.font.Height
+End
+
+Function B2DFontHeight#()
+	If context.font Return context.font.Height
+End
+
+Function B2DDrawText( text$,x#,y#,xalign#=0,yalign#=0 )
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+	If Not context.font Return
+	
+	Local w=context.font.Width
+	Local h=context.font.Height
+	
+	x-=Floor( w * text.Length * xalign )
+	y-=Floor( h * yalign )
+	
+	For Local i=0 Until text.Length
+		Local ch=text[i]-context.firstChar
+		If ch>=0 And ch<context.font.Frames
+			B2DDrawImage context.font,x+i*w,y,ch
+		Endif
+	Next
+
 End
