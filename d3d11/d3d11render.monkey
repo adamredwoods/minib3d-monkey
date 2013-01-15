@@ -127,10 +127,27 @@ Public
 		_blendStates = [
 			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD),
 			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_INV_SRC_ALPHA, D3D11_BLEND_OP_ADD),
-			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_ZERO, D3D11_BLEND_SRC_COLOR, D3D11_BLEND_OP_ADD),
-			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD),
-			D3D11.CreateD3D11BlendState(0,D3D11_BLEND_ONE, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD)]
-		
+			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_SRC_COLOR, D3D11_BLEND_ZERO, D3D11_BLEND_OP_ADD),
+			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_SRC_ALPHA, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD),
+			D3D11.CreateD3D11BlendState(1,D3D11_BLEND_ONE, D3D11_BLEND_ONE, D3D11_BLEND_OP_ADD)]
+		#rem
+		//Additive blend state
+	D3D11_BLEND_DESC pbdesc;
+	ZEROMEM( pbdesc );
+	memset( &pbdesc,0,sizeof(pbdesc) );
+	pbdesc.AlphaToCoverageEnable=FALSE;
+	pbdesc.IndependentBlendEnable=FALSE;
+	pbdesc.RenderTarget[0].BlendEnable=TRUE;
+	pbdesc.RenderTarget[0].SrcBlend=D3D11_BLEND_ONE;
+	pbdesc.RenderTarget[0].DestBlend=D3D11_BLEND_ONE;
+	pbdesc.RenderTarget[0].BlendOp=D3D11_BLEND_OP_ADD;
+	pbdesc.RenderTarget[0].SrcBlendAlpha=D3D11_BLEND_ONE;
+	pbdesc.RenderTarget[0].DestBlendAlpha=D3D11_BLEND_ZERO;
+	pbdesc.RenderTarget[0].BlendOpAlpha=D3D11_BLEND_OP_ADD;
+	pbdesc.RenderTarget[0].RenderTargetWriteMask=D3D11_COLOR_WRITE_ENABLE_ALL;
+	DXASS( d3dDevice->CreateBlendState( &pbdesc,&additiveBlendState ) );
+	#end 
+	
 		'' point filter uv sampler states
 		_st_uvNormal = New UVSamplerState( D3D11_FILTER_MIN_MAG_MIP_POINT,D3D11_MIPMAP_BIAS )
 		
