@@ -88,9 +88,11 @@ Class Game Extends App
 		light.LightColor(196,196,196)
 
 		AmbientLight( 150,150,150)
-
+		
 		old_ms=Millisecs()
-
+			
+		txt = TText.CreateText2D()	
+			
 		Print "main: init done"
 	End
 
@@ -130,8 +132,15 @@ Class Game Extends App
 			renders=0
 		Endif
 
+		' prevent d3d11 issue
+		' it seems that d3d11render needs at least one entitymesh
+		txt.SetText(".")
+		txt.HideEntity()
+		txt.Draw(10,10)
+
 		UpdateWorld()
 	End
+	
 
 	Method OnRender()
 
@@ -154,7 +163,8 @@ Class Game Extends App
 		B2DBeginRender(3)' lightblend
 
 			UpdateEntities sparks
-
+		
+			
 			B2DSetColor(150,150,75)
 			B2DSetAlpha(0.5)
 			B2DDrawRect(0,0,200,100)
@@ -177,24 +187,21 @@ Class Game Extends App
 			B2DDrawLine(10,DeviceHeight-5, DeviceWidth-10,DeviceHeight-5,1)
 			B2DDrawLine(10,110,10,DeviceHeight-5,1)
 			B2DDrawLine(DeviceWidth-10,110,DeviceWidth-10,DeviceHeight-5,1)
-
-			B2DPushMatrix
-			B2DTranslate(120,360)
-			B2DRotate(Millisecs*0.1)
-			B2DTranslate(-100,-50)
-			B2DSetColor(0,255,0)
-			B2DDrawOval(0,0,200,100)
-			B2DPopMatrix()
 		
+			
+			
 		B2DEndRender()
 		
+	
 		B2DBeginRender(1)' alphablend
 		
 			B2DSetColor(255,255,255)
 			B2DDrawText("Fps: " + fps,0,0)
 			B2DDrawText("B2D: " + blitz2dTime,0,13)
-		
+			B2DDrawText("Particles: " + TSpark.Count,0,26)
+			
 		B2DEndRender()
+		 
 		
 		blitz2dTime = ( Millisecs -t )
 		renders=renders+1

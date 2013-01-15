@@ -1,6 +1,14 @@
 ' Author Sascha Schmidt
 ' From mojo.graphics Copyright 2011 Mark Sibly, all rights reserved.
 
+#rem
+
+issues:
+
+- d3d11 does only work if at one point an 'entity' was rendered by renderworld
+
+#end 
+
 Import minib3d
 Import minib3d.util.spritebatch
 
