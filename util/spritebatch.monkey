@@ -38,14 +38,14 @@ Class SpriteBatch
 		Self.Draw(_pad,-1,-1)
 	End
 	
-	Method BeginRender:Void(blend = 1)
+	Method BeginRender:Void()
 
 		TRender.render.Reset()
 		TRender.render.SetDrawShader()
 		TRender.render.UpdateCamera(TRender.render.camera2D)
 		TRender.alpha_pass = 1
 		
-		_mesh.brush.blend = blend
+		_mesh.brush.blend = 1
 		_mesh.Update(TRender.camera2D ) 
 
 		_begin = True 
@@ -53,10 +53,23 @@ Class SpriteBatch
 		ClearBatch()
 		
 	End
+	
+	Method SetBlend(blend)
+		RenderBatch(_primTex)
+		ClearBatch()
+		
+		Select blend
+			Case AdditiveBlend
+				_mesh.brush.blend = 3
+			Default
+				_mesh.brush.blend = 1
+		End 
+	End 
 
 	Method EndRender:Void()
 
 		RenderBatch(_primTex)
+		ClearBatch()
 		
 		TShader.DefaultShader()
 		TRender.render.Reset()
@@ -64,6 +77,10 @@ Class SpriteBatch
 		_begin = False 
 	End
 
+	Method SetScissor(x#,y#,width#,height#)
+		TRender.camera2D.CameraViewport(x,y,width,height)
+	End 
+	
 	Method SetColor:Void(r#,g#,b#)
 		_r = r
 		_g = g

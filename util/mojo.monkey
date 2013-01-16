@@ -1,5 +1,5 @@
 ' Author Sascha Schmidt
-' From mojo.graphics Copyright 2011 Mark Sibly, all rights reserved.
+' Most from mojo.graphics Copyright 2011 Mark Sibly, all rights reserved.
 
 #rem
 
@@ -16,10 +16,11 @@ Private
 
 Global textureContainer:B2DImage
 Global spriteBatch:SpriteBatch
+Global renderSpriteBatch:SpriteBatch
 Global context:=New GraphicsContext
 
 Function DebugRenderDevice()
-	If Not spriteBatch Error "Rendering operations can only be performed within B2DBeginRender and B2DEndRender"
+	If Not renderSpriteBatch Error "Rendering operations can only be performed within B2DBeginRender and B2DEndRender"
 End
 
 Class B2DFrame
@@ -213,10 +214,28 @@ Function B2DEnd()
 	spriteBatch = Null
 End 
 
-Function B2DBeginRender(blend = 1)
-	spriteBatch.BeginRender(blend)
+Function B2DBeginRender()
+	If Not spriteBatch Then 
+		 Error "B2DInit needs to be called before B2DBeginRender"
+	End 
+	renderSpriteBatch = spriteBatch
+	context.matrixSp=0
+	B2DSetMatrix 1,0,0,1,0,0
+	B2DSetColor 255,255,255
+	B2DSetAlpha 1
+	B2DSetBlend 0
+	B2DSetScissor 0,0,DeviceWidth,DeviceHeight
+	spriteBatch.BeginRender()
 End 
 
+Function B2DSetBlend( blend )
+	context.blend=blend
+	spriteBatch.SetBlend blend
+End
+
+Function B2DGetBlend()
+	Return context.blend
+End
 
 Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 
@@ -499,7 +518,7 @@ Function B2DSetColor(r#,g#,b#)
 	spriteBatch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
 End 
 
-Function GetColor#[]()
+Function B2DGetColor#[]()
 	Return [context.color_r,context.color_g,context.color_b]
 End
 
@@ -508,11 +527,11 @@ Function B2DSetAlpha(a#)
 	spriteBatch.SetAlpha(a)
 End 
 
-Function GetAlpha#()
+Function B2DGetAlpha#()
 	Return context.alpha
 End
 
-Function SetScissor( x#,y#,width#,height# )
+Function B2DSetScissor( x#,y#,width#,height# )
 	context.scissor_x=x
 	context.scissor_y=y
 	context.scissor_width=width
@@ -520,13 +539,14 @@ Function SetScissor( x#,y#,width#,height# )
 	spriteBatch.SetScissor x,y,width,height
 End
 
-Function GetScissor#[]()
+Function B2DGetScissor#[]()
 	Return [context.scissor_x,context.scissor_y,context.scissor_width,context.scissor_height]
 End
 
 
 Function B2DEndRender()
 	spriteBatch.EndRender()
+	renderSpriteBatch = null
 End
 
 Function B2DSetFont( font:B2DImage,firstChar=32 )

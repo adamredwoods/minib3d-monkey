@@ -149,8 +149,9 @@ Class Game Extends App
 
 		Local t:= Millisecs 
 
-		B2DBeginRender(1)' alpha blend
+		B2DBeginRender()' alpha blend
 
+			B2DSetBlend(AlphaBlend)
 			B2DSetColor(255,255,255)
 			B2DSetAlpha(1)
 			B2DDrawImage( dude,dude_x, dude_y)
@@ -159,8 +160,9 @@ Class Game Extends App
 
 		B2DEndRender()
 
-		B2DBeginRender(3)' lightblend
+		B2DBeginRender()' lightblend
 
+			B2DSetBlend(AdditiveBlend)
 			UpdateEntities sparks
 		
 			
@@ -192,8 +194,9 @@ Class Game Extends App
 		B2DEndRender()
 		
 	
-		B2DBeginRender(1)' alphablend
+		B2DBeginRender()' alphablend
 		
+			B2DSetBlend(AdditiveBlend)
 			B2DSetColor(255,255,255)
 			B2DDrawText("Fps: " + fps,0,0)
 			B2DDrawText("B2D: " + blitz2dTime,0,13)
