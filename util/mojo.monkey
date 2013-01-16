@@ -10,15 +10,16 @@ issues:
 #end 
 
 Import minib3d
-Import minib3d.util.spritebatch
+Import spritebatch
 
 Private
 
-Global Batch:BBSpriteBatch
 Global textureContainer:B2DImage
+Global spriteBatch:SpriteBatch
+Global context:=New GraphicsContext
 
 Function DebugRenderDevice()
-	If Not Batch Error "Rendering operations can only be performed within B2DBeginRender and B2DEndRender"
+	If Not spriteBatch Error "Rendering operations can only be performed within B2DBeginRender and B2DEndRender"
 End
 
 Class B2DFrame
@@ -34,30 +35,22 @@ End
 
 Class GraphicsContext
 
-	'Field color_r#,color_g#,color_b#
-	'Field alpha#
-	'Field blend
-	'Field ix#=1,iy#,jx#,jy#=1,tx#,ty#,tformed,matDirty
-	'Field scissor_x#,scissor_y#,scissor_width#,scissor_height#
-	'Field matrixStack:=New Float[6*32],matrixSp
-	
+	Field color_r#,color_g#,color_b#
+	Field alpha#
+	Field blend
+	Field ix#=1,iy#,jx#,jy#=1,tx#,ty#,tformed,matDirty
+	Field scissor_x#,scissor_y#,scissor_width#,scissor_height#
+	Field matrixStack:=New Float[6*32],matrixSp
 	Field font:B2DImage,firstChar,defaultFont:B2DImage
 
-#rem
 	Method Validate()
 		If matDirty
-			renderDevice.SetMatrix context.ix,context.iy,context.jx,context.jy,context.tx,context.ty
+			spriteBatch.SetMatrix context.ix,context.iy,context.jx,context.jy,context.tx,context.ty
 			matDirty=0
 		Endif
 	End
-#end 
-
+	
 End
-
-'Global device:GraphicsDevice
-'Global renderDevice:GraphicsDevice
-
-Global context:GraphicsContext=New GraphicsContext
 
 Public 
 
@@ -205,8 +198,8 @@ Function B2DLoadImage:B2DImage( path$,frameWidth,frameHeight,frameCount,flags= B
 End
 
 Function B2DInit()
-	if Not Batch Then 
-		Batch = New BBSpriteBatch
+	if Not spriteBatch Then 
+		spriteBatch = New SpriteBatch
 		textureContainer = New B2DImage
 		textureContainer.flags|=B2DImage.FullFrame
 		textureContainer.frames = New B2DFrame[1]
@@ -217,11 +210,11 @@ Function B2DInit()
 End 
 
 Function B2DEnd()
-	Batch = Null
+	spriteBatch = Null
 End 
 
 Function B2DBeginRender(blend = 1)
-	Batch.BeginRender(blend)
+	spriteBatch.BeginRender(blend)
 End 
 
 
@@ -234,27 +227,29 @@ Function B2DDrawImage( image:B2DImage,x#,y#,frame=0 )
 
 	Local f:=image.frames[frame]
 
-	If Batch.tformed Then 
+	If spriteBatch.tformed Then 
 
 		B2DPushMatrix
 		B2DTranslate x-image.tx,y-image.ty
 
+		context.Validate
+		
 		If image.flags & B2DImage.FullFrame
-			Batch.Draw image.surface,0,0
+			spriteBatch.Draw image.surface,0,0
 		Else
-			Batch.Draw image.surface,0,0,image.width, image.height,f.x,f.y,image.width,image.height
+			spriteBatch.Draw image.surface,0,0,image.width, image.height,f.x,f.y,image.width,image.height
 		Endif
 
 		B2DPopMatrix
 
 	Else
-
+		context.Validate
+		
 		If image.flags & B2DImage.FullFrame
-			Batch.Draw image.surface,x-image.tx,y-image.ty
+			spriteBatch.Draw image.surface,x-image.tx,y-image.ty
 		Else
-			Batch.Draw image.surface,x-image.tx,y-image.ty,image.width, image.height,f.x,f.y,image.width,image.height
+			spriteBatch.Draw image.surface,x-image.tx,y-image.ty,image.width, image.height,f.x,f.y,image.width,image.height
 		Endif
-
 	Endif
 
 End
@@ -276,10 +271,12 @@ Function B2DDrawImage( image:B2DImage,x#,y#,rotation#,scaleX#,scaleY#,frame=0 )
 	B2DScale scaleX, scaleY
 	B2DTranslate -image.tx,-image.ty
 
+	context.Validate
+	
 	If image.flags & B2DImage.FullFrame
-		Batch.Draw(image.surface, 0,0)
+		spriteBatch.Draw(image.surface, 0,0)
 	Else
-		Batch.Draw( image.surface,0,0,image.width, image.height,f.x,f.y,image.width,image.height)
+		spriteBatch.Draw( image.surface,0,0,image.width, image.height,f.x,f.y,image.width,image.height)
 	Endif
 
 	B2DPopMatrix
@@ -296,17 +293,19 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,fra
 
 	Local f:=image.frames[frame]
 
-	If Batch.tformed Then 
+	If spriteBatch.tformed Then 
 		B2DPushMatrix
-
 		B2DTranslate -image.tx+x,-image.ty+y
 
-		Batch.Draw image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		context.Validate
+		
+		spriteBatch.Draw image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 
 		B2DPopMatrix
 	Else
-
-		Batch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		context.Validate
+		
+		spriteBatch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 	Endif
 
 End
@@ -322,18 +321,19 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,rot
 
 	Local f:=image.frames[frame]
 
-	If Batch.tformed Then 
+	If spriteBatch.tformed Then 
 
 		B2DPushMatrix
 		B2DTranslate -image.tx+x,-image.ty+y
 
-		Batch.Drawimage image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		context.Validate
+		spriteBatch.Drawimage image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 
 		B2DPopMatrix
 
 	Else
 
-		Batch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		spriteBatch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 
 	End 
 
@@ -390,8 +390,8 @@ Function B2DDrawRect(x#,y#,width#,height#)
 #If CONFIG="debug"
 	DebugRenderDevice
 #End
-
-	Batch.Draw2(Null,x, y,width,height, 0,0,1,1 )
+	context.Validate
+	spriteBatch.Draw2(Null,x, y,width,height, 0,0,1,1 )
 End 
 
 Function B2DDrawLine(x0#,y0#,x1#,y1#, linewidth# = 1 )
@@ -399,9 +399,8 @@ Function B2DDrawLine(x0#,y0#,x1#,y1#, linewidth# = 1 )
 #If CONFIG="debug"
 	DebugRenderDevice
 #End
-
-	Batch.DrawLine(x0,y0,x1,y1,linewidth)
-
+	context.Validate
+	spriteBatch.DrawLine(x0,y0,x1,y1,linewidth)
 End 
 
 Function B2DDrawOval(x#,y#,w#,h#)
@@ -409,9 +408,8 @@ Function B2DDrawOval(x#,y#,w#,h#)
 #If CONFIG="debug"
 	DebugRenderDevice
 #End
-
-	Batch.DrawOval(x,y,w,h)
-	
+	context.Validate
+	spriteBatch.DrawOval(x,y,w,h)
 End 
 
 
@@ -419,47 +417,116 @@ Function B2DDrawCircle( x#,y#,r# )
 #If CONFIG="debug"
 	DebugRenderDevice
 #End
+	context.Validate
+	spriteBatch.DrawOval(x-r,y-r,r*2,r*2)
+End
 
-	Batch.DrawOval(x-r,y-r,r*2,r*2)
-	
+
+Function B2DSetMatrix( m#[] )
+	SetMatrix m[0],m[1],m[2],m[3],m[4],m[5]
+End
+
+Function B2DSetMatrix( ix#,iy#,jx#,jy#,tx#,ty# )
+	context.ix=ix
+	context.iy=iy
+	context.jx=jx
+	context.jy=jy
+	context.tx=tx
+	context.ty=ty
+	context.tformed=(ix<>1 Or iy<>0 Or jx<>0 Or jy<>1 Or tx<>0 Or ty<>0)
+	context.matDirty=1
+End
+
+Function B2DGetMatrix#[]()
+	Return [context.ix,context.iy,context.jx,context.jy,context.tx,context.ty]
+End
+
+Function B2DGetMatrix( matrix#[] )
+	matrix[0]=context.ix;matrix[1]=context.iy;
+	matrix[2]=context.jx;matrix[3]=context.jy;
+	matrix[4]=context.tx;matrix[5]=context.ty
 End
 
 Function B2DPushMatrix()
-	Batch.PushMatrix
+	Local sp=context.matrixSp
+	context.matrixStack[sp+0]=context.ix
+	context.matrixStack[sp+1]=context.iy
+	context.matrixStack[sp+2]=context.jx
+	context.matrixStack[sp+3]=context.jy
+	context.matrixStack[sp+4]=context.tx
+	context.matrixStack[sp+5]=context.ty
+	context.matrixSp=sp+6
 End
 
 Function B2DPopMatrix()
-	Batch.PopMatrix
+	Local sp=context.matrixSp-6
+	B2DSetMatrix context.matrixStack[sp+0],context.matrixStack[sp+1],context.matrixStack[sp+2],context.matrixStack[sp+3],context.matrixStack[sp+4],context.matrixStack[sp+5]
+	context.matrixSp=sp
+End
+
+Function B2DTransform( ix#,iy#,jx#,jy#,tx#,ty# )
+	Local ix2#=ix*context.ix+iy*context.jx
+	Local iy2#=ix*context.iy+iy*context.jy
+	Local jx2#=jx*context.ix+jy*context.jx
+	Local jy2#=jx*context.iy+jy*context.jy
+	Local tx2#=tx*context.ix+ty*context.jx+context.tx
+	Local ty2#=tx*context.iy+ty*context.jy+context.ty
+	B2DSetMatrix ix2,iy2,jx2,jy2,tx2,ty2
+End
+
+Function B2DTransform( m#[] )
+	B2DTransform m[0],m[1],m[2],m[3],m[4],m[5]
 End
 
 Function B2DTranslate:Void(x#,y#)
-	Batch.Transform 1,0,0,1,x,y
+	B2DTransform 1,0,0,1,x,y
 End
 
 Function B2DScale(sx#,sy#)
-	Batch.Transform sx,0,0,sy,0,0
+	B2DTransform sx,0,0,sy,0,0
 End
 
 Function B2DRotate(angle#)
 	Local s#= Sin(angle)
 	Local c#= Cos(angle)
-	Batch.Transform c,-s,s,c,0,0
+	B2DTransform c,-s,s,c,0,0
 End 
 
 Function B2DSetColor(r#,g#,b#)
-	Batch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
+	context.color_r=r
+	context.color_g=g
+	context.color_b=b
+	spriteBatch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
 End 
 
-Function B2DSetAlpha(a#)
-	Batch.SetAlpha(a)
-End 
-
-Function B2DEndRender()
-	Batch.EndRender()
+Function GetColor#[]()
+	Return [context.color_r,context.color_g,context.color_b]
 End
 
-Function B2DTransform( ix#,iy#,jx#,jy#,tx#,ty# )
-	Batch.Transform ix,iy,jx,jy,tx,ty
+Function B2DSetAlpha(a#)
+	context.alpha=a
+	spriteBatch.SetAlpha(a)
+End 
+
+Function GetAlpha#()
+	Return context.alpha
+End
+
+Function SetScissor( x#,y#,width#,height# )
+	context.scissor_x=x
+	context.scissor_y=y
+	context.scissor_width=width
+	context.scissor_height=height
+	spriteBatch.SetScissor x,y,width,height
+End
+
+Function GetScissor#[]()
+	Return [context.scissor_x,context.scissor_y,context.scissor_width,context.scissor_height]
+End
+
+
+Function B2DEndRender()
+	spriteBatch.EndRender()
 End
 
 Function B2DSetFont( font:B2DImage,firstChar=32 )

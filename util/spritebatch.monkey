@@ -1,27 +1,23 @@
 Import minib3d
-Import "_pad_.png"
+Import "data/spacer.png"
+Import "data/mojo_font2.png"
 
 Public 
 
-Class BBSpriteBatch
+Class SpriteBatch
 
 	Const MAX_BATCH_SIZE = 2048
 	Const MIN_BATCH_SIZE = 16
 
 	Field _spriteCnt:Int
-	Field _sprites:SpriteInfo[MAX_BATCH_SIZE]
-
 	Field _ix# = 1,_iy#, _jx#, _jy# = 1,_tx#= 0, _ty# = 0
 	Field _r# = 1, _g# = 1, _b# = 1, _a# = 1
 	Field _begin?
 	Field _mesh:TMesh 
 	Field _surface:TSurface
-
-	Field matrixStack:=New Float[6*32],matrixSp
+	Field _primTex:TTexture 
+	Field _pad:TTexture
 	Field tformed?
-	Field matDirty
-	Field primTex:TTexture 
-	Field pad:TTexture
 	
 	Method New()
 
@@ -37,9 +33,9 @@ Class BBSpriteBatch
 		TRender.camera2D.draw2D = 1
 		
 		' init texture stages
-		' pad is also used for drawRect, drawLine, drawOval
-		pad = LoadTexture("_pad_.png",2+16+32)
-		Self.Draw(pad,-1,-1)
+		' _pad is also used for drawRect, drawLine, drawOval
+		_pad = LoadTexture("spacer.png",2+16+32)
+		Self.Draw(_pad,-1,-1)
 	End
 	
 	Method BeginRender:Void(blend = 1)
@@ -60,7 +56,7 @@ Class BBSpriteBatch
 
 	Method EndRender:Void()
 
-		RenderBatch(primTex)
+		RenderBatch(_primTex)
 		
 		TShader.DefaultShader()
 		TRender.render.Reset()
@@ -78,23 +74,6 @@ Class BBSpriteBatch
 		_a = a
 	End 
 
-	Method PushMatrix()
-		Local sp=matrixSp
-		matrixStack[sp+0]=_ix
-		matrixStack[sp+1]=_iy
-		matrixStack[sp+2]=_jx
-		matrixStack[sp+3]=_jy
-		matrixStack[sp+4]=_tx
-		matrixStack[sp+5]=_ty
-		matrixSp=sp+6
-	End 
-
-	Method PopMatrix()
-		Local sp=matrixSp-6
-		SetMatrix matrixStack[sp+0],matrixStack[sp+1],matrixStack[sp+2],matrixStack[sp+3],matrixStack[sp+4],matrixStack[sp+5]
-		matrixSp=sp
-	End 
-
 	Method SetMatrix(ix#,iy#,jx#,jy#,tx#,ty#)
 		_ix = ix
 		_iy = iy
@@ -103,16 +82,6 @@ Class BBSpriteBatch
 		_tx = tx
 		_ty = ty
 		tformed=(ix<>1 Or iy<>0 Or jx<>0 Or jy<>1 Or tx<>0 Or ty<>0)
-	End 
-
-	Method Transform(ix#,iy#,jx#,jy#,tx#,ty# )
-		Local ix2#=ix*_ix+iy*_jx
-		Local iy2#=ix*_iy+iy*_jy
-		Local jx2#=jx*_ix+jy*_jx
-		Local jy2#=jx*_iy+jy*_jy
-		Local tx2#=tx*_ix+ty*_jx+_tx
-		Local ty2#=tx*_iy+ty*_jy+_ty
-		SetMatrix ix2,iy2,jx2,jy2,tx2,ty2
 	End 
 
 	Method Draw:Void(texture:TTexture,x:Float, y:Float)
@@ -134,13 +103,13 @@ Class BBSpriteBatch
 
 	Method Draw2:Void(texture:TTexture,x#, y#,width#,height#, u0# , v0#, u1# , v1# )
 
-		If primTex <> texture Or _spriteCnt = MAX_BATCH_SIZE Then 
+		If _primTex <> texture Or _spriteCnt = MAX_BATCH_SIZE Then 
 		
-			RenderBatch(primTex)
+			RenderBatch(_primTex)
 			ClearBatch()
-			primTex = texture
-			if primTex = Null Then
-				primTex = pad
+			_primTex = texture
+			if _primTex = Null Then
+				_primTex = _pad
 			End
 			
 		End 
@@ -194,11 +163,11 @@ Class BBSpriteBatch
 	
 	Method DrawLine:Void(x0#, y0#, x1#, y1#, linewidth# = 1)
 	
-		If primTex <> pad Or _spriteCnt = MAX_BATCH_SIZE Then 
+		If _primTex <> _pad Or _spriteCnt = MAX_BATCH_SIZE Then 
 		
-			RenderBatch(primTex)
+			RenderBatch(_primTex)
 			ClearBatch()
-			primTex = pad
+			_primTex = _pad
 			
 		End 
 
@@ -264,9 +233,9 @@ Class BBSpriteBatch
 	
 	Method DrawOval(x#,y#,w#,h#)
 	
-		RenderBatch(primTex)
+		RenderBatch(_primTex)
 		ClearBatch()
-		primTex = pad
+		_primTex = _pad
 		
 		Local xr#=w/2.0
 		Local yr#=h/2.0

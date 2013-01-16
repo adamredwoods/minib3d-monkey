@@ -12,14 +12,13 @@ Hold down mouse button to emit *FIRE*!
 #GLFW_WINDOW_RESIZABLE=false
 #GLFW_WINDOW_FULLSCREEN=false
 
-
 #XNA_WINDOW_WIDTH=1280
 #XNA_WINDOW_HEIGHT=720
 #XNA_WINDOW_RESIZABLE=false
 #XNA_WINDOW_FULLSCREEN=False
 
 Import minib3d
-Import minib3d.util.blitz2d
+Import minib3d.util.mojo
 
 Function Main()
 	New Game
@@ -60,7 +59,7 @@ Class Game Extends App
 		If init_gl Then Return
 
 		Local preloadImages:String[] = ["player.png", "bullet.png", "stars.png", 
-										"spark.png","mojo_font2.png", "_pad_.png"]
+										"spark.png","mojo_font2.png", "spacer.png","mojo_font.png"]
 
 		If Not TPixmap.PreLoadPixmap(preloadImages)	
 			Return
