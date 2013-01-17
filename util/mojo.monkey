@@ -318,13 +318,13 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,fra
 
 		context.Validate
 		
-		spriteBatch.Draw image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		spriteBatch.Draw image.surface,0,0,srcWidth,srcHeight,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 
 		B2DPopMatrix
 	Else
 		context.Validate
 		
-		spriteBatch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		spriteBatch.Draw image.surface,-image.tx+x,-image.ty+y,srcWidth,srcHeight,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 	Endif
 
 End
@@ -346,13 +346,13 @@ Function B2DDrawImageRect( image:B2DImage,x#,y#,srcX,srcY,srcWidth,srcHeight,rot
 		B2DTranslate -image.tx+x,-image.ty+y
 
 		context.Validate
-		spriteBatch.Drawimage image.surface,0,0,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		spriteBatch.Draw image.surface,0,0,srcWidth,srcHeight,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 
 		B2DPopMatrix
 
 	Else
 
-		spriteBatch.Draw image.surface,-image.tx+x,-image.ty+y,srcX+f.x,srcY+f.y,srcWidth,srcHeight
+		spriteBatch.Draw image.surface,-image.tx+x,-image.ty+y,srcWidth,srcHeight,srcX+f.x,srcY+f.y,srcWidth,srcHeight
 
 	End 
 

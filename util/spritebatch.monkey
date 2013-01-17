@@ -125,7 +125,8 @@ Class SpriteBatch
 			RenderBatch(_primTex)
 			ClearBatch()
 			_primTex = texture
-			if _primTex = Null Then
+			
+			If _primTex = Null Then' if called from B2DDrawRect
 				_primTex = _pad
 			End
 			
