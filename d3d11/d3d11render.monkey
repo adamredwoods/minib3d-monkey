@@ -247,15 +247,13 @@ Public
 						_lastSurf = surf
 					Endif
 
-					If Not skip_sprite_state Then 
+					'If Not skip_sprite_state Then 
 					
 						SetPerObjRenderStates(ent, surf)
+						SetPerObjConstants()
+						SetTextures(surf, ent, skip_sprite_state)
 						
-					End 
-					
-					SetPerObjConstants()
-					
-					SetTextures(surf, ent, skip_sprite_state)
+					'End 
 					
 				End 
 

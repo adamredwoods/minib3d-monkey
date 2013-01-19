@@ -410,7 +410,18 @@ Function B2DDrawRect(x#,y#,width#,height#)
 	DebugRenderDevice
 #End
 	context.Validate
-	spriteBatch.Draw2(Null,x, y,width,height, 0,0,1,1 )
+	spriteBatch.__Draw2(Null,x,y,width,height,0,0,1,1 )
+End 
+
+
+Function B2DDrawPoint(x#,y#)
+
+#If CONFIG="debug"
+	DebugRenderDevice
+#End
+	context.Validate
+	spriteBatch.__Draw2(Null,x,y,1,1,0,0,1,1 )
+	
 End 
 
 Function B2DDrawLine(x0#,y0#,x1#,y1#, linewidth# = 1 )
@@ -512,9 +523,9 @@ Function B2DRotate(angle#)
 End 
 
 Function B2DSetColor(r#,g#,b#)
-	context.color_r=r
-	context.color_g=g
-	context.color_b=b
+	context.color_r=255'r
+	context.color_g=255'g
+	context.color_b=255'b
 	spriteBatch.SetColor( r / 255.0,  g/ 255.0, b/ 255.0)
 End 
 
