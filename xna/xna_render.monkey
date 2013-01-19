@@ -537,8 +537,6 @@ Public
 			_st_uvSmooth = UVSamplerState.Create(TextureFilter_LinearMipPoint, bias)
 		#End 
 		
-		
-
 	End
 
 	Field _cam:TCamera
@@ -648,13 +646,13 @@ Public
 		Elseif tex_count>0 And has_texture				
 			state = filter._wU_wV ''only use wrap with power-of-two textures 
 		End
-	
+
 		' ' preserve sampler state
 		If state <> _lastSamplerState Then 
 			_device.SamplerState(0, state)
 			_lastSamplerState = state
 		End 
-		
+
 		'----------------
 		
 		' fx flag 16 - disable backface culling

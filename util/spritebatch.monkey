@@ -109,16 +109,17 @@ Class SpriteBatch
 	
 	Method Draw:Void( texture:TTexture,x#,y#,width#, height#,srcX#,srcY#,srcWidth#,srcHeight#)
 
-		Local u0# = srcX / Float(texture.width)
-		Local v0# = srcY / Float(texture.height)
-		Local u1# = u0 + srcWidth / Float(texture.width)
-		Local v1# = v0 + srcHeight / Float(texture.height)
+		Local w# = texture.width
+		Local h# = texture.height
+		Local u0# = srcX / w
+		Local v0# = srcY / h
+		Local u1# = (srcX + srcWidth ) / w
+		Local v1# = (srcY + srcHeight ) / h
 
 		__Draw2(texture,x, y,width, height, u0,v0,u1,v1)
-
 	End 
 
-	Method __Draw2:Void(texture:TTexture,x#, y#,width#,height#, u0# , v0#, u1# , v1# )
+	Method __Draw2:Void(texture:TTexture,x#, y#,w#,h#, u0# , v0#, u1# , v1# )
 
 		If _primTex <> texture Or _spriteCnt = MAX_BATCH_SIZE Then 
 		
@@ -132,8 +133,6 @@ Class SpriteBatch
 			
 		End 
 
-		Local w# = width
-		Local h# = height
 		Local x0#=x,x1#=x+w,x2#=x+w,x3#=x
 		Local y0#=y,y1#=y,y2#=y+h,y3#=y+h
 		Local tx0#=x0,tx1#=x1,tx2#=x2,tx3#=x3

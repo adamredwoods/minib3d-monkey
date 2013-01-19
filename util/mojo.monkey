@@ -164,10 +164,26 @@ Private
 		flags=iflags
 
 		If flags & XPadding
+		
+'#########################################################################################		
+'' dirty fix for xna
+'' TODO: spritebatch.Draw2 is different than original mojo's Draw2
+'' unlikely, but check if issue does also occur if Draw2 is exactly like original mojo
+''
+'' or is it xna's pixmap implementation?
+'' renderstates seems ok!
+'#########################################################################################
+			
 			For Local f:=Eachin frames
-				f.x+=1
+				#If TARGET="xna" Then 
+					f.x+=2
+				#Else
+					f.x+=1
+				#End
 			Next
 			width-=2
+			
+			
 		Endif
 
 		If flags & YPadding
