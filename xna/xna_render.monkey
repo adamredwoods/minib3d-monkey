@@ -669,16 +669,8 @@ Public
 			_device.RasterizerState = _rasterizerWire
 		Endif
 
-		'' fx flag 32 - force alpha
-		If _fx&32
-			surf.alpha_enable=True
-		Endif
-		
-		
-
 		' take into account auto fade alpha
 		_alpha=_alpha-ent.fade_alpha
-
 		
 		' if surface contains alpha info, enable blending
 		''and  fx flag 64 - disable depth testing
