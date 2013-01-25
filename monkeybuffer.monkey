@@ -488,7 +488,7 @@ Class BufferReader
 	''shortcut for b3d, loads a 4-byte "tag", does not increment position
 	Method ReadTag:Int()
 
-		If pos>size Then Return 0
+		If pos+3>size Then Return 0
 		Return ((data.PeekByte(pos+3) Shl 24) | (data.PeekByte(pos+2) Shl 16) | (data.PeekByte(pos+1) Shl 8) | (data.PeekByte(pos)))
 
 	End
