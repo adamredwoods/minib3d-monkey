@@ -299,6 +299,7 @@ Class TRender
 			TRender.render.Render(mesh,camera2D)
 		Next
 		
+		TRender.render.Finish()
 		draw_list.Clear()
 		
 	End
@@ -361,7 +362,9 @@ Class TRender
 'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
 
 				If inview
-				
+					
+					If mesh.wireframe Or wireframe Then wireframe = True
+					
 					If mesh.auto_fade=True Then mesh.AutoFade(cam)
 					
 					If mesh.is_sprite Or mesh.is_update
@@ -386,22 +389,18 @@ Class TRender
 	
 					Endif
 					
+					wireframe = False
+					
 				Endif
 			Endif
 					
 		Next
 		
-		'' can't draw front to back, then "entity.order" is messed up
+		
+		
+		'' can't draw front to back for opaque, then "entity.order" is messed up
 		' Draw front to back for opaque
 		'render_list.Sort()
-		'For mesh = Eachin render_list
-		
-			'TRender.alpha_pass=1 'skip, no alpha
-			'mesh.alpha_order=0.0
-			'TRender.render.Render(mesh,cam)
-			
-		'Next
-		'TRender.alpha_pass=0
 		
 				
 		' Draw back to front, alpha render list
@@ -410,19 +409,25 @@ Class TRender
 		'TRender.alpha_pass = 1 ''skip non-alpha surface pass ''ACTUALLY this may help hardware z-ordering
 		
 		For mesh = Eachin render_alpha_list
-
+			
+			If mesh.wireframe Or wireframe Then wireframe = True
+			
 			TRender.render.Render(mesh,cam)
+			
+			wireframe = False
 
 		Next
+		
+		
 		
 		Finish() ''end render pass
 		
 	End
 	
 	
-	Function Wireframe(enable:Bool)
+	Function Wireframe(b:Bool=True)
 	
-		wireframe = enable
+		wireframe = b
 		
 	End 
 	

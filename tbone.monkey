@@ -1,4 +1,5 @@
 Import minib3d
+Import minib3d.math.quaternion
 
 ''NOTES
 '' - currently does not support bone scale animation
@@ -189,8 +190,9 @@ Public
 	
 	
 	Method RotateBone(x#,y#,z#,glob=False)
-
-		rx=x; ry=y; rz=z
+		
+		'' pitch is flipped
+		rx=-x; ry=y; rz=z
 		
 		''use rest matrix
 		Local t_mat:Matrix = New Matrix
@@ -232,6 +234,9 @@ Public
 			'UpdateMatrixGlobal(t_mat, 3, [x,y,z])
 		'Endif
 		
+		gsx=parent.gsx*sx
+		gsy=parent.gsy*sy
+		gsz=parent.gsz*sz
 		
 		If TBone(Self).child_list.IsEmpty()<>True Then UpdateBoneChildren(Self)
 

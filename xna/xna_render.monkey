@@ -134,6 +134,7 @@ Public
 		Local mesh:TMesh = TMesh(ent)
 		If Not mesh Then Return
 		
+		''If _device.GraphicsDeviceStatus() Then Print "<<<<<<<"
 
 		'' draw surfaces with alpha last
 		Local temp_list:List<TSurface> = mesh.surf_list
@@ -188,12 +189,14 @@ Public
 					If mesh.anim
 						
 						Local meshx:= _meshes.Get(mesh.anim_surf[surf.surf_id].vbo_id[0])
+						If Not meshx Then surf.vbo_id[0]=0; Continue
 						meshx.Bind()
 						meshx.Render()
 					
 					Else
 		
 						Local meshx:= _meshes.Get(surf.vbo_id[0])
+						If Not meshx Then surf.vbo_id[0]=0; Continue
 						meshx.Bind()
 						meshx.Render()
 					Endif 
@@ -488,12 +491,12 @@ Private
 	Field _basicEffect			:BasicEffect
 	Field _enviromentEffect		:BasicEffect
 	Field _draw2DEffect			:Draw2DEffect
+
 	
 	Field _lastTexture			:TTexture
 	
 	' last combined brush values
 	Field tex_count%, _red#,_green#,_blue#,_alpha#,_shine#,_blend%,_fx%, tex_flags%, textures:TTexture[]
-
 
 
 Public 
@@ -591,6 +594,7 @@ Public
 		Else
 			_lastEffect.Effect().FogEnabled = False 
 		Endif
+
 	End
 	
 	
@@ -827,6 +831,12 @@ Public
 			If BasicEffect(e) Then BasicEffect(e).NoLighting
 		Endif
 		
+		If e._disable_fog
+			e.Fog(False)
+		Else
+			e.Fog(True)
+		Endif
+		
 	End
 	
 	
@@ -949,6 +959,7 @@ Class EffectContainer Implements IEffectContainer
 	Field _updateProjection? 	= True
 	Field _effect				:XNAEffect
 	Field _name					:String
+	Field _disable_fog			:Bool
 	
 	Method Bind(ent:TEntity, surf:TSurface, 
 		_red#,_green#,_blue#, _alpha#, _shine#, _fx%, tex_count, textures:TTexture[] ) Abstract
@@ -962,7 +973,8 @@ Class EffectContainer Implements IEffectContainer
 		_updateView = True
 		_updateLight = True
 		_updateProjection = True
-		_effect.FogEnabled = False
+		'_effect.FogEnabled = False
+		_disable_fog = False
 	End
 	
 	
@@ -1024,6 +1036,10 @@ Class EffectContainer Implements IEffectContainer
 	Method WorldMatrix:Void(mat:Float[])
 		_updateWorld = False
 		_effect.WorldMatrix(mat)
+	End
+	
+	Method Fog:Void(enable?)
+		If enable Then _effect.FogEnabled = True Else _effect.FogEnabled = False
 	End
 	
 	Method Update(cam:TCamera, ent:TEntity, e:IEffectContainer)
@@ -1092,7 +1108,9 @@ Class BasicEffect Extends EffectContainer
 
 		' fx flag 8 - disable fog
 		If _fx&8 Then 
-			effect.FogEnabled = False 
+			_disable_fog = True 
+		Else
+			_disable_fog = False
 		End 
 		
 		
@@ -1125,7 +1143,7 @@ Class BasicEffect Extends EffectContainer
 	Method NoLighting:Void()
 		
 		Local effect:XNABasicEffect = XNABasicEffect(_effect)
-		effect.FogEnabled = False
+		_disable_fog = True
 		effect.LightingEnabled = False
 		effect.AmbientLightColor(1,1,1)
 		effect.SpecularPower(0)
@@ -1164,7 +1182,7 @@ Class Draw2DEffect Extends BasicEffect
 		Super.Bind(ent,surf,_red,_green,_blue,_alpha,_shine,_fx,tex_count,textures)
 		
 		Local effect:XNABasicEffect = XNABasicEffect(_effect)
-		effect.FogEnabled = False
+		_disable_fog = True
 		effect.LightingEnabled = False
 		effect.AmbientLightColor(1,1,1)
 		effect.SpecularPower(0)
@@ -1208,7 +1226,7 @@ Class EnvironmentMapEffect Extends EffectContainer
 		
 		' fx flag 8 - disable fog
 		If _fx&8 Then 
-			effect.FogEnabled = False 
+			effect._disable_fog = True 
 		End 
 		
 		' set textures

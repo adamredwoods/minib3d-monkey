@@ -978,6 +978,7 @@ Class OpenglES11 Extends TRender
 	
 		If surf.vbo_id[0]<>0 
 			glDeleteBuffers(6,surf.vbo_id)
+			surf.vbo_id[0]=0
 		Endif
 	
 	End 

@@ -1,4 +1,49 @@
 ****************************************
+minib3d v0.33
+
+- MDD and PC2 import for vertex animation
+	TModelMDD.LoadMDD:Void(mesh:TMesh, url:String, flipz:Int=0, variance:Float = EPSI)
+	TModelMDD.LoadPC2:Void(mesh:TMesh, url:String, flipz:Int=0, variance:Float = EPSI)
+	-- applied to an existing mesh
+	-- use variance to allow slight offset between loaded OBJ and MDD
+	-- frame 0 MUST be reference pose
+	
+- ReadPixel/WritePixel for TPixmap (TTextures). all targets, even html5.
+	Example:
+	
+	pixtemp = TPixmap.CreatePixmap(64,64) ''must be powers-of-two
+
+	''edit pixmap
+	Local x:Int = 20, y:Int=20
+	For Local x:Int=0 To 63
+		pixtemp.SetPixel( x,y, 255,0,255)
+	Next
+
+	'Print	ToHex(pixtemp.GetPixel( 1,y))
+
+	
+	''when done
+	textemp = TTexture.LoadTexture(pixtemp , 1) ''flags 9=1+8=color+mipmapping
+	
+	cube.EntityTexture(textemp)
+		
+- Camera Pick and Collisions now work
+	Added CollisionSetup() for easier setup.
+	CollisionSetup(type_no, pick_mode) for auto sphere radius (uses cull radius)
+	CollisionSetup(type_no, pick_mode, radius) for sphere/polygon
+	CollisionSetup(type_no, pick_mode, x, y, z, w, d, h) for box
+
+- mymesh.Wireframe(bool) --to turn on/off individual wireframes
+- auto-correct ratio of sprites / Draw()
+- entity.PositionToVertex(mesh, surf, vertex_id) --to position an entity to a specific vertex on a mesh (animated too!)
+- Added CreateLine() for thin lines (no thickness yet)
+- CreateMiniB3DMonkey() -- creates a minib3d monkey head mesh
+
+- other bug fixes (inc. b3d loading, xna fog, parenting problem)
+
+
+
+****************************************
 minib3d v0.32
 
 -added "minib3d.app" template. to use, import minib3d.app and override methods (Create, Init, Update).

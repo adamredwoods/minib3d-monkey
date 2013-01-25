@@ -1,4 +1,5 @@
 minib3d+monkey
+v0.33 - MMD/PC2 file load, TPixmap read/write, collisions, bug fixes
 v0.32 - programmable bones, Draw(x,y) for screen, loads of bugs and stability fixes
 v0.31 - update to work with monkey v66, bug fixes.
 v0.30 - new targets, Html5, XNA, opengl2.0, GPU shaders
@@ -13,7 +14,7 @@ v0.10 - first release
 
 original minib3d (c) Simon Harrison
 monkey version (c) Adam Piette
-xna version (c) Sascha Schmidt
+xna, dx11 version (c) Sascha Schmidt
 various contributions through many authors
 
 This software is provided 'as-is', without any express or implied

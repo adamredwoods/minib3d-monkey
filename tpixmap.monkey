@@ -4,7 +4,7 @@
 '' for monkey
 ''
 Import minib3d
-Import monkeyutility
+Import minib3d.monkeyutility
 Import mojo.data
 'Import minib3d.monkeybuffer
 
@@ -77,6 +77,12 @@ Class TPixmap
 
 	End
 	
+	Method GetPixel:Int( x:Int, y:Int)
+		Return 0
+	End
+	
+	Method SetPixel:Void(x:Int, y:Int, r:Int, g:Int, b:Int, a:Int=255)
+	End
 
 	
 End

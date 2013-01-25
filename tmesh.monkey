@@ -10,12 +10,13 @@ Import minib3d
 
 Class TMesh Extends TEntity
 	
+	''mesh bounds
 	Field min_x#,min_y#,min_z#,max_x#,max_y#,max_z#
 
 	Field no_surfs:Int=0
 	Field surf_list:List<TSurface>= New List<TSurface>
 	
-	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id 'deprecated
+	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id 
 	
 	Field no_bones=0
 	Field bones:TBone[]
@@ -26,16 +27,17 @@ Class TMesh Extends TEntity
 	' reset flags - these are set when mesh shape is changed by various commands in TMesh
 	Field reset_bounds=True
 	Field center_x:Float,center_y:Float,center_z:Float
-	Field bounds_radius:Float
+	Field bounds_radius:Float '' is this used?
 	'Field reset_col_tree=True
 		
 	Field is_sprite:Bool = False '' used for sprites
 	Field is_update:Bool = False ''used for batching, etc.
 	
+	Field wireframe:Bool
 
 	Private
 	
-
+	Field vec_temp:Vector = New Vector
 	
 	Public
 
@@ -64,6 +66,7 @@ Class TMesh Extends TEntity
 
 		mesh.is_sprite = is_sprite
 		mesh.is_update = is_update
+		mesh.wireframe = wireframe
 		
 		' copy mesh info
 		
@@ -237,8 +240,12 @@ Class TMesh Extends TEntity
 		Local mesh:TMesh
 		If file.EndsWith(".obj") Or file.EndsWith(".obj.txt")
 			mesh = TModelObj.LoadMesh(file, override_texflags)
-		Else
+		Elseif file.EndsWith(".txt")
 			mesh = TModelB3D.LoadAnimB3D(file,parent_ent, override_texflags)
+		Elseif file.EndsWith(".b3d")
+			mesh = TModelB3D.LoadAnimB3DBin(file,parent_ent, override_texflags)
+		Else
+			Print "**Error: File type not recognized (use .txt, .obj, or .b3d)"
 		Endif
 		
 		If Not mesh Then Return TMesh.CreateCube()
@@ -394,6 +401,7 @@ Class TMesh Extends TEntity
 		Endif
 		
 		surf.CropSurfaceBuffers()
+		'mesh.UpdateNormals()
 		
 		mesh.classname = "MeshGrid"
 		Return mesh
@@ -583,12 +591,14 @@ Class TMesh Extends TEntity
 		Else ' have center strips now
 		
 			' poles first
+			Local YPos#=Cos(div)
+			
 			For Local i=1 To (segments*2)
 			
 				Local np=thissurf.AddVertex(0.0,height,0.0,upos-(udiv/2.0),0.0)'northpole
 				Local sp=thissurf.AddVertex(0.0,-height,0.0,upos-(udiv/2.0),1.0)'southpole
 				
-				Local YPos#=Cos(div)
+				
 				
 				Local XPos#=-Cos(RotAngle)*(Sin(div))
 				Local ZPos#=Sin(RotAngle)*(Sin(div))
@@ -638,12 +648,14 @@ Class TMesh Extends TEntity
 					thissurf.VertexTexCoords(v0b,upos,Thisvdiv+vdiv,0.0,1)
 				
 					Local tempRotAngle#=RotAngle+div
-				
-					XPos=-Cos(tempRotAngle)*(Sin(div*(mult)))
-					ZPos=Sin(tempRotAngle)*(Sin(div*(mult)))
 					
-					XPos2=-Cos(tempRotAngle)*(Sin(div*(mult+1.0)))
-					ZPos2=Sin(tempRotAngle)*(Sin(div*(mult+1.0)))				
+					Local sdm# = Sin(div*(mult))
+					XPos=-Cos(tempRotAngle)*(sdm)
+					ZPos=Sin(tempRotAngle)*(sdm)
+					
+					sdm = Sin(div*(mult+1.0))
+					XPos2=-Cos(tempRotAngle)*(sdm)
+					ZPos2=Sin(tempRotAngle)*(sdm)				
 				
 					Local temp_upos#=upos-udiv
 	
@@ -919,153 +931,39 @@ Class TMesh Extends TEntity
 		
 	End 
 	
+	Function CreateLine:TMesh(v1:Vector, v2:Vector, thick:Float=1.0, parent_ent:TEntity=Null)
+		Return CreateLine(v1.x,v1.y,v1.z,v2.x,v2.y,v2.z,thick,parent_ent)
+	End
 	
-	Method CreateLine:TMesh(x:Int, y:Int, z:Int, x2:Int, y2:Int, z2:Int, thick:Float=1.0, parent_ent:TEntity=Null)
+	Function CreateLine:TMesh(v1:Vector, v2:Vector, r:Int,g:Int,b:Int)
+		Local m:TMesh = CreateLine(v1.x,v1.y,v1.z,v2.x,v2.y,v2.z)
+		m.EntityColor(r,g,b)
+		Return m
+	End
+	
+	
+	Function CreateLine:TMesh(x:Float, y:Float, z:Float, x2:Float, y2:Float, z2:Float, thick:Float=1.0, parent_ent:TEntity=Null)
 		
 		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
 	
 		Local surf:TSurface=mesh.CreateSurface()
-			
-		surf.AddVertex(-thick,-1.0,-1.0) ' front
-		surf.AddVertex(-1.0, 1.0,-1.0)
-		surf.AddVertex( 1.0, 1.0,-1.0)
-		surf.AddVertex( 1.0,-1.0,-1.0)
 		
-		surf.AddVertex(-1.0,-1.0, 1.0) ' back
-		surf.AddVertex(-1.0, 1.0, 1.0)
-		surf.AddVertex( 1.0, 1.0, 1.0)
-		surf.AddVertex( 1.0,-1.0, 1.0)
-			
-		surf.AddVertex(-1.0,-1.0, 1.0) ' top
-		surf.AddVertex(-1.0, 1.0, 1.0)
-		surf.AddVertex( 1.0, 1.0, 1.0)
-		surf.AddVertex( 1.0,-1.0, 1.0)
 		
-		surf.AddVertex(-1.0,-1.0,-1.0) ' bottom
-		surf.AddVertex(-1.0, 1.0,-1.0)
-		surf.AddVertex( 1.0, 1.0,-1.0)
-		surf.AddVertex( 1.0,-1.0,-1.0)
 
-		surf.AddVertex(-1.0,-1.0, 1.0) ' right
-		surf.AddVertex(-1.0, 1.0, 1.0)
-		surf.AddVertex( 1.0, 1.0, 1.0)
-		surf.AddVertex( 1.0,-1.0, 1.0)
-		
-		surf.AddVertex(-1.0,-1.0,-1.0) ' left
-		surf.AddVertex(-1.0, 1.0,-1.0)
-		surf.AddVertex( 1.0, 1.0,-1.0)
-		surf.AddVertex( 1.0,-1.0,-1.0)
+		surf.AddVertex(x,y,z)
+		surf.AddVertex(x2,y2,z2)
+		surf.AddVertex(x,y,z)
+						
+		surf.AddTriangle(0,1,2)
 
-		surf.VertexNormal(0,0.0,0.0,-1.0)
-		surf.VertexNormal(1,0.0,0.0,-1.0)
-		surf.VertexNormal(2,0.0,0.0,-1.0)
-		surf.VertexNormal(3,0.0,0.0,-1.0)
-	
-		surf.VertexNormal(4,0.0,0.0,1.0)
-		surf.VertexNormal(5,0.0,0.0,1.0)
-		surf.VertexNormal(6,0.0,0.0,1.0)
-		surf.VertexNormal(7,0.0,0.0,1.0)
-		
-		surf.VertexNormal(8,0.0,-1.0,0.0)
-		surf.VertexNormal(9,0.0,1.0,0.0)
-		surf.VertexNormal(10,0.0,1.0,0.0)
-		surf.VertexNormal(11,0.0,-1.0,0.0)
-				
-		surf.VertexNormal(12,0.0,-1.0,0.0)
-		surf.VertexNormal(13,0.0,1.0,0.0)
-		surf.VertexNormal(14,0.0,1.0,0.0)
-		surf.VertexNormal(15,0.0,-1.0,0.0)
-	
-		surf.VertexNormal(16,-1.0,0.0,0.0)
-		surf.VertexNormal(17,-1.0,0.0,0.0)
-		surf.VertexNormal(18,1.0,0.0,0.0)
-		surf.VertexNormal(19,1.0,0.0,0.0)
-				
-		surf.VertexNormal(20,-1.0,0.0,0.0)
-		surf.VertexNormal(21,-1.0,0.0,0.0)
-		surf.VertexNormal(22,1.0,0.0,0.0)
-		surf.VertexNormal(23,1.0,0.0,0.0)
-
-		surf.VertexTexCoords(0,0.0,1.0)
-		surf.VertexTexCoords(1,0.0,0.0)
-		surf.VertexTexCoords(2,1.0,0.0)
-		surf.VertexTexCoords(3,1.0,1.0)
-		
-		surf.VertexTexCoords(4,1.0,1.0)
-		surf.VertexTexCoords(5,1.0,0.0)
-		surf.VertexTexCoords(6,0.0,0.0)
-		surf.VertexTexCoords(7,0.0,1.0)
-		
-		surf.VertexTexCoords(8,0.0,1.0)
-		surf.VertexTexCoords(9,0.0,0.0)
-		surf.VertexTexCoords(10,1.0,0.0)
-		surf.VertexTexCoords(11,1.0,1.0)
-			
-		surf.VertexTexCoords(12,0.0,0.0)
-		surf.VertexTexCoords(13,0.0,1.0)
-		surf.VertexTexCoords(14,1.0,1.0)
-		surf.VertexTexCoords(15,1.0,0.0)
-	
-		surf.VertexTexCoords(16,0.0,1.0)
-		surf.VertexTexCoords(17,0.0,0.0)
-		surf.VertexTexCoords(18,1.0,0.0)
-		surf.VertexTexCoords(19,1.0,1.0)
-				
-		surf.VertexTexCoords(20,1.0,1.0)
-		surf.VertexTexCoords(21,1.0,0.0)
-		surf.VertexTexCoords(22,0.0,0.0)
-		surf.VertexTexCoords(23,0.0,1.0)
-
-		surf.VertexTexCoords(0,0.0,1.0,0.0,1)
-		surf.VertexTexCoords(1,0.0,0.0,0.0,1)
-		surf.VertexTexCoords(2,1.0,0.0,0.0,1)
-		surf.VertexTexCoords(3,1.0,1.0,0.0,1)
-		
-		surf.VertexTexCoords(4,1.0,1.0,0.0,1)
-		surf.VertexTexCoords(5,1.0,0.0,0.0,1)
-		surf.VertexTexCoords(6,0.0,0.0,0.0,1)
-		surf.VertexTexCoords(7,0.0,1.0,0.0,1)
-		
-		surf.VertexTexCoords(8,0.0,1.0,0.0,1)
-		surf.VertexTexCoords(9,0.0,0.0,0.0,1)
-		surf.VertexTexCoords(10,1.0,0.0,0.0,1)
-		surf.VertexTexCoords(11,1.0,1.0,0.0,1)
-			
-		surf.VertexTexCoords(12,0.0,0.0,0.0,1)
-		surf.VertexTexCoords(13,0.0,1.0,0.0,1)
-		surf.VertexTexCoords(14,1.0,1.0,0.0,1)
-		surf.VertexTexCoords(15,1.0,0.0,0.0,1)
-	
-		surf.VertexTexCoords(16,0.0,1.0,0.0,1)
-		surf.VertexTexCoords(17,0.0,0.0,0.0,1)
-		surf.VertexTexCoords(18,1.0,0.0,0.0,1)
-		surf.VertexTexCoords(19,1.0,1.0,0.0,1)
-				
-		surf.VertexTexCoords(20,1.0,1.0,0.0,1)
-		surf.VertexTexCoords(21,1.0,0.0,0.0,1)
-		surf.VertexTexCoords(22,0.0,0.0,0.0,1)
-		surf.VertexTexCoords(23,0.0,1.0,0.0,1)
-				
-		surf.AddTriangle(0,1,2) ' front
-		surf.AddTriangle(0,2,3)
-		surf.AddTriangle(6,5,4) ' back
-		surf.AddTriangle(7,6,4)
-		surf.AddTriangle(6+8,5+8,1+8) ' top
-		surf.AddTriangle(2+8,6+8,1+8)
-		surf.AddTriangle(0+8,4+8,7+8) ' bottom
-		surf.AddTriangle(0+8,7+8,3+8)
-		surf.AddTriangle(6+16,2+16,3+16) ' right
-		surf.AddTriangle(7+16,6+16,3+16)
-		surf.AddTriangle(0+16,1+16,5+16) ' left
-		surf.AddTriangle(0+16,5+16,4+16)
 
 		surf.CropSurfaceBuffers()
 		
-		mesh.classname = "MeshCube"
+		mesh.classname = "Line"
+		mesh.wireframe = True
 		
 		Return mesh
 
-		
 	End
 	
 	Method CopyMesh:TMesh(parent_ent:TEntity=Null)
@@ -1443,7 +1341,7 @@ Class TMesh Extends TEntity
 		
 		Local mat:Matrix=New Matrix
 		mat.LoadIdentity()
-		mat.Rotate(pitch,yaw,roll)
+		mat.FastRotateScale(pitch,yaw,roll,1.0,1.0,1.0)
 
 		For Local s=1 To no_surfs
 	
@@ -1455,9 +1353,9 @@ Class TMesh Extends TEntity
 				Local vy#=surf.vert_data.VertexY(v)
 				Local vz#=surf.vert_data.VertexZ(v)
 	
-				Local rx# =(mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz + mat.grid[3][0] )
-				Local ry# =(mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz + mat.grid[3][1] )
-				Local rz# =(mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz + mat.grid[3][2] )
+				Local rx# =(mat.grid[0][0]*vx + mat.grid[1][0]*vy + mat.grid[2][0]*vz )'+ mat.grid[3][0] )
+				Local ry# =(mat.grid[0][1]*vx + mat.grid[1][1]*vy + mat.grid[2][1]*vz )'+ mat.grid[3][1] )
+				Local rz# =(mat.grid[0][2]*vx + mat.grid[1][2]*vy + mat.grid[2][2]*vz )'+ mat.grid[3][2] )
 				
 				surf.vert_data.PokeVertCoords(v, rx,ry,rz)
 				
@@ -1465,9 +1363,9 @@ Class TMesh Extends TEntity
 				Local ny#=surf.vert_data.VertexNY(v)
 				Local nz#=surf.vert_data.VertexNZ(v)
 	
-				rx=( mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz + mat.grid[3][0] )
-				ry=( mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz + mat.grid[3][1] )
-				rz=( mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz + mat.grid[3][2] )
+				rx=( mat.grid[0][0]*nx + mat.grid[1][0]*ny + mat.grid[2][0]*nz)' + mat.grid[3][0] )
+				ry=( mat.grid[0][1]*nx + mat.grid[1][1]*ny + mat.grid[2][1]*nz)' + mat.grid[3][1] )
+				rz=( mat.grid[0][2]*nx + mat.grid[1][2]*ny + mat.grid[2][2]*nz)' + mat.grid[3][2] )
 				
 				surf.vert_data.PokeNormals(v, rx,ry,rz)
 			Next
@@ -1813,18 +1711,17 @@ Class TMesh Extends TEntity
 			For Local surf:TSurface=Eachin surf_list
 		
 				For Local v=0 Until surf.no_verts
-				
-					Local x#=surf.vert_data.VertexX(v) 'vert_coords.Peek(v*3) ' surf.VertexX(v)
-					If x<min_x Then min_x=x
-					If x>max_x Then max_x=x
 					
-					Local y#=surf.vert_data.VertexY(v) 'vert_coords.Peek((v*3)+1) ' surf.VertexY(v)
-					If y<min_y Then min_y=y
-					If y>max_y Then max_y=y
+					surf.vert_data.GetVertCoords(vec_temp,v)
+
+					If vec_temp.x<min_x Then min_x=vec_temp.x
+					If vec_temp.x>max_x Then max_x=vec_temp.x
 					
-					Local z#=-surf.vert_data.VertexZ(v) 'vert_coords.Peek((v*3)+2) ' surf.VertexZ(v)
-					If z<min_z Then min_z=z
-					If z>max_z Then max_z=z
+					If vec_temp.y<min_y Then min_y=vec_temp.y
+					If vec_temp.y>max_y Then max_y=vec_temp.y
+
+					If vec_temp.z<min_z Then min_z=vec_temp.z
+					If vec_temp.z>max_z Then max_z=vec_temp.z
 				
 				Next
 			
@@ -1850,8 +1747,8 @@ Class TMesh Extends TEntity
 
 				cull_radius=cull_radius * 0.5
 				Local crs#=cull_radius*cull_radius
-				cull_radius=Sqrt(crs+crs)'+crs)
-				
+				cull_radius= Sqrt(crs+crs) ''need the cube corners to be in the sphere
+
 			Endif
 			
 			' mesh centre
@@ -2000,6 +1897,13 @@ Class TMesh Extends TEntity
 		
 	End
 	
+	Method GetAnimSurface:TSurface(s:Int)
+		
+		If s<0 Or s>anim_surf.Length Then Return Null
+		Return anim_surf[s-1]
+		
+	End
+	
 	
 	Method ResetBones:Void()
 		
@@ -2049,6 +1953,12 @@ Class TMesh Extends TEntity
 		
 	End
 	
+	
+	Method Wireframe:Void(w:Bool = True)
+		
+		wireframe = w
+		
+	End
 	
 	Method Update(cam:TCamera)
 		

@@ -144,6 +144,12 @@ public class XNAGraphicsDevice
 		//return caps.PixelShaderVersion; //MaxPixelShaderProfile;
 		if (_device.GraphicsProfile == GraphicsProfile.Reach) {return 2.0f;} else { return 3.0f; }
 	}
+	
+	public int GraphicsDeviceStatus() {
+		return Convert.ToInt32(_device.GraphicsDeviceStatus);
+		//return Convert.ToInt32(_device.IsDisposed);
+	}
+	
 };
 
 public class XNABlendState

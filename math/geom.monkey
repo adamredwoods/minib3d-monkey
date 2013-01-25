@@ -23,10 +23,22 @@ Class Line
 	
 	End
 	
+	Method FromPoints ( oo:Vector, dd:Vector )
+		o=oo.Copy()
+		d=dd.Subtract(oo)
+	End
+	
 	Method Update(ox:Float,oy:Float,oz:Float,dx:Float,dy:Float,dz:Float)
 		
 		o.x = ox; o.y = oy; o.z = oz
 		d.x = dx; d.y = dy; d.z = dz
+		
+	End
+	
+	Method Update(l:Line)
+		
+		o.x = l.o.x; o.y = l.o.y; o.z = l.o.z
+		d.x = l.d.x; d.y = l.d.y; d.z = l.d.z
 		
 	End
 	
@@ -57,13 +69,17 @@ Class Line
 		Local z:Float = o.z-d.z
 		Return Sqrt(x*x + y*y + z*z)
 	End
+	
+	Method ToString:String()
+		Return o.x+" "+o.y+" "+o.z+" :: "+(o.x+d.x)+" "+(o.y+d.y)+" "+(o.z+d.z)
+	End
 End
 
 
 Class Plane
 	Public
 	
-	Field n:Vector
+	Field n:Vector = New Vector
 	Field d:Float =0.0
 
 
@@ -85,7 +101,11 @@ Class Plane
 		n = v1.Subtract(v0).Cross( v2.Subtract(v0)).Normalize
 		d = -n.Dot(v0)
 	End
-
+	
+	Method Update( nnx:Float, nny:Float, nnz:Float, dd:Float)
+		n.x=nnx; n.y=nny; n.z=nnz
+		d=dd
+	End
 
 	Method Negate()
 		Return New Plane(n.Negate(),d.Negate() )
@@ -107,7 +127,10 @@ Class Plane
 		Local lv:Vector = n.Cross( q.n ).Normalize()
 		Return New Line( q.Intersect( New Line( Nearest( n.Multiply(-d)), n.Cross(lv) ) ), lv)
 	End
-
+	
+	Method IntersectNorm:Vector( q:Plane )
+		Return n.Cross( q.n ).Normalize()
+	End
 
 	Method Nearest:Vector( q:Vector)
 		Return q.Subtract(n.Multiply( Distance(q) ))
@@ -218,6 +241,14 @@ Class Box
 		If( q.b.z>b.z ) b.z=q.b.z
 	End
 	
+	Method Update( l:Line )
+
+		a.Overwrite(l.o)
+		b.Overwrite(l.o)
+		Update(l.o.Add(l.d))
+		
+	End
+	
 	Method Overlaps(q:Box)
 		Local r1:Float, r2:Float, r3:Float, r4:Float, r5:Float, r6:Float
 		If b.x<q.b.x Then r1 = b.x Else r1 = q.b.x
@@ -237,6 +268,10 @@ Class Box
 		a.x-=n; a.y-=n; a.z-=n; b.x+=n; b.y+=n; b.z+=n
 	End
 	
+	Method Expand( n:Vector )
+		a.x-=n.x; a.y-=n.y; a.z-=n.z; b.x+=n.x; b.y+=n.y; b.z+=n.z
+	End
+	
 	Method Width:Float()
 		Return b.x-a.x
 	End
@@ -251,6 +286,10 @@ Class Box
 	
 	Method Contains:Bool( q:Vector )
 		Return (q.x>=a.x And q.x<=b.x And q.y>=a.y And q.y<=b.y And q.z>=a.z And q.z<=b.z)
+	End
+	
+	Method ToString:String()
+		Return a.x+" "+a.y+" "+a.z+" : "+b.x+" "+b.y+" "+b.z
 	End
 	
 End

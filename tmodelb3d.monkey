@@ -6,6 +6,7 @@
 
 Import minib3d
 Import minib3d.monkeybuffer
+Import minib3d.monkeyutility
 
 Class TModelB3D
 	
@@ -43,13 +44,53 @@ Public
 			Return New TMesh
 		Endif
 		
-			
+		Local ent:TMesh = ParseB3D(file.data, override_texflags)
+		
+		If parent_ent_ext Then ent.EntityParent(parent_ent_ext)
+		TEntity.entity_list.EntityListAdd( ent)
+		
+		file.Free()
+		
+		Return ent
+		
+	End
+	
+
+	'' cant do this yet until Monkey V67
+	Function LoadAnimB3DBin:TMesh(f_name$,parent_ent_ext:TEntity=Null, override_texflags:Int=-1 )
+	
+		Return New TMesh
+#rem	
+		' Start file reading
+		
+		Local data:DataBuffer = LoadDataBuffer(f_name)
+		
+		If data.Length() <=1
+			Print "**File not found: "+f_name
+			Return New TMesh
+		Endif
+		
+		Local ent:TMesh = ParseB3D(data, override_texflags)
+		
+		If parent_ent_ext Then ent.EntityParent(parent_ent_ext)
+		TEntity.entity_list.EntityListAdd( ent)
+		
+		Return ent
+#end		
+	End
+	
+	
+	Function ParseB3D:TMesh (data:DataBuffer, override_texflags:Int=-1)		
 		' Header info
 		
 		Local tag:Int
 		Local prev_tag:Int
 		Local new_tag:Int
 		Local vno:Int
+		
+		Local file:BufferReader = BufferReader.Create(data)
+		
+		''read BB3D
 		
 		tag=file.ReadTag()
 		
@@ -60,8 +101,8 @@ Public
 
 		vno =file.ReadInt() 'version
 
-		If tag<>BB3D Dprint  "Invalid b3d file"; Return New TMesh
-		If Int(vno*0.01) >0 Dprint  "Invalid b3d file version"; Return New TMesh
+		If tag<>BB3D Print  "Invalid b3d file"; Return New TMesh
+		If Int(vno*0.01) >0 Print  "Invalid b3d file version"; Return New TMesh
 		
 		' Locals
 		
@@ -285,7 +326,7 @@ Public
 					For Local i=1 To node_level
 						tab=tab+"-"
 					Next
-					Dprint  tab+" "+PrintTag(tag)+" "+info
+					Print  tab+" "+PrintTag(tag)+" "+info
 				Endif
 				
 			Else
@@ -307,6 +348,9 @@ Public
 					While NewTag(new_tag)<>True And file.Eof()<>True
 					
 						te_file=B3DReadString(file)
+						
+						If te_file.Length <=1 Then Exit
+						
 						te_flags=file.ReadInt()
 						te_blend=file.ReadInt()
 						te_u_pos=file.ReadFloat()
@@ -348,7 +392,7 @@ Public
 						' if not then the texture created above (supplied as param below) will be returned
 						tex[tex_no]=TTexture.LoadTexture(te_file,te_flags,tex[tex_no])
 						
-						If tex[tex_no].gltex[0] And DEBUGMODEL Then Dprint  "-Load Texture:"+te_file
+						If tex[tex_no] And DEBUGMODEL Then Print  "-Load Texture:"+te_file
 											
 						tex_no=tex_no+1
 						tex=tex.Resize(tex_no+1) ' resize array +1
@@ -465,7 +509,7 @@ Public
 						If root_ent=Null Then root_ent=piv
 			
 						' if ent is root ent, and external parent specified, add parent
-						If root_ent=piv Then piv.AddParent(parent_ent_ext)
+						'If root_ent=piv Then piv.AddParent(parent_ent_ext)
 			
 						' if ent nested then add parent
 						If node_level>0 Then piv.AddParent(parent_ent)
@@ -514,7 +558,7 @@ Public
 					If root_ent=Null Then root_ent=mesh
 					
 					' if ent is root ent, and external parent specified, add parent
-					If root_ent=mesh Then mesh.AddParent(parent_ent_ext)
+					'If root_ent=mesh Then mesh.AddParent(parent_ent_ext)
 					
 					' if ent nested then add parent
 					If node_level>0 Then mesh.AddParent(parent_ent)
@@ -600,7 +644,7 @@ Public
 					Local e:Bool = False
 					Local old_tr_brush_id:Int = tr_brush_id
 					tr_brush_id=file.ReadInt()
-					e=file.Eof()
+					
 			
 					' don't create new surface if tris chunk has same brush as chunk immediately before it
 					If (prev_tag<>TRIS Or tr_brush_id<>old_tr_brush_id)
@@ -621,7 +665,8 @@ Public
 						
 					new_tag=file.ReadTag()
 					
-	Print "** size "+((size-4)/12)+" trbrush "+tr_brush_id				
+	'Print "** size "+((size-4)/12)+" trbrush "+tr_brush_id	
+				
 					''check for EOF in case of corrupt file
 					'While NewTag(new_tag)<>True And file.Eof()<>True
 					
@@ -763,7 +808,7 @@ Public
 					a_frames=file.ReadInt()
 					a_fps=file.ReadFloat()
 					
-					If mesh<>Null
+					If mesh<>Null And file.Eof()<>True
 					
 						mesh.anim=1
 					
@@ -817,6 +862,8 @@ Public
 				
 						bo_vert_id=file.ReadInt()
 						bo_vert_w=file.ReadFloat()
+						
+						If bo_vert_id>surf.no_verts Or bo_vert_id <0 Then Exit	'' a check for corrupt files			
 						
 						' assign weight values, with the strongest weight in vert_weight[1], and weakest in vert_weight[4]
 									
@@ -985,7 +1032,7 @@ Public
 					new_tag=file.ReadTag()
 	
 					While NewTag(new_tag)<>True And file.Eof()<>True
-				
+			
 						k_frame=file.ReadInt()
 						
 						If(k_flags&1) 'pos
@@ -1055,7 +1102,6 @@ Public
 		
 		Until file.Eof()
 		
-		file.Free()
 		
 		''clean up buffers
 		For Local surf:TSurface = Eachin mesh.surf_list
@@ -1064,7 +1110,7 @@ Public
 		Next
 		
 		
-		TEntity.entity_list.EntityListAdd( root_ent)
+		
 		Return TMesh(root_ent)
 	
 	End 
@@ -1082,7 +1128,7 @@ Public
 		Local vmin=surf.vmin
 		Local vmax=surf.vmax
 		Local diff = vmax-vmin
-Print "trim: "+vmin+" "+vmax
+'If DEBUG Then Print "trim: "+vmin+" "+vmax
 		
 		surf.vert_data= CopyDataBuffer(surf.vert_data, VertexDataBuffer.Create(diff+1), vmin,vmax+1)
 		'surf.vert_coords=CopyFloatBuffer(surf.vert_coords, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
@@ -1102,14 +1148,14 @@ Print "trim: "+vmin+" "+vmax
 		
 	End 
 
-	Function B3DReadString:String(file:Base64)
+	Function B3DReadString:String(file:BufferReader)
 		Local t$="", ch:Int
 		Repeat
 			ch =file.ReadByte()
 			If ch=0 Exit
 			t=t.Join(["",String.FromChar(ch)]) ''backwards
 		Forever
-		
+	
 		''strip directory
 		Local str:String[] = t.Split("/")
 		
@@ -1436,7 +1482,7 @@ Function DumpB3D:Void( f_name$, outf$ )
 							te_coords=0
 						Endif
 						
-						If tex[tex_no].gltex[0] Then outp+=  "-Load Texture:"+te_file+" flags:"+te_flags+" tecoords:"+te_coords+"~n"
+						outp+=  "-Load Texture "+tex_no+":"+te_file+" flags:"+te_flags+" tecoords:"+te_coords+"~n"
 											
 						tex_no=tex_no+1
 	

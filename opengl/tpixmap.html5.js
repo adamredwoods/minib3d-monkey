@@ -1,109 +1,6 @@
-/*
-var _preLoadTextures = new PreLoadTextures();
-
-
-function PreLoadTextures() {
-	this.preloadedimages=[];
-	this.old_file=[];
-	this.totalloaded=0;
-	this.loading=false;
-	this.loaded=false;
-	//print("/// setup");
-}
-
-//return true if loading
-PreLoadTextures.prototype.Loader = function(file) {
-
-	if (file[0] == this.old_file[0]) {
-		if (this.loading) {
-			//print( "html5 checkloading "+this.totalloaded );
-			return this.CheckLoading() ;
-		}
-		//print ("loading done "+this.loading);
-		return 0; //not currently loading anything
-	} else {
-		if (!this.loading) this.old_file = file.slice(0); this.totalloaded=0;
-	}
-
-		
-	
-	this.loading = true;
-	var base = this;
-	
-	//print ("loading start "+this.loading);
-	
-    for (var i = 0; i < file.length; ++i) {
-		// Create an image tag.
-		var image = document.createElement("img");
-
-		
-		image.filename = file[i];
-		image.src = "data/"+file[i];
-		
-		// Remember the image.
-		this.preloadedimages.push(image);
-	}
-	
-	return 1;
-};
-
-PreLoadTextures.prototype.CheckLoading = function() {
-	//print ("CheckLoading list length "+this.preloadedimages.length);
-
-	if (this.preloadedimages.length<1) return 0;
-	
-	this.totalloaded =0;
-	for (i=0; i<this.preloadedimages.length-1; i++) {	
-		
-		if (!this.preloadedimages[i].complete) {
-			//print ("CheckLoading still loading");
-			return 1;
-		}		
-		this.totalloaded++;
-	}
-	//print ("CheckLoading all done");
-	return 0;
-	
-};
-	
-PreLoadTextures.prototype.LoadImageData = function(file, info) {
-	//check cache
-	var nn = this.preloadedimages.length;
-	//print ( "///preloader len "+nn);
-	for (i=0; i<this.preloadedimages.length; ++i) {
-		if (this.preloadedimages[i].filename == file) {
-			//print( "cache hit "+this.preloadedimages[i].filename);
-			info[0] = this.preloadedimages[i].width; info[1] = this.preloadedimages[i].height;
-			return this.preloadedimages[i];
-		}
-	}
-	
-	//else load asynchronously, no guarantee
-	var image = document.createElement("img");
-	var base = this;
-	
-	image.loaded = false;
-	
-	image.onload = function() {
-			image.loaded = true;
-			//base.ImageInc();
-			//print( "loaded "+image.filename);
-			} ;
-		
-	image.filename = file;
-	image.src = "data/"+file;
-	
-	info[0] = image.width; info[1] = image.height;
-	
-	return image;
-};
-*/
-
-/*
-function PreLoadImage() {
-	this.id = -1;
-	this.image = document.createElement("img");
-}*/
+//
+//
+// for minib3d html5
 
 
 function LoadImageData(file, idx) {
@@ -201,7 +98,69 @@ function GetImageInfo( image ) {
 	
 	return [image.width, image.height];
 	
-}
+};
+
+
+//
+// -- pixel read/write functions
+//
+
+var _pixelMod= new pixelMod();
+
+function pixelMod() {
+	this.image_cache;
+	this.image_cacheread;
+	this.imagedata_cache_minib3d;
+	
+	this.image_cache_canvas ;//= document.createElement("canvas");
+	this.image_cache_cxt ;//= this.image_cache_canvas.getContext("2d");
+};
+
+pixelMod.prototype.ReadPixel = function( image, x, y) {
+
+	
+	if (!(image === this.image_cache)) {
+	
+		this.image_cache_canvas = document.createElement("canvas");
+		this.image_cache_cxt = this.image_cache_canvas.getContext("2d");
+		this.image_cache_canvas.width = image.width; this.image_cache_canvas.height = image.height;
+		this.image_cache_cxt.drawImage(image, 0, 0);
+		//this.imagedata_cache_minib3d = this.image_cache_cxt.getImageData(0, 0, image.width, image.height);
+		this.image_cache = image;
+		
+	}
+	//var i = (x+y*image.width)*4;
+	//return (this.imagedata_cache_minib3d.data[i]|this.imagedata_cache_minib3d.data[i+1]|this.imagedata_cache_minib3d.data[i+2]|this.imagedata_cache_minib3d.data[i+3]);
+	this.image_cache_cxt.drawImage(image, 0, 0);
+	var p = this.image_cache_cxt.getImageData(x, y, 1, 1);
+	return (p.data[0] << 24 |p.data[1] << 16|p.data[2]<<8|p.data[3]);
+};
+
+pixelMod.prototype.WritePixel = function( image, x, y, r,g,b,a) {
+	
+	if (!(image === this.image_cache)) {
+
+		this.image_cache_canvas = document.createElement("canvas");
+		this.image_cache_cxt = this.image_cache_canvas.getContext("2d");
+		this.image_cache_canvas.width = image.width; this.image_cache_canvas.height = image.height;
+		this.image_cache_cxt.drawImage(image, 0, 0);
+		//this.imagedata_cache_minib3d = this.image_cache_cxt.getImageData(0, 0, image.width, image.height);
+		this.image_cache = image;
+
+	}
+	
+	/*var i = (x+y*image.width)*4;
+
+	this.imagedata_cache_minib3d.data[i]=r;
+	this.imagedata_cache_minib3d.data[i+1]=g;
+	this.imagedata_cache_minib3d.data[i+2]=b;
+	this.imagedata_cache_minib3d.data[i+3]=a;*/
+	
+	this.image_cache_cxt.fillStyle = "rgba("+r+","+g+","+b+","+a+")";
+	this.image_cache_cxt.fillRect (x,y,1,1);
+	
+	return this.image_cache_canvas;
+};
 
 
 

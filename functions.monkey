@@ -1092,6 +1092,10 @@ Function PositionTexture(tex:TTexture,u_pos#,v_pos#)
 	tex.PositionTexture(u_pos,v_pos)
 End 
 
+Function PreLoadPixmap:Int(fs:String[])
+	Return TPixmap.PreLoadPixmap(fs)
+End
+
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=ProjectedX">Online Help</a>
 #End 

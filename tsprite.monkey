@@ -1,4 +1,5 @@
 Import minib3d
+Import minib3d.tmesh
 
 Class TSprite Extends TMesh
 
@@ -100,22 +101,45 @@ Class TSprite Extends TMesh
 		Return sprite
 
 	End 
-
-	Function LoadSprite:TSprite(tex_file$,tex_flag=1,parent_ent:TEntity=Null)
+	
+	
+	Function CreateSprite:TSprite(tex:TTexture,parent_ent:TEntity=Null)
 
 		Local sprite:TSprite=CreateSprite(parent_ent)
-		
-		Local tex:TTexture=TTexture.LoadTexture(tex_file,tex_flag)
+
 		sprite.EntityTexture(tex)
 		
 		' additive blend if sprite doesn't have alpha or masking flags set
-		If tex_flag&2=0 And tex_flag&4=0
+		If tex.flags&2=0 And tex.flags&4=0
 			sprite.EntityBlend 3
 		Endif
-	
+		
+		''auto-resize resized images (from poweroftwo)
+		If tex.orig_width<>0
+			
+			Local x:Float = 1.0, y:Float = 1.0
+			If tex.orig_height > tex.orig_width Then y = (Float(tex.orig_height)/tex.orig_width)
+			If tex.orig_height < tex.orig_width Then x = (Float(tex.orig_width)/tex.orig_height)
+			sprite.GetSurface(1).VertexCoords(0, -x,-y,0)
+			sprite.GetSurface(1).VertexCoords(1, -x,y,0)
+			sprite.GetSurface(1).VertexCoords(2, x,y,0)
+			sprite.GetSurface(1).VertexCoords(3, x,-y,0)
+						
+		Endif
+		
 		Return sprite
 
+	End
+	
+	
+	Function LoadSprite:TSprite(tex_file$,tex_flag=1,parent_ent:TEntity=Null)
+		
+		Local tex:TTexture=TTexture.LoadTexture(tex_file,tex_flag)
+		
+		Return CreateSprite(tex, parent_ent)
+
 	End 
+	
 	
 	Method RotateSprite(ang#)
 	
@@ -128,7 +152,11 @@ Class TSprite Extends TMesh
 		scale_x=s_x
 		scale_y=s_y
 	
-	End 
+	End
+	
+	Method ScaleEntity(x#, y#, z#, glob:Int=0)
+		ScaleSprite(x,y)
+	End
 	
 	Method HandleSprite(h_x#,h_y#)
 	

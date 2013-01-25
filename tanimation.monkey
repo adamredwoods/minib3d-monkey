@@ -1,5 +1,5 @@
 Import minib3d
-
+Import minib3d.monkeybuffer
 
 ''
 '' NOTES:
@@ -10,6 +10,12 @@ Class TVertexAnim
 	
 	Field offset:Int
 	Field vert_buffer:FloatBuffer
+	
+	Method PeekVertCoords:Vector(i:Int)
+
+		Return vert_buffer.PeekVertCoords(i)
+		
+	End
 	
 End
 

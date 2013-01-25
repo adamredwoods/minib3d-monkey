@@ -42,70 +42,7 @@ Class TLight Extends TEntity
 		' new light 
 		Local light:TLight=New TLight
 		
-		' copy contents of child list before adding parent
-		For Local ent:TEntity=Eachin child_list
-			ent.CopyEntity(light)
-		Next
-		
-		' lists
-		
-		' add parent, add to list
-		light.AddParent(parent_ent)
-		light.entity_link = entity_list.EntityListAdd(light)
-		
-
-		' add to collision entity list
-		If collision_type<>0
-			TCollisionPair.ent_lists[collision_type].AddLast(light)
-		Endif
-		
-		' add to pick entity list
-		If pick_mode<>0
-			light.pick_link = TPick.ent_list.AddLast(light)
-		Endif
-
-
-		' update matrix
-		If light.parent<>Null
-			light.mat.Overwrite(light.parent.mat)
-		Else
-			light.mat.LoadIdentity()
-		Endif
-		
-		' copy entity info
-				
-		light.mat.Multiply(mat)
-		
-		light.px=px
-		light.py=py
-		light.pz=pz
-		light.sx=sx
-		light.sy=sy
-		light.sz=sz
-		light.rx=rx
-		light.ry=ry
-		light.rz=rz
-		light.qw=qw
-		light.qx=qx
-		light.qy=qy
-		light.qz=qz
-		
-		light.name=name
-		light.classname=classname
-		light.order=order
-		light.hide=False
-
-		light.cull_radius=cull_radius
-		light.radius_x=radius_x
-		light.radius_y=radius_y
-		light.box_x=box_x
-		light.box_y=box_y
-		light.box_z=box_z
-		light.box_w=box_w
-		light.box_h=box_h
-		light.box_d=box_d
-		light.pick_mode=pick_mode
-		light.obscurer=obscurer
+		Self.CopyBaseEntityTo(light, parent_ent)
 
 		' copy light info
 		

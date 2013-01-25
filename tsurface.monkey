@@ -1,7 +1,7 @@
 Import minib3d
-Import monkeybuffer
-Import monkeyutility
-
+Import minib3d.monkeybuffer
+Import minib3d.monkeyutility
+Import minib3d.tanimation
 
 '' NOTES
 ''
@@ -92,9 +92,11 @@ Class TSurface
 	
 	End 
 	
-	Method Delete()
+	Method FreeSurface()
 	
-		FreeVBO()
+		TRender.render.FreeVBO(Self)
+		no_verts=0; no_tris=0
+		tris=Null; vert_data=null
 			
 	End 
 	
@@ -153,6 +155,7 @@ Class TSurface
 		'surf.vert_anim = vert_anim ''move this to tmesh, since may take up a lot of space, decide how to copy via CopyMesh/CopyEnt
 
 		surf.alpha_enable=alpha_enable
+		
 		
 		Return surf
 	
@@ -785,17 +788,20 @@ Class TSurface
 			
 			For Local j:= 0 To total
 				
-				If Abs(vx - va[j].x) < diff And Abs(vy - va[j].y) < diff And Abs(vz - va[j].z) < diff 
-						
-					'vert_coords.Poke( v+0, va[j].x)
-					'vert_coords.Poke( v+1, va[j].y)
-					'vert_coords.Poke( v+2,-va[j].z)
-					vert_data.PokeVertCoords(v,va[j].x,va[j].y,-va[j].z)
-					dup = True
-					same += 1
-		
-					Exit
-
+				If Int(vx)=Int(va[j].x) And Int(vy)=Int(va[j].y) And Int(vz)=Int(va[j].z) ''fast rejection
+				
+					If Abs(vx - va[j].x) < diff And Abs(vy - va[j].y) < diff And Abs(vz - va[j].z) < diff 
+							
+						'vert_coords.Poke( v+0, va[j].x)
+						'vert_coords.Poke( v+1, va[j].y)
+						'vert_coords.Poke( v+2,-va[j].z)
+						vert_data.PokeVertCoords(v,va[j].x,va[j].y,-va[j].z)
+						dup = True
+						same += 1
+			
+						Exit
+	
+					Endif
 				Endif
 				
 			Next
@@ -894,6 +900,12 @@ Class TSurface
 		v.GetVertex(vid,vert_data)
 		Return v
 		
+	End
+	
+	Method ToString$()
+		For Local i:Int=0 To no_verts-1
+			Print "v:"+i+" "+GetVertexCoords(i)
+		Next
 	End
 	
 End 

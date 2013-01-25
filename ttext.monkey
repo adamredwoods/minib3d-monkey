@@ -1,7 +1,7 @@
 ''
 ''
 '' 3d text for minib3d + monkey
-Import tsprite
+Import minib3d.tsprite
 Import minib3d
 
 
