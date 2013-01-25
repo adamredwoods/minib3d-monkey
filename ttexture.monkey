@@ -1,5 +1,5 @@
 Import minib3d
-Import monkeyutility
+Import minib3d.monkeyutility
 
 
 
@@ -15,6 +15,18 @@ Class TextureStack Extends Stack<TTexture>
 	
 End
 
+Const TEXFLAG_COLOR% = 1
+Const TEXFLAG_ALPHA% = 2
+Const TEXFLAG_MASKED% = 4
+Const TEXFLAG_MIPMAP% = 8
+Const TEXFLAG_CLAMPU% = 16
+Const TEXFLAG_CLAMPV% = 32
+Const TEXFLAG_SPHEREMAP% = 64
+Const TEXFLAG_CUBEMAP% = 128
+Const TEXFLAG_PRESERVE_SIZE% = 256
+Const TEXFLAG_512% = 512  ' force high colors?
+Const TEXFLAG_NORMALMAP% = 1024
+	
 Class TTexture
 
 	Global render:TTextureDriver '' reserved for future use for target extendability
@@ -35,6 +47,7 @@ Class TTexture
 	
 	Field tex_smooth:Bool =True ''smooths texture via graphics driver
 	Field resize_smooth:Bool ''smooth resize (used for mipmap reducing/ power of two enlarging)
+	Field orig_width:Int, orig_height:Int
 	Global useGlobalResizeSmooth:Bool = True
 		
 	Field no_frames:Int=1
@@ -100,7 +113,9 @@ Class TTexture
 	
 		Local pixmap:TPixmap = tex.pixmap
 		
-		pixmap=AdjustPixmap(pixmap, tex.resize_smooth)
+		If tex.flags & TEXFLAG_PRESERVE_SIZE = 0 Then 
+			pixmap=AdjustPixmap(pixmap, tex.resize_smooth, tex)
+		End
 		tex.width=pixmap.width
 		tex.height=pixmap.height
 		
@@ -133,7 +148,10 @@ Class TTexture
 
 		
 		''poweroftwo
-		tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth)
+		If tex.flags & TEXFLAG_PRESERVE_SIZE = 0 Then 
+			tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth, tex)
+		End 
+		
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 		
@@ -185,7 +203,9 @@ Class TTexture
 		oldw = tex.pixmap.width; oldh=tex.pixmap.width
 		
 		
-		tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth)
+		If tex.flags & TEXFLAG_PRESERVE_SIZE = 0 Then 
+			tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth, tex)
+		End 
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 	
@@ -576,7 +596,7 @@ Class TTexture
 	
 	End 
 		
-	Function AdjustPixmap:TPixmap(pixmap:TPixmap, resize_smooth:Bool = True)
+	Function AdjustPixmap:TPixmap(pixmap:TPixmap, resize_smooth:Bool = True, tex:TTexture=Null)
 		
 		' adjust width and height size to next biggest power of 2 size
 		Local width=Pow2Size(pixmap.width)
@@ -585,7 +605,14 @@ Class TTexture
 		
 		' if width or height have changed then resize pixmap
 		If width<>pixmap.width Or height<>pixmap.height
+			
+			'' save original width/height
+			If tex
+				tex.orig_width = pixmap.width; tex.orig_height = pixmap.height
+			Endif
+			
 			If resize_smooth Then pixmap=pixmap.ResizePixmap(width,height) Else pixmap=pixmap.ResizePixmapNoSmooth(width,height)
+			
 		Endif
 
 		Return pixmap

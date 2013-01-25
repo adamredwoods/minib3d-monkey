@@ -1,4 +1,7 @@
 Import minib3d
+Import minib3d.math.vector
+Import minib3d.math.geom
+Import minib3d.math.matrix
 
 ''
 ''
@@ -16,6 +19,7 @@ Class TColTree
 	
 	Field reset_col_tree=False
 	Field c_col_tree:MeshCollider ''variable name or class name is misleading
+	
 	
 	Method New()
 	
@@ -103,8 +107,9 @@ Class TColTree
 						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_centres[triindex].z*ONETHIRD
 						
 						c_col_tree.tris[triindex]=triindex 'i
-						c_col_tree.tri_surface[triindex] = s & $0000ffff ''lo byte=surface
-						c_col_tree.tri_surface[triindex] = c_col_tree.tri_surface[triindex] | (i Shl 16) ''hi byte=realtriindex 
+						c_col_tree.tri_surface[triindex] = s '& $0000ffff ''lo byte=surface
+						'c_col_tree.tri_surface[triindex] = c_col_tree.tri_surface[triindex] | (i Shl 16) ''hi byte=realtriindex 
+						c_col_tree.tri_number[triindex] = i
 						
 						vindex += 3
 						triindex += 1
@@ -169,7 +174,8 @@ Class MeshCollider
 	Field tri_count:Int
 	Field vert_count:Int
 	Field tris:Int[] ''tri index  '' one to one
-	Field tri_surface:Int[] ''16byteslo = surface, 16bytes high = real tri number '**byte packing
+	Field tri_surface:Int[]
+	Field tri_number:Int[]
 	Field tri_vix:Int[] ''vertex index, tris*3
 	Field tri_verts:Vector[] ''vert = tri_verts[tri_index[tris]+0]
 	Field tri_centres:Vector[]
@@ -178,17 +184,24 @@ Class MeshCollider
 	Field tree:Node ''was global
 	Field leaf_list:List<Node> = New List<Node> ''was global
 	
-	''to allow the ray to inverse entity scale
-	Field gsx#, gsy#, gsz#
+	''to allow the ray (or triangles) to inverse entity scale
+	Field tf_scale:Vector = New Vector
 	
 	
 	''fast ray-box test
+	Global ray_line:Line = New Line()
 	Field r_invx#, r_invy#, r_invz#, r_sign:Int[3]
 	
 	Global t_tform:TransformMat ''for testing
+	Global test_vec:Vector = New Vector ''for testing
+	Global test_line:TMesh
+	
+	Field ee1:TMesh, ee2:TMesh
 	
 	Private
-
+	
+	Field tri_node_stack:Stack<Node> = New Stack<Node>
+	Field l_box:Box = New Box
 	
 	Public
 	
@@ -199,6 +212,7 @@ Class MeshCollider
 		vert_count = no_verts
 		tris = New Int[no_tris]
 		tri_surface = New Int[no_tris]
+		tri_number = New Int[no_tris]
 		tri_vix = New Int[no_tris*3]
 		tri_verts = New Vector[no_verts]
 		tri_centres = New Vector[no_tris]
@@ -213,7 +227,10 @@ Class MeshCollider
 
 	End
 
-
+	
+	Method ClearTriNodeStack:Void()
+		tri_node_stack.Clear()
+	End
 
 
 	Method CreateNodeBox:Box( tris:Int[] )
@@ -364,101 +381,129 @@ Class MeshCollider
 
 	
 
-	''COLLIDE
-	'' -- takes a bounding box and orients it to find the new bounding box
-	''
-	Method Collide:Int( li:Line, radius:Float, tf:TransformMat, coll:CollisionObject)
+
+
+
+	'' -- iterative
+	'' -- box should be a sphere.
+	
+	Method CollideAABB:Int( line_box:Box, radius:Vector, curr_coll:CollisionObject, node:Node )
 		
-		If Not tree
-			Print "TColTree: no tree"
-			Return False
+		If node = Null Then Return 0
+			
+		If node = tree
+			'' node = tree
+			ClearTriNodeStack() ''clear when checking base node (tree)
+
 		Endif
 
-		Local t:TransformMat = tf.Copy()
-		't.m.Transpose() ''the orig c++ code uses different type of matrix
-		'local_box = t.Transpose().Multiply(local_box) 'transpose = fastinverse
-		'Box local_box=-t * box; ''was a full Inverse(), but opted on Transpose() since only using 3x3	<-- WRONG needs full inverse
 		
-		't.m.Transpose() ''the orig c++ code uses different type of matrix
-		't = t.Transpose()
-		
-		't.v = t.m.Multiply(t.v.Negate() ) ''transform transpose ''**THIS WORKED v0.20
+		If (Not line_box.Overlaps(node.box)) Then Return 0
 
-
-		Local line2:Line '= New Line(li.o, li.d)
-		line2 = t.Multiply(li) 'line2)
+		''fast ray-box (big speed imporvement for camera picking, but NOT with spheres)
+		If (radius.x = 0.0 And Not RayBoxTest(ray_line, node.box)) Then Return 0
 		
-		'' create local box
-		Local local_box:Box = New Box(line2)
-		local_box.Expand(radius)
-		
-		''fast world rejection
-		If (Not local_box.Overlaps(tree.box)) Then Return 0
-		
-		''setup ray for ray-box
-		Local ln:Float = 1.0/line2.Length()
-		Local dir:Vector = New Vector( (line2.o.x-line2.d.x)*ln,(line2.o.y-line2.d.y)*ln,(line2.o.z-line2.d.z)*ln )
-		If ln<> 1.0 Then r_invx = 1.0/dir.x; r_invy = 1.0/dir.y; r_invz = 1.0/dir.z
-		
-		r_sign[0] = (r_invx < 0)
-		r_sign[1] = (r_invy < 0)
-		r_sign[2] = (r_invz < 0)
-
-		Return Collide(local_box, line2, radius, t, coll, tree)
-
-	End
-
-
-	''-- iterative
-	Method Collide:Int( line_box:Box, line:Line, radius:Float, tform:TransformMat, curr_coll:CollisionObject, node:Node)
-		
-		''fast ray-box
-		If node <> tree
-			If (Not RayBoxTest(line,node.box)) Then Return 0
-		Endif
-		
-		'If (Not line_box.Overlaps(node.box)) Then Return 0
-
 		Local hit:Int = 0
 
 		If (node.triangles.Length() <1)
 			
-			If( node.left ) Then hit = hit | Collide( line_box,line,radius,tform,curr_coll,node.left )
-			If( node.right ) Then hit = hit | Collide( line_box,line,radius,tform,curr_coll,node.right )
-			
-			Return hit
+			If( node.left ) Then hit = hit | CollideAABB( line_box,radius,curr_coll,node.left )
+			If( node.right ) Then hit = hit | CollideAABB( line_box,radius,curr_coll,node.right )
+		Else
+
+			hit=1
+			tri_node_stack.Push(node)
 			
 		Endif
 
-		For Local k:Int = 0 To node.triangles.Length()-1
 		
-			Local tri:Int = node.triangles[k]*3
-
-			Local v0:Vector = tri_verts[tri_vix[tri+0]]
-			Local v1:Vector = tri_verts[tri_vix[tri+1]]
-			Local v2:Vector = tri_verts[tri_vix[tri+2]]
 		
-			''tri box
-			Local tri_box:Box = New Box(v0,v1,v2)
-		
-			If (Not tri_box.Overlaps(line_box)) Then Continue ''check boxes
-
-			'If( Not curr_coll.TriangleCollide( line,radius,v0,v1,v2 ) ) Then Continue
+		Return hit
 	
-			If Not curr_coll.RayTriangle( line, radius, v0,v1,v2 ) Then Continue
+	End
+	
+	
+	Method TriNodeCollide:Int( line_box:Box, line:Line, radius:Vector, curr_coll:CollisionObject, scalef:Vector=Null )
+				
+		Local hit:Int=0
+		Local tritest:Int=0
+		
+		For Local node:Node = Eachin tri_node_stack
+			
+			For Local k:Int = 0 To node.triangles.Length()-1
+			
+				Local tri:Int = node.triangles[k]*3
 
-			curr_coll.surface=tri_surface[ node.triangles[k] ] ''warning: byte packed
-			curr_coll.index= node.triangles[k] ''real tri is in hi-bytes of tri_surface
-										
-			hit = 1
-			'' no exit early for hit. or check all triangles and check which time is smallest
+				Local v0:Vector = tri_verts[tri_vix[tri+0]]
+				Local v1:Vector = tri_verts[tri_vix[tri+1]]
+				Local v2:Vector = tri_verts[tri_vix[tri+2]]
+				
+				''we could store the triangle's normal here, speed vs. memory.
+			
+				''tri box
+				Local tri_box:Box = New Box(v0,v1,v2)
+			
+				If (Not tri_box.Overlaps(line_box)) Then Continue ''check boxes
+				'If( Not curr_coll.TriangleCollide( line,radius,v0,v1,v2 ) ) Then Continue
+		
+				If radius.x > 0.001
 
+					If Not curr_coll.SphereTriangle( line, radius, v0.Multiply(scalef),v1.Multiply(scalef),v2.Multiply(scalef) ) Then Continue
+
+				Else
+					If Not curr_coll.RayTriangle( line, v0.Multiply(scalef),v1.Multiply(scalef),v2.Multiply(scalef) ) Then Continue
+				Endif
+
+'Print "! TRIHIT "+line.o+"   "+line.o.Add(line.d)
+'DrawTriTest(v0,v1,v2, curr_coll)
+'CollisionInfo.test_vec = line.Multiply(curr_coll.time)
+	
+				curr_coll.surface=tri_surface[ node.triangles[k] ] ''warning: byte packed
+				curr_coll.index= tri_number[ node.triangles[k] ] 'node.triangles[k] ''real tri is in hi-bytes of tri_surface
+											
+				hit += 1
+				'' no exit early for hit. or check all triangles and check which time is smallest
+	
+			Next
+		
 		Next
+
 
 		
 		Return hit
 	
 	End
+	
+	
+	
+	Method DrawTriTest(v0:Vector, v1:Vector, v2:Vector, colobj:CollisionObject)
+		If Not ee2 Then Return
+		If Not test_line
+			test_line = TMesh.CreateLine(v0,v1)
+			test_line.EntityFX 65
+			test_line.RotateEntity(90,0,0)
+			ee2 = TMesh.CreateLine(v0, v1, 255,10,255)
+			ee2.EntityFX 65
+			ee2.RotateEntity(90,0,0)
+		Endif
+		
+		test_line.GetSurface(1).VertexCoords(0, v0.x,v0.y,v0.z)
+		test_line.GetSurface(1).VertexCoords(1, v1.x,v1.y,v1.z)
+		test_line.GetSurface(1).VertexCoords(2, v2.x,v2.y,v2.z)
+		
+		
+		
+		Local u# = colobj.coll_u
+		Local v# = colobj.coll_v
+		Local va:Vector = (v0.Multiply(1-u-v)).Add(v1.Multiply(u)).Add(v2.Multiply(v)) 
+		ee2.GetSurface(1).VertexCoords(0, va.x-0.1,va.y,va.z+0.1)
+		ee2.GetSurface(1).VertexCoords(1, va.x+0.1,va.y,va.z+0.1)
+		ee2.GetSurface(1).VertexCoords(2, va.x,va.y,va.z-0.1)
+		
+	End
+	
+
+
 	
 	''Triangle-Triangle intersect
 	Method Intersects:Bool( c:MeshCollider, t:Transform)
@@ -501,6 +546,21 @@ Class MeshCollider
 		
 	End
 
+
+	Method RayBoxSetup( line2:Line )
+		ray_line = line2
+		
+		''setup ray for ray-box, once per ray
+		Local ln:Float = 1.0/line2.Length()
+		Local dir:Vector = New Vector( (line2.o.x-line2.d.x)*ln,(line2.o.y-line2.d.y)*ln,(line2.o.z-line2.d.z)*ln )
+		If ln<> 1.0 Then r_invx = 1.0/dir.x; r_invy = 1.0/dir.y; r_invz = 1.0/dir.z
+		
+		''optimized
+		r_sign[0] = (r_invx < 0)
+		r_sign[1] = (r_invy < 0)
+		r_sign[2] = (r_invz < 0)
+		
+	End
 
 	''ray testing
 	''ray extends forever from origin

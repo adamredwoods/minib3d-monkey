@@ -3,7 +3,7 @@
 ''
 
 Import mojo.data
-Import minib3d.vector
+Import minib3d.math.vector
 
 #If TARGET="html5" Or TARGET="glfw" Or TARGET="mingw" Or TARGET="ios" Or TARGET="android"
 
@@ -314,6 +314,12 @@ Class FloatBuffer
 		
 	End
 	
+	Method PeekVertCoords:Vector(i:Int)
+		
+		Return New Vector(buf.PeekFloat(i*12), buf.PeekFloat((i)*12+4), buf.PeekFloat((i)*12+8))
+		
+	End
+	
 	Method Peek:Float(i:Int)
 		'i =i*SIZE  
 		'i2f.PokeInt(0, ((buf.PeekByte(i+3) & $000000ff) Shl 24) | ((buf.PeekByte(i+2) & $000000ff) Shl 16) | ((buf.PeekByte(i+1)& $000000ff) Shl 8) | (buf.PeekByte(i)& $000000ff) )
@@ -418,6 +424,92 @@ Function CopyShortBuffer:ShortBuffer( src:ShortBuffer, dest:ShortBuffer )
 	
 	Return dest
 End
+
+
+
+
+
+Class BufferReader
+	
+	Field data:DataBuffer
+	Field pos:Int ''seek position
+	Field size:Int=0
+	
+	Global i2f:DataBuffer
+
+	Method New()
+
+		i2f = CreateDataBuffer(4)
+
+	End
+	
+	Function Create:BufferReader( d:DataBuffer )
+	
+		Local br:BufferReader = New BufferReader
+		br.data = d
+		br.size = GetBufferLength(d)-1
+		br.pos = 0
+		Return br
+		
+	End
+	
+	Method Size:Int()
+		Return size
+	End
+
+	Method ReadByte:Int()
+		pos += 1
+		Return data.PeekByte(pos-1)
+	End
+
+	''Endianness is different for targets, so use PeekInt()
+	Method ReadInt:Int()
+		pos += 4
+		'i2f.PokeByte(0,data.PeekByte(pos-4))
+		'i2f.PokeByte(1,data.PeekByte(pos-3))
+		'i2f.PokeByte(2,data.PeekByte(pos-2))
+		'i2f.PokeByte(3,data.PeekByte(pos-1))
+		Return ((data.PeekByte(pos-1) & $000000ff) Shl 24) | ((data.PeekByte(pos-2)& $000000ff) Shl 16) | ((data.PeekByte(pos-3)& $000000ff) Shl 8) | (data.PeekByte(pos-4)& $000000ff)
+		'i2f.PokeInt(0, v)
+		'Return i2f.PeekInt(0)
+	End
+	
+	''reads across 4-byte alignment, important!
+	Method ReadFloat:Float()
+		pos += 4
+		'i2f.PokeByte(0,data.PeekByte(pos-4))
+		'i2f.PokeByte(1,data.PeekByte(pos-3))
+		'i2f.PokeByte(2,data.PeekByte(pos-2))
+		'i2f.PokeByte(3,data.PeekByte(pos-1))
+		i2f.PokeInt(0, ((data.PeekByte(pos-1) & $000000ff) Shl 24) | ((data.PeekByte(pos-2)& $000000ff) Shl 16) | ((data.PeekByte(pos-3)& $000000ff) Shl 8) | (data.PeekByte(pos-4)& $000000ff) )
+		Return i2f.PeekFloat(0)
+	End
+
+	''shortcut for b3d, loads a 4-byte "tag", does not increment position
+	Method ReadTag:Int()
+
+		If pos>size Then Return 0
+		Return ((data.PeekByte(pos+3) Shl 24) | (data.PeekByte(pos+2) Shl 16) | (data.PeekByte(pos+1) Shl 8) | (data.PeekByte(pos)))
+
+	End
+
+	Method Position:Int()
+		Return pos
+	End
+
+	Method SetPosition(p:Int)
+		pos = p
+	End
+
+
+	Method Eof:Bool()
+		If pos >= size Then Return True Else Return False
+	End
+
+End
+
+
+
 
 
 #rem

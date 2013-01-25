@@ -61,18 +61,36 @@ Class Vector
 	
 	End
 	
+	Method Multiply:Vector(v:Vector)
+		
+		Return New Vector(x*v.x,y*v.y,z*v.z)
+	
+	End 
+	
 	Method Multiply:Vector(val#)
 		
 		Return New Vector(x*val,y*val,z*val)
 	
 	End 
 	
+	Method Multiply:Vector(a#,b#,c#)
+		
+		Return New Vector(x*a,y*b,z*c)
+	
+	End
+	
 	Method Divide:Vector(val#)
 	
 		Local inv:Float = 1.0/val
 		Return New Vector(x*inv,y*inv,z*inv)
 	
-	End 
+	End
+	
+	Method Divide:Vector(v:Vector)
+		
+		Return New Vector(x/v.x,y/v.y,z/v.z)
+	
+	End
 	
 	Method Dot:Float(vec:Vector)
 	
@@ -112,7 +130,27 @@ Class Vector
 	
 		Return x*x+y*y+z*z
 
+	End
+	
+	Method DistanceSquared:Float ()
+	
+		Return x*x+y*y+z*z
+
+	End
+	
+	Method DistanceSquared:Float ( q:Vector)
+		Local xx:Float = x-q.x
+		Local yy:Float = y-q.y
+		Local zz:Float = z-q.z
+		Return (xx*xx + yy*yy + zz*zz)
 	End 
+	
+	Method Distance:Float ( q:Vector)
+		Local xx:Float = x-q.x
+		Local yy:Float = y-q.y
+		Local zz:Float = z-q.z
+		Return Sqrt(xx*xx + yy*yy + zz*zz)
+	End
 	
 	Method SetLength(val#)
 	
@@ -152,12 +190,19 @@ Class Vector
 	
 	End 
 	
-	Method Distance:Float ( q:Vector)
-		Local xx:Float = x-q.x
-		Local yy:Float = y-q.y
-		Local zz:Float = z-q.z
-		Return Sqrt(xx*xx + yy*yy + zz*zz)
+	Method PointOnSegment:Vector(o:Vector, d:Vector)
+		Local d2:Vector = d.Subtract(o)
+		
+		Local dx# = x-o.x
+		Local dy# = y-o.y
+		Local dz# = z-o.z
+		Local v:Float = (d2.x*dx + d2.y*dy + d2.z*dz) / (d2.x*d2.x + d2.y*d2.y + d2.z*d2.z)
+		If v>1.0 Then Return d
+		If v<0.0 Then Return o
+		Return New Vector(o.x+d2.x*v, o.y+d2.y*v, o.z+d2.z*v)'o.Add(d.Multiply(v))
+		
 	End
+	
 	
 	Method Negate:Vector()
 		Return New Vector(-x, -y, -z)
@@ -173,6 +218,10 @@ Class Vector
 	
 	Method Overwrite( v:Vector)
 		x=v.x; y=v.y; z=v.z
+	End
+	
+	Method ToString:String()
+		Return "x:"+x+" y:"+y+" z:"+z
 	End
 	
 End 

@@ -27,7 +27,8 @@ Extern
 	
 	Function CreateImageData:HTMLImage(w:Int, h:Int)
 	
-	Function GetImagePixel:Int(x:Int, y:Int)
+	Function _ReadPixel:Int(image:HTMLImage, x:Int, y:Int) = "_pixelMod.ReadPixel"
+	Function _WritePixel:HTMLImage(image:HTMLImage, x:Int, y:Int, r:Int, g:Int, b:Int, a:Int) = "_pixelMod.WritePixel"
 	
 	Function HTMLResizePixmap:HTMLImage(image:HTMLImage, w:Int, h:Int, smooth:Bool)
 	
@@ -131,9 +132,15 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	End
 
 	
-	Method GetPixel:Int(x:Int,y:Int,rgba:Int=0)
+	Method GetPixel:Int(x:Int,y:Int)
 
-		Return 0
+		Return _ReadPixel(pixels,x,y)
+
+	End
+	
+	Method SetPixel:Void(x:Int,y:Int,r:Int,g:Int,b:Int,a:Int=255)
+
+		pixels = _WritePixel(pixels,x,y,r,g,b,a)
 
 	End
 	

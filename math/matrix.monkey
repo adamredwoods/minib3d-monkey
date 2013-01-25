@@ -1,6 +1,7 @@
 Import monkey.math
-'Import monkeyutility
-Import vector
+Import minib3d.monkeyutility
+Import minib3d.math.vector
+Import minib3d.math.geom
 
 '' opengl is column-major order m[column][row]
 ''m0 m4 m8 m12
@@ -14,15 +15,13 @@ Import vector
 
 Class Matrix
 
-	Field grid:Float[4][] ''4x4
+	Field grid:Float[4][]''4x4
 	
 	Method New()
 		
 		'grid = AllocateFloatArray(4,4)
-		grid[0] = [0.0,0.0,0.0,0.0]
-		grid[1] = [0.0,0.0,0.0,0.0]
-		grid[2] = [0.0,0.0,0.0,0.0]
-		grid[3] = [0.0,0.0,0.0,0.0]
+		grid = [[0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0],[0.0,0.0,0.0,0.0]]
+
 		
 	End
 	
@@ -38,10 +37,10 @@ Class Matrix
 	
 	Method LoadIdentity:Void()
 	
-		grid[0] = [1.0,0.0,0.0,0.0]
-		grid[1] = [0.0,1.0,0.0,0.0]
-		grid[2] = [0.0,0.0,1.0,0.0]
-		grid[3] = [0.0,0.0,0.0,1.0]
+		grid[0][0] = 1.0; grid[0][1] = 0.0; grid[0][2] = 0.0; grid[0][3] = 0.0
+		grid[1][0] = 0.0; grid[1][1] = 1.0; grid[1][2] = 0.0; grid[1][3] = 0.0
+		grid[2][0] = 0.0; grid[2][1] = 0.0; grid[2][2] = 1.0; grid[2][3] = 0.0
+		grid[3][0] = 0.0; grid[3][1] = 0.0; grid[3][2] = 0.0; grid[3][3] = 1.0
 	
 	End
 	
@@ -285,7 +284,7 @@ Class Matrix
 	End
 
 	Method Multiply:Vector(v1:Vector)
-		'' not flipping the z value
+		'' 3x3 only
 		Local v2:Vector = New Vector
 		
 		v2.x = grid[0][0]*v1.x + grid[1][0]*v1.y + grid[2][0]*v1.z
@@ -422,7 +421,7 @@ Class Matrix
 		grid[2][1] = (-sx) *scz
 		grid[2][2] = (cx*cy) *scz
 
-	
+		
 	End
 	
 	Method Rotate:Void(rx:Float,ry:Float,rz:Float)
@@ -581,6 +580,15 @@ Class Matrix
 		
 		Return [p0,p1,p2]
 	End
+
+
+	Method Multiply:Line( q:Line)
+		Local t:Vector = Self.Multiply(q.o)
+		Return New Line(t, Self.Multiply(q.o.Add(q.d)).Subtract(t) )
+	End
+
+
+
 	
 	''bbdoc: returns a matrix class from an float array [16]
 	''bbdoc: usually used for tranferring OpenGL data
@@ -621,11 +629,12 @@ Class Matrix
 	
 	Method Update:Void( a:Vector, b:Vector, c:Vector)
 
-		grid[0] = [a.x,a.y,a.z,grid[3][0] ]
-		grid[1] = [b.x,b.y,b.z,grid[3][1] ]
-		grid[2] = [c.x,c.y,c.z,grid[3][2] ]
-		
+		grid[0][0] = a.x; grid[0][1] = a.y; grid[0][2] = a.z
+		grid[1][0] = b.x; grid[1][1] = b.y; grid[1][2] = b.z
+		grid[2][0] = c.x; grid[2][1] = c.y; grid[2][2] = c.z
+
 	End
+
 		
 End 
 

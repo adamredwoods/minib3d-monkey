@@ -61,6 +61,7 @@ Import tbone
 Import tanimation
 Import tmodelb3d
 Import tmodelobj
+Import tmodelmdd
 
 '' picking/collision
 Import tcoltree
@@ -68,9 +69,9 @@ Import tpick
 Import tcollision
 
 '' geom
-Import vector
-Import matrix
-Import quaternion
+Import minib3d.math.vector
+Import minib3d.math.matrix
+'Import minib3d.math.quaternion
 'Include "inc/BoxSphere.monkey"
 
 '' misc

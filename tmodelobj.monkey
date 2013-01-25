@@ -24,6 +24,8 @@ Class TModelObj
 	
 	Global override_texflags:Int = -1
 	
+	Private
+		
 	Method ReadLine:String()
 		Local s:String=""
 		
@@ -53,22 +55,51 @@ Class TModelObj
 		Return stack.Join("")
 	End
 	
+	
+	Public
+	
+	
+	
+	
 	Function LoadMesh:TMesh(url:String, flags:Int=-1)
 		
 		override_texflags = flags
 		
+		Local mesh:TMesh = ParseObj(LoadString(url),flags)
+		
+		If mesh = Null Then Print "**File not found "+url Elseif DEBUG Then Print"TModelObj: "+url
+		If mesh Then mesh.name = url
+		
+		Return mesh
+		
+	End
+	
+	Function LoadMeshString:TMesh(data:String, mtllib:String="", flags:Int=-1)
+		
+		override_texflags = flags
+		
+		Local mesh:TMesh = ParseObj(data, flags, mtllib)
+		
+		If mesh = Null Then Print "**Error: bad OBJ string " Elseif DEBUG Then Print"TModelObj"
+		If mesh Then mesh.name = "ModelOBJ"
+		
+		Return mesh
+		
+	End
+	
+	Function ParseObj:TMesh(s:String, flags:Int=-1, mtllib_string:String = "")
+		
 		Local stream:TModelObj = New TModelObj
 		
-		stream.data = LoadString(url)
+		stream.data = s
 		stream.length = stream.data.Length()
 		
 		Local StreamLine:Int=0
 		If stream.length =0 
-			Print "**File not found "+url
 			Return Null 
 		Endif
 		
-		If DEBUG Then Print"" ; Print"TModelObj: ** "+url
+		If DEBUG Then Print"" 
 		
 		Local matlibs:StringMap<TObjMtl> = New StringMap<TObjMtl>
 		Local vertexP:TObjVertex[MAXVERTS]
@@ -96,7 +127,7 @@ Class TModelObj
 		Local mtlCache:String[] = New String[255]
 		Local currMtl:TObjMtl
 		
-		mesh.name = url
+		'mesh.name = url
 		
 		While stream.pos < stream.length 
 		
@@ -111,7 +142,11 @@ Class TModelObj
 			Else
 				
 				Local tag:String = Line[0..9].ToLower()
-	
+				
+				If tag[0..2]= "o " Then
+					mesh.name = Line[2..]
+				Endif
+				
 				If tag[0..2]= "v " Then
 					If VC>=vertexP.Length()-1 Then vertexP = vertexP.Resize(vertexP.Length()+MAXVERTS)
 					
@@ -152,7 +187,7 @@ Class TModelObj
 				
 					If DEBUG Then Print "mtllib"
 					
-					Local lib:TObjMtl[] = ParseMTLLib(Line[7..]) 
+					Local lib:TObjMtl[] = ParseMTLLib(Line[7..], mtllib_string) 
 					
 					For Local obj:TObjMtl = Eachin lib
 						If obj Then matlibs.Set(obj.name , obj) 
@@ -297,10 +332,12 @@ Class TModelObj
 								
 								TRI+=1
 								
+								
+								
 							Next
 							
 						FC+=1
-						
+
 					Endif
 				Endif	
 						
@@ -337,7 +374,7 @@ Class TModelObj
 			surfx.CropSurfaceBuffers()
 		Next
 		
-		mesh.UpdateNormals()
+		'mesh.UpdateNormals() ''we can leave this for external needs
 		
 		Return mesh
 		
@@ -414,16 +451,21 @@ Class TModelObj
 	End
 
 
-	Function ParseMTLLib:TObjMtl[](url:String)
+	Function ParseMTLLib:TObjMtl[](url:String, mtllib_string:String)
 		
 		Local MatLib:TObjMtl[0]
 		Local stream:TModelObj = New TModelObj
 		
 		stream.data = LoadString(url) 
-
+		
+		''see if we have a string
+		If Not stream.data And mtllib_string Then stream.data = mtllib_string
+		
 		If Not stream.data 
 			stream.data = LoadString(url+".txt")
-			If Not stream.data 
+
+			If Not stream.data
+
 				Print "**TModelObj: Material obj file not found"
 				Return MatLib
 			Endif

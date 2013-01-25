@@ -1,5 +1,5 @@
 Import minib3d
-Import matrix
+Import minib3d.math.matrix
 
 ''moneky notes:
 ''
@@ -59,70 +59,11 @@ Class TCamera Extends TEntity
 		' new cam
 		Local cam:TCamera=New TCamera
 		
-		' copy contents of child list before adding parent
-		For Local ent:TEntity=Eachin child_list
-			ent.CopyEntity(cam)
-		Next
-		
-		' lists
-		
-		' add parent, add to list
-		cam.AddParent(parent_ent)
-		cam.entity_link = entity_list.EntityListAdd(cam)
-
+		Self.CopyBaseEntityTo(cam, parent_ent)
 	
-		' add to collision entity list
-		If collision_type<>0
-			TCollisionPair.ent_lists[collision_type].AddLast(cam)
-		Endif
-		
-		' add to pick entity list
-		If pick_mode<>0
-			cam.pick_link = TPick.ent_list.AddLast(cam)
-		Endif
-
-	
-		' update matrix
-		If cam.parent<>Null
-			cam.mat.Overwrite(cam.parent.mat)
-		Else
-			cam.mat.LoadIdentity()
-		Endif
-		
-		' copy entity info
-		
-		cam.mat.Multiply(mat)
-		
-		cam.px=px
-		cam.py=py
-		cam.pz=pz
-		cam.sx=sx
-		cam.sy=sy
-		cam.sz=sz
-		cam.rx=rx
-		cam.ry=ry
-		cam.rz=rz
-		cam.qw=qw
-		cam.qx=qx
-		cam.qy=qy
-		cam.qz=qz
 
 		cam.name=name+"("+cam_list.Count()+")"
-		cam.classname=classname
-		cam.order=order
-		cam.hide=False
-		
-		cam.cull_radius=cull_radius
-		cam.radius_x=radius_x
-		cam.radius_y=radius_y
-		cam.box_x=box_x
-		cam.box_y=box_y
-		cam.box_z=box_z
-		cam.box_w=box_w
-		cam.box_h=box_h
-		cam.box_d=box_d
-		cam.pick_mode=pick_mode
-		cam.obscurer=obscurer
+
 
 		' copy camera info
 		
@@ -150,8 +91,7 @@ Class TCamera Extends TEntity
 		cam.fog_range_near=fog_range_near
 		cam.fog_range_far=fog_range_far
 		
-		cam.use_cam_layer = use_cam_layer
-		cam.cam_layer = cam_layer
+
 		cam.draw2D = draw2D
 		
 		Return cam
@@ -467,34 +407,13 @@ Class TCamera Extends TEntity
 		Local mesh:TMesh = TMesh(ent)
 		If mesh
 			
-			''moved to GetBounds() in TMesh
-			' mesh centre
-			'x=mesh.min_x
-			'y=mesh.min_y
-			'z=mesh.min_z
-			'x=x+(mesh.max_x-mesh.min_x)*0.5
-			'y=y+(mesh.max_y-mesh.min_y)*0.5
-			'z=z+(mesh.max_z-mesh.min_z)*0.5
-			
 			'' transform mesh centre into world space
-			'TEntity.TFormPoint (mesh.center_x,mesh.center_y,mesh.center_z,ent,Null)
-			'''TEntity.TFormPoint (x,y,z,ent,Null)
-			'x=tformed_x
-			'y=tformed_y
-			'z=tformed_z
 			
 			Local r:Float[] = ent.mat.TransformPoint(mesh.center_x,mesh.center_y,mesh.center_z)
 			x=r[0]; y=r[1]; z=-r[2] ''-z opengl
 			
-			' radius - apply entity scale
-			'Local rx#=radius*ent.gsx 'EntityScaleX(True)
-			'Local ry#=radius*ent.gsy 'EntityScaleY(True)
-			'Local rz#=radius*ent.gsz 'EntityScaleZ(True)
-
-			'If rx<0 Then rx=-rx
-			'If ry<0 Then ry=-ry
-			'If rz<0 Then rz=-rz
-			'radius = Max(Max(rx,ry),rz)
+			'' radius - apply entity scale
+			
 			Local gs:Float = Max(Max(ent.gsx,ent.gsy),ent.gsz) ''optimizing ABS()
 			radius = radius*gs
 			If radius<0 Then radius=-radius

@@ -27,12 +27,17 @@ minib3d v0.33
 	cube.EntityTexture(textemp)
 		
 - Camera Pick and Collisions now work
-	Added CollisionSetup(type_no, pick_mode:, x, y, z, w, d, h) for faster setup.
+	Added CollisionSetup() for easier setup.
+	CollisionSetup(type_no, pick_mode) for auto sphere radius (uses cull radius)
+	CollisionSetup(type_no, pick_mode, radius) for sphere/polygon
+	CollisionSetup(type_no, pick_mode, x, y, z, w, d, h) for box
 
 - mymesh.Wireframe(bool) --to turn on/off individual wireframes
 - auto-correct ratio of sprites / Draw()
 - entity.PositionToVertex(mesh, surf, vertex_id) --to position an entity to a specific vertex on a mesh (animated too!)
-- other bug fixes (inc. b3d loading, xna fog)
+- CreateMiniB3DMonkey() -- creates a minib3d monkey head mesh
+
+- other bug fixes (inc. b3d loading, xna fog, parenting problem)
 
 
 

@@ -83,7 +83,15 @@ public class DataBufferHelper
 		var texture = MonkeyData.LoadTexture2D(path, gxtkApp.game.Content);
 		if (texture==null) {info[0]=0; return; } //new BBDataBuffer(0);}
 		
-        int size = texture.Width * texture.Height * 4;
+		int bytes = 4;
+		Console.WriteLine("textureformat "+texture.Format.ToString()+" "+path);
+		
+		if (texture.Format != SurfaceFormat.Color) {
+			
+			bytes = 3;
+		}
+		
+        int size = texture.Width * texture.Height * bytes;
 
 		info[0] = texture.Width;
 		info[1] = texture.Height;
@@ -93,8 +101,7 @@ public class DataBufferHelper
 		buffer._New(size);
         texture.GetData<byte>(buffer._data, 0, size);
 
-		//buffer = buffer2;
-        //return buffer;
+
 	}
 }
 

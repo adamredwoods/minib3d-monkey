@@ -1,7 +1,7 @@
 Import minib3d
-Import vector
-Import geom
-
+Import minib3d.math.vector
+Import minib3d.math.geom
+Import minib3d.math.matrix
 
 '' will need to port over a collision library specifically for monkey xplatform
 
@@ -11,6 +11,7 @@ Const MAX_TYPES=100
 Const COLLISION_METHOD_SPHERE:Int=1
 Const COLLISION_METHOD_POLYGON:Int=2
 Const COLLISION_METHOD_BOX:Int=3
+Const COLLISION_METHOD_AABB:Int=4
 
 'collision actions
 ''-- damping (water)? -- sticking?
@@ -20,6 +21,54 @@ Const COLLISION_RESPONSE_SLIDE:Int=2
 Const COLLISION_RESPONSE_SLIDEXZ:Int=3
 
 Const COLLISION_EPSILON:Float=0.001
+
+
+
+Class TCollision
+	
+	Field type:Int
+	Field impact:TCollisionImpact[]
+	
+	''collision, pick
+	Field radius_x#=1.0,radius_y#=1.0
+	Field box_x#=-1.0,box_y#=-1.0,box_z#=-1.0,box_w#=2.0,box_h#=2.0,box_d#=2.0
+	
+	
+	
+	Method New()
+
+	End 
+	
+	
+	Method Copy:TCollision()
+		Local cc:TCollision = New TCollision
+		
+		cc.type = type
+		cc.radius_x = radius_x
+		cc.radius_y = radius_y
+		cc.box_x = box_x
+		cc.box_y = box_y
+		cc.box_z = box_z
+		cc.box_w = box_w
+		cc.box_h = box_h
+		cc.box_d = box_d
+		
+		Return cc
+	End
+
+End 
+
+
+Class TCollisionImpact
+
+	Field x#,y#,z#
+	Field nx#,ny#,nz#
+	Field time#
+	Field ent:TEntity
+	Field surf:Int
+	Field tri:Int
+	
+End
 
 
 Class TCollisionPair
@@ -94,27 +143,7 @@ Class TCollisionPair
 	
 End 
 
-Class TCollisionImpact
 
-	Method New()
-
-	
-	End 
-	
-	Method Delete()
-	
-	
-	End 
-
-
-	Field x#,y#,z#
-	Field nx#,ny#,nz#
-	Field time#
-	Field ent:TEntity
-	Field surf:Int
-	Field tri:Int
-
-End 
 
 
 
@@ -124,22 +153,38 @@ End
 
 Class CollisionInfo
 
-	Field dv:Vector
-	Field sv:Vector
-	Field radii:Vector
-	Field panic:Vector
+	Field dv:Vector = New Vector
+	Field sv:Vector = New Vector
+	Field radii:Vector = New Vector
+	Field panic:Vector = New Vector
 
 	Field mesh_coll:MeshCollider
 	Field radius:Float, inv_y_scale:Float, y_scale:Float
+	
+	
 
-	Field n_hit:Int
-	Field planes:Plane[3]
-
+	Field  n_hit:Int
+	Field planes:Plane[] = [New Plane, New Plane, New Plane, New Plane]
+	Field col_points:Vector[] = [New Vector, New Vector, New Vector, New Vector]
+	
 	Field coll_method:Int
-	Field coll_line:Line
-	Field dir:Vector
-	Field tform:TransformMat=New TransformMat(New Matrix,New Vector)
+	Field coll_line:Line = New Line()
+	Field tf_line:Line = New Line()
+	Field dir:Vector = New Vector
+	Field tform:TransformMat=New TransformMat
 	Field y_tform:TransformMat = New TransformMat
+	'Field oform:TransformMat=New TransformMat ''original ent mat
+	Field renew:Matrix = New Matrix
+	Field renew2:Matrix = New Matrix
+	Field renew3:Matrix = New Matrix
+	Field tf_offset:Vector = New Vector
+	Field inv_scale:Vector = New Vector
+	
+	''for triangle collisions
+	Field tf_scale:Vector = New Vector
+	Field tf_radius:Vector = New Vector ''scaled radius for sphere in local mesh space
+	Field tf_box:Box = New Box()
+
 
 	
 	Field td:Float
@@ -169,28 +214,48 @@ Class CollisionInfo
 	Global vec_j:Vector = New Vector(0.0,0.0,0.0)
 	Global vec_k:Vector = New Vector(0.0,0.0,0.0)
 
-	Global t_mat:Matrix = New Matrix(vec_i,vec_j,vec_k)
+	Global t_mat:Matrix
 				
 	Global vec_v:Vector = New Vector(0.0,0.0,0.0)
 	
 	
-	
+	Global test_vec:Vector = New Vector
+	Global test_dot:Vector = New Vector
 	Global testx:Float, testy:Float, testz:Float
 	Global testx2:Float, testy2:Float, testz2:Float
+	Global testline:Line = New Line()
+
 	
+	Global trigger:Int=0
 	
+	Method New()
 	
-	Method New(sv2:Vector,dv2:Vector,radii2:Vector)
-	
-		dv = dv2.Copy()
-		sv = sv2.Copy()
-		panic = sv.Copy()
-		radii = radii2.Copy()
-		radius = radii.x
+		t_mat = New Matrix()
+		tform = New TransformMat()
 		
-		planes[0] = New Plane(New Vector(0.0,0.0,0.0),0)
-		planes[1] = New Plane(New Vector(0.0,0.0,0.0),0)
-		planes[2] = New Plane(New Vector(0.0,0.0,0.0),0)
+	End
+
+	
+	Method UpdateRay:Int(sv2:Vector,dv2:Vector,radii2:Vector)
+		
+		t_mat = New Matrix()
+		tform = New TransformMat()
+		
+		dv.Overwrite(dv2)
+		sv.Overwrite(sv2)
+		panic.Overwrite(sv2)
+		radii.Overwrite(radii2)
+		radius = radii.x
+
+		
+		planes[0].Update(0.0,0.0,0.0,  0)
+		planes[1].Update(0.0,0.0,0.0,  0)
+		planes[2].Update(0.0,0.0,0.0,  0)
+		planes[3].Update(0.0,0.0,0.0,  0)
+		col_points[0].Update(0.0,0.0,0.0)
+		col_points[1].Update(0.0,0.0,0.0)
+		col_points[2].Update(0.0,0.0,0.0)
+		col_points[3].Update(0.0,0.0,0.0)
 		
 		y_scale=1.0
 		inv_y_scale=1.0
@@ -204,13 +269,17 @@ Class CollisionInfo
 			dv.y *= y_scale
 		Endif
 	
-		coll_line=New Line( sv.x, sv.y, sv.z, dv.x-sv.x, dv.y-sv.y, dv.z-sv.z )
+		coll_line.Update( sv.x, sv.y, sv.z, dv.x-sv.x, dv.y-sv.y, dv.z-sv.z )
 		
-		dir=New Vector((coll_line.d.x),(coll_line.d.y),(coll_line.d.z)).Normalize()
+		dir.Update((coll_line.d.x),(coll_line.d.y),(coll_line.d.z))
+		dir = dir.Normalize()
 		td=coll_line.d.Length()
 		
-		Local tempvec:Vector =New Vector( coll_line.d.x,0,coll_line.d.z )
-		td_xz = tempvec.Length()
+		tf_radius = tf_scale.Multiply(radius)
+		tf_line.Update(coll_line.o.x,coll_line.o.y,coll_line.o.z, coll_line.d.x,coll_line.d.y,coll_line.d.z)
+		
+
+		td_xz = New Vector( coll_line.d.x,0,coll_line.d.z ).Length()
 	
 		''
 		
@@ -225,15 +294,16 @@ Class CollisionInfo
 
 	End
 	
-	Method Update (dst_radius2:Float,ax2:Float,ay2:Float,az2:Float,bx2:Float,by2:Float,bz2:Float)
+	Method UpdateShape (ent:TEntity)
 
-		dst_radius=dst_radius2
-		ax=ax2
-		ay=ay2
-		az=az2
-		bx=bx2
-		by=by2
-		bz=bz2
+		dst_radius =ent.collision.radius_x
+		ax =ent.collision.box_x
+		ay =ent.collision.box_y
+		az =ent.collision.box_z
+		bx =ent.collision.box_x+ent.collision.box_w
+		by =ent.collision.box_y+ent.collision.box_h
+		bz =ent.collision.box_z+ent.collision.box_d
+		
 	End
 	
 	
@@ -244,38 +314,43 @@ Class CollisionInfo
 		'DebugLog "Update Collisions"
 	
 		Local coll_obj:CollisionObject
+		Local col_info:CollisionInfo= New CollisionInfo()
 		
 		' loop through collision setup list, containing pairs of src entities and des entities to be check for collisions
 		For Local i:Int=0 Until MAX_TYPES
 		
 			' if no entities exist of src_type then do not check for collisions
 			If TCollisionPair.ent_lists[i]=Null Then Continue
-	
+
+			
 			' loop through src entities
 			For Local ent:TEntity=Eachin TCollisionPair.ent_lists[i]
-	
+				
 				ent.no_collisions=0
-				ent.collision=ent.collision.Resize(0)
-		
+				
 				' if src entity is hidden or it's parent is hidden then do not check for collision
 				If ent.Hidden()=True Then Continue
 						
-				vec_a.Update(ent.EntityX(True),ent.EntityY(True),ent.EntityZ(True)) ''line dest
+				
+				ent.collision.impact =New TCollisionImpact[0]		
+				
+				vec_a.Update(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2]) ''line dest
 				vec_b.Update(ent.old_x,ent.old_y,ent.old_z) ''line source
-				vec_c.Update(ent.radius_x,ent.radius_y,ent.radius_x)
-	
+				vec_c.Update(ent.collision.radius_x,ent.collision.radius_y,ent.collision.radius_x)
+
 				''make collision line
-				Local col_info:CollisionInfo =New CollisionInfo(vec_b,vec_a,vec_c)	
+				col_info.UpdateRay(vec_b,vec_a,vec_c)	
 				Local response:Int
 				
 				Repeat
 	
 					Local hit:Int =0
 					Local ent2_hit:TEntity=Null
-					coll_obj=New CollisionObject			
-					
+					coll_obj = New CollisionObject			
+
+				
 					For Local col_pair:TCollisionPair=Eachin TCollisionPair.list
-					
+						
 						If col_pair.src_type = i
 						
 							' if no entities exist of des_type then do not check for collisions
@@ -291,10 +366,9 @@ Class CollisionInfo
 								
 								If QuickCheck(ent,ent2)=False Then Continue ' quick check to see if entities are colliding
 			
-			
-								col_info.CollisionSetup(ent2, col_pair.col_method)
+
+								col_info.CollisionSetup(ent2, col_pair.col_method, coll_obj)
 								hit = col_info.CollisionDetect(coll_obj)
-								
 			
 								If hit
 
@@ -314,27 +388,27 @@ Class CollisionInfo
 						ent.no_collisions=ent.no_collisions+1
 	
 						Local i=ent.no_collisions-1
-						ent.collision=ent.collision.Resize(i+1)
+						ent.collision.impact=ent.collision.impact.Resize(i+1)
 									
-						ent.collision[i]=New TCollisionImpact
-						ent.collision[i].x=coll_obj.col_coords.x 
-						ent.collision[i].y=coll_obj.col_coords.y 
-						ent.collision[i].z=coll_obj.col_coords.z 
-						ent.collision[i].nx=coll_obj.col_normal.x
-						ent.collision[i].ny=coll_obj.col_normal.y 
-						ent.collision[i].nz=coll_obj.col_normal.z
-						ent.collision[i].ent=ent2_hit
+						ent.collision.impact[i]=New TCollisionImpact
+						ent.collision.impact[i].x=coll_obj.col_coords.x 
+						ent.collision.impact[i].y=coll_obj.col_coords.y 
+						ent.collision.impact[i].z=coll_obj.col_coords.z 
+						ent.collision.impact[i].nx=coll_obj.normal.x
+						ent.collision.impact[i].ny=coll_obj.normal.y 
+						ent.collision.impact[i].nz=coll_obj.normal.z
+						ent.collision.impact[i].ent=ent2_hit
 						
 						If TMesh(ent2_hit)<>Null
-							ent.collision[i].surf=coll_obj.surface & $0000ffff
+							ent.collision.impact[i].surf=coll_obj.surface '& $0000ffff
 						Else
-							ent.collision[i].surf=0
+							ent.collision.impact[i].surf=0
 						Endif
 						
-						''get the real tri index (byte packed in surface)
-						ent.collision[i].tri=((coll_obj.surface & $ffff0000) Shr 16) 
+						''get the real tri index (byte packed in surface) --not anymore
+						ent.collision.impact[i].tri=coll_obj.index '((coll_obj.surface & $ffff0000) Shr 16) 
 	
-							
+						''exit on no hits
 						If col_info.CollisionResponse(coll_obj, response)=False Then Exit
 						
 					Else
@@ -344,22 +418,20 @@ Class CollisionInfo
 					Endif
 										
 				Forever
-	
+
 
 				Local hits:Int =col_info.CollisionFinal(coll_obj, response)
 				
 				If hits
-								
-					ent.PositionEntity(coll_obj.col_pos.x,coll_obj.col_pos.y,coll_obj.col_pos.z,True)
+						
+					ent.PositionEntity(coll_obj.col_pos.x,coll_obj.col_pos.y,coll_obj.col_pos.z,True) 
 					
 				Endif
 		
-				col_info = Null
-				coll_obj = Null
 	
-				ent.old_x=ent.EntityX(True)
-				ent.old_y=ent.EntityY(True)
-				ent.old_z=ent.EntityZ(True)
+				ent.old_x=ent.mat.grid[3][0]
+				ent.old_y=ent.mat.grid[3][1]
+				ent.old_z=-ent.mat.grid[3][2]
 	
 			Next
 											
@@ -368,130 +440,244 @@ Class CollisionInfo
 	End 
 
 	
-	
-	
 	''
+	'' line is in world space. need to change line to local mesh space. watch out for parented global scale versus local scale
 	''
-	''
-	Method CollisionSetup(ent:TEntity, col_method:Int)
+	Method CollisionSetup(ent:TEntity, c_method:Int, coll_obj:CollisionObject)
+
+'Print "setup----"+ent.classname
 	
-		coll_method = col_method
+		coll_method = c_method
+
+
+		''remove global scaling from matrix	
+
+		Local ex:Float = 1.0/ent.gsx'*ent.gsx)
+		Local ey:Float = 1.0/ent.gsy'*ent.gsy)
+		Local ez:Float = 1.0/ent.gsz'*ent.gsz)
+		inv_scale.Overwrite(ex,ey,ez)
+
+
+		tform.m.grid[0] = [ent.mat.grid[0][0]*ex,ent.mat.grid[1][0]*ey,-ent.mat.grid[2][0]*ez,  0.0]
+		tform.m.grid[1] = [ent.mat.grid[0][1]*ex,ent.mat.grid[1][1]*ey,-ent.mat.grid[2][1]*ez,  0.0]
+		tform.m.grid[2] = [-ent.mat.grid[0][2]*ex,-ent.mat.grid[1][2]*ey,ent.mat.grid[2][2]*ez,  0.0]
+
+		renew2 = tform.m.Inverse()
 		
-		vec_i.Update(ent.mat.grid[0][0],ent.mat.grid[1][0],-ent.mat.grid[2][0])
-		vec_j.Update(ent.mat.grid[0][1],ent.mat.grid[1][1],-ent.mat.grid[2][1])
-		vec_k.Update(-ent.mat.grid[0][2],-ent.mat.grid[1][2],ent.mat.grid[2][2])
-		t_mat.Update(vec_i,vec_j,vec_k)
+
+		If( y_scale<>1.0 )
+
+			tform = y_tform.Multiply(tform)
+
+		Endif
 		
-		'mat = ent.mat.Inverse()
-		''remove global scaling from matrix
-		t_mat.InverseScale(ent.gsx,ent.gsy,ent.gsz) 
-		't_mat.Scale(1/(ent.gsx),1/(ent.gsy),1/(ent.gsz))
-		vec_v.Update(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2])
-		
-	
-		tform.Update(t_mat, vec_v)
 
 		' if pick mode is sphere or box then update collision info object to include entity radius/box info
-		If col_method<>COLLISION_METHOD_POLYGON
-			Update(ent.radius_x,ent.box_x,ent.box_y,ent.box_z,ent.box_x+ent.box_w,ent.box_y+ent.box_h,ent.box_z+ent.box_d)
+		If coll_method=COLLISION_METHOD_BOX
+			
+			CollisionBoxSetup(ent, radius, coll_obj)
+			
+			
+		Elseif If coll_method=COLLISION_METHOD_SPHERE
+			
+			CollisionSphereSetup(ent, radius, coll_obj)
+			
+			
+		Elseif coll_method=COLLISION_METHOD_POLYGON
+			
+			
+			CollisionTriangleSetup(ent, radius, coll_obj)
+			
+		Elseif coll_method=COLLISION_METHOD_AABB
+			
+			
+			CollisionAABBSetup(ent, radius, coll_obj)
+			
+				
 		Endif
+		
+	End
+	
+	
+	Method CollisionSphereSetup(ent:TEntity, radius:Float, coll_obj:CollisionObject)
+		
+		tf_offset = New Vector(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2] )
+		
+		UpdateShape(ent)
+		coll_obj.time = 1.0
+		
+	End
+	
+	Method CollisionBoxSetup(ent:TEntity, radius:Float, coll_obj:CollisionObject)
+		
+		tf_offset.Overwrite(-ent.mat.grid[3][0],-ent.mat.grid[3][1],ent.mat.grid[3][2] )
+		tf_line = tform.m.Multiply(coll_line.Add(tf_offset) )
+		tf_scale.Overwrite(ent.gsx, ent.gsy, ent.gsz)
+		
+		UpdateShape(ent)
+		
+		coll_obj.time = tf_line.d.Add(tf_radius).DistanceSquared()+radius
+	
+	End
+	
+	Method CollisionAABBSetup(ent:TEntity, radius:Float, coll_obj:CollisionObject)
+		
+		tf_line = New Line(coll_line.o,coll_line.d)
+		UpdateShape(ent)
+		
+		coll_obj.time = tf_line.d.Add(tf_radius).DistanceSquared()+radius
+	
+	End
+	
+	Method CollisionTriangleSetup(ent:TEntity, radius:Float, coll_obj:CollisionObject)
+	
+		tf_offset.Overwrite(-ent.mat.grid[3][0],-ent.mat.grid[3][1],ent.mat.grid[3][2] )
+		tf_line = tform.m.Multiply(coll_line.Add(tf_offset) )
 
+		'tf_scale.Overwrite(1.0/ent.gsx, 1.0/ent.gsy, 1.0/ent.gsz)
+		tf_scale.Overwrite(ent.gsx, ent.gsy, ent.gsz)
+		tf_radius.Overwrite(radius, radius, radius)
+		
+		
 		Local mesh:TMesh = TMesh(ent)
 		If mesh<>Null	
 			mesh_coll = mesh.col_tree.CreateMeshTree(mesh) ' create collision tree for mesh if necessary
 		Endif
+
 		
+		
+		'tf_scale = tform.m.Multiply(tf_scale)
+		mesh_coll.tf_scale = tf_scale
+		
+		'Local radoffset:Vector = tf_line.d.Normalize().Multiply(radius+0.001) ''MUST HAVE r+r??
 
-	
+
+		tf_box.Update(tf_line.o)
+		tf_box.Update(tf_line.d)'.Add(radoffset))
+		tf_box.Expand(radius) 'tf_radius)
+		'Local ex# = 1.0/ent.gsx
+		'Local ey# = 1.0/ent.gsy
+		'Local ez# = 1.0/ent.gsz
+		tf_box.a.Multiply(inv_scale); tf_box.b.Multiply(inv_scale)
+		
+		If radius = 0.0
+		
+			''setup ray for pick
+			tf_radius.x = 0.0
+			mesh_coll.RayBoxSetup( New Line( tf_line.o.Multiply(inv_scale) , tf_line.d.Multiply(inv_scale)) ) ''may need new line with radoffset		
+			
+		Endif
+		
+		coll_obj.time = tf_line.d.Add(tf_radius).DistanceSquared()+radius ''dist squ
+		If radius = 0.0 Then coll_obj.time = 1.0 ''raytriangle
 	End
-	
-	''--- Pick() depricated
-	'Method Pick:Int(coll_obj:CollisionObject)
 
-		'Local hit:Int=0
-	
-		'If( HitTest(coll_line, radius, tform, mesh_coll, coll_method, coll_obj, Self ) )
-			
-			'hit=True	
-			
-		'Endif
-	
-		'Return hit
-	'End
-	
-	
-	
-	''
-	''--deprecated HitTest()
+
+
 	Method CollisionDetect:Int(coll_obj:CollisionObject)
 		
 		Local res:Int=0
-		Local tf:TransformMat = tform
 		
-		If( y_scale<>1.0 )
-		
-			'Return HitTest(Self.coll_line, radius, Self.y_tform.Multiply(tform), mesh_coll, coll_method, coll_obj,Self )
-			tf = y_tform.Multiply(tform)
-			
-		Endif
-			
-		'Return HitTest(Self.coll_line, radius, tform, mesh_coll, coll_method, coll_obj, Self )
-		'Function HitTest:Int( line:Line, radius2:Float, tf:TransformMat, mesh_col:MeshCollider, methd:Int, coll_obj:CollisionObject, ci:CollisionInfo  )
-		
+
 		Select ( coll_method )
 	
 			Case COLLISION_METHOD_SPHERE
-			
-				res = coll_obj.SphereCollide( coll_line,radius,tf.v,dst_radius )
-		
+				
+				res = coll_obj.SphereCollide( coll_line,radius,tf_offset,dst_radius )
+				
+				If res
+					coll_obj.col_coords=coll_line.Multiply(coll_obj.time)
+				
+					RegisterHitPlane ( coll_obj.col_coords, coll_obj.normal)
+					
+				Endif
+				radius = 0.0
+				
+				
 			Case COLLISION_METHOD_POLYGON
-			
-				res = mesh_coll.Collide( coll_line,radius,tf,coll_obj )
 
-				''adjust normal
+				
+				If mesh_coll.CollideAABB( tf_box, tf_radius, coll_obj, mesh_coll.tree )
+					
+					res = mesh_coll.TriNodeCollide( tf_box, tf_line, tf_radius, coll_obj, tf_scale )
+					
+					''adjust normal to original ent. matrix
+					If res 'And coll_obj.time < 99999.0
 
-				coll_obj.normal = tf.m.Transpose().Multiply(coll_obj.normal).Normalize()
-				
-				'Local t:TransformMat =tf.Copy()
-				't.NormalizeMatrix3x3()
-				'coll_obj.normal=tf.m.Multiply(coll_obj.normal).Normalize()
-
-				'coll_line = t.Transpose.Multiply(coll_line)
-				
-			Case COLLISION_METHOD_BOX
-			
-				Local t:TransformMat =tf.Copy()
-				t.NormalizeMatrix3x3() ''------is this done in collisionsetup()?
-				
-				Local a:Vector = New Vector(ax,ay,az)
-				Local b:Vector = New Vector(bx,by,bz)
-				Local box:Box= New Box(a,b)
-				
-				Local l:Line = t.Transpose().Multiply(coll_line)
-			
-				If( coll_obj.BoxCollide( l ,radius,box ) ) ''BoxCollide( ~t*line,radius,box )
-					coll_obj.normal=t.m.Multiply(coll_obj.normal)
-					'coll_obj.normal.Normalize()
-					res = True
+						coll_obj.normal = renew2.Multiply(coll_obj.normal).Normalize()
+						
+						''convert col_coords back to world space
+						coll_obj.col_coords = renew2.Multiply(coll_obj.col_coords ).Subtract(tf_offset)
+					
+						RegisterHitPlane ( coll_obj.col_coords, coll_obj.normal)
+						
+					Endif
 				Endif
 	
+	
+				
+			Case COLLISION_METHOD_BOX
+
+				Local box:Box= New Box(New Vector(ax,ay,az), New Vector(bx,by,bz))
+	
+				
+				If( coll_obj.SphereBox( tf_line, radius, box, tf_scale ) ) ''BoxCollide( ~t*line,radius,box )
+				
+					coll_obj.normal=renew2.Multiply(coll_obj.normal) '.Normalize()
+					'coll_obj.normal=coll_obj.normal
+					res = True
+					
+					'coll_obj.col_coords=coll_line.Multiply(coll_obj.time)'.Subtract(tf_offset)
+					coll_obj.col_coords = renew2.Multiply(coll_obj.col_coords ).Subtract(tf_offset)
+					
+					RegisterHitPlane ( coll_obj.col_coords, coll_obj.normal)
+			
+				Endif
+
+				'radius = 0.0
+			
+			
+			'' *** TO DO ***
+			Case COLLISION_METHOD_AABB
+			
+				Local box_target:Box= New Box(New Vector(ax,ay,az), New Vector(bx,by,bz))
+				'Local box:Box= New Box(New Vector(-radius,-radius,-radius), New Vector(radius,radius,radius))
+				
+				Local line_box:Box = New Box(tf_line)
+				line_box.Expand(radius+radius)
+
+				res= coll_obj.AABBCollide(tf_line, line_box, box_target)
+
+				If res
+					'coll_obj.normal= 
+					'coll_obj.col_coords=coll_line.Multiply(coll_obj.time)
+				
+					RegisterHitPlane ( coll_obj.col_coords, coll_obj.normal)
+					
+				Endif
+				radius = 0.0
 		End
 		
-		If res
-		
-			coll_obj.col_normal=coll_obj.normal
-			coll_obj.col_time=coll_obj.time
-			coll_obj.col_surface=coll_obj.surface
-			coll_obj.col_index=coll_obj.index	
-	
-			coll_obj.col_coords=coll_line.d.Multiply(coll_obj.time).Add(coll_line.o) '.Subtract(coll_obj.normal.Multiply(radius))
-			
-			'coll_obj.col_coords=coll_line.d.Subtract(coll_line.o).Multiply(coll_obj.time).Add(coll_line.o).Subtract(coll_obj.normal.Multiply(radius))
-			'coll_obj.col_coords=coll_line.Multiply(coll_obj.time).Subtract(coll_obj.normal.Multiply(radius))
-	
-		Endif
+'If res
+'CollisionInfo.test_vec = coll_obj.col_coords.Copy()
+'CreateTestLine(coll_obj.col_coords, coll_obj.col_coords.Add(coll_obj.normal.Multiply(1.0)), 100,0,100 )
+'Endif
 		
 		Return res
+	End
+	
+	
+	'' Physics
+	
+	Method RegisterHitPlane(coords:Vector, norm:Vector)
+		
+		hits +=1
+		If hits>3 Or hits<1 Then Return
+		
+		n_hit = hits-1
+		planes[n_hit] = New Plane( coords, norm)
+		col_points[n_hit] = coords.Copy()
+		
 	End
 	
 	
@@ -499,96 +685,130 @@ Class CollisionInfo
 	Method CollisionResponse:Int(coll:CollisionObject,response:Int)
 		''notes: needed a copy for dv and sv when assigning, but not so with local vectors
 		
-		
-		'coll.col_coords=coll_line.Multiply(coll.time).Subtract(coll.normal.Multiply(radii.x) )
-		
-		
-		''register collision
-		hits += 1
-		If( hits>=MAX_HITS ) Return False
+		'' let's not worry about time here, and work only with collision point
+
+
+		If( hits>=MAX_HITS  ) Return False
+
 	
-		'Local impact:Vector = coll_line.Multiply(coll.time)
-		'impact.y *= y_scale
-PrintVector coll.normal
-		'coll.col_coords=coll.col_coords.Add(coll.normal.Multiply(radii.x) )
-		coll.col_coords.y *= y_scale
-		
-		Local coll_plane:Plane = New Plane( coll.col_coords,coll.normal )
-		coll_plane.d -= COLLISION_EPSILON
-		coll.time=coll_plane.T_Intersect( coll_line )
-		
-		
-		
-Dprint "coll_time "+coll.time
-		If( coll.time>0.0 ) '' && fabs(coll.normal.dot( coll_line.d ))>EPSILON ){
-			''update source position - ONLY If AHEAD!
-			sv=coll.col_coords.Copy() 'coll_line.Multiply(coll.time) 'impact
-			'sv = coll_line.Multiply(coll.time)
-			td *=1.0-coll.time
-			td_xz *=1.0-coll.time
+		Local new_coords:Vector
+
+		''create correct normal response
+		If ( response = COLLISION_RESPONSE_SLIDEXZ )
+			coll.normal.y = 0.0'-coll_line.o.y
+			coll.normal = coll.normal.Normalize()
 		Endif
+		
+		new_coords=coll.col_coords.Add(coll.normal.Multiply(radius))
+		'new_coords = coll.col_coords.Copy() 'coll_line.o.Add(coll_line.d.Multiply(coll.time))
+		
+		
+		new_coords.y *= y_scale
+		'coll.col_coords=new_coords
+		
+		Local coll_plane:Plane = New Plane( new_coords,coll.normal )	
+		coll_plane.d -= COLLISION_EPSILON
+
+		
+'Print "coll_time "+coll.time+"  res:"+response+" colnorm:"+coll.normal.ToString+" rad:"+radius
+
+		
+		sv.Overwrite(new_coords)
 	
-		If( response=COLLISION_RESPONSE_STOP )
-			dv=sv.Copy()
+		If ( response=COLLISION_RESPONSE_STOP )
+			dv.Overwrite(sv)
 			Return False 
 		Endif
 		
 
+
 		''find nearest point on plane To dest
 		Local nv:Vector =coll_plane.Nearest( dv )
-	
-		If( n_hit=0 )
-			dv=nv
-		Elseif( n_hit=1 )
-			If( planes[0].Distance(nv)>=0 )
-				dv=nv
-				n_hit=0
-			Elseif( Abs( planes[0].n.Dot( coll_plane.n ) )< 1.0-EPSILON )
-				dv=coll_plane.Intersect( planes[0] ).Nearest( dv )
-			Else
-				''SQUISHED!
-				hits=MAX_HITS
-				Return False
-			Endif
-		Elseif( planes[0].Distance(nv)>=0 And planes[1].Distance(nv)>=0 )
-			dv=nv
-			n_hit=0
-		Else
-			dv=sv.Copy()
-			Return False
-		Endif
-	PrintVector sv
-	PrintVector dv
-		'Local dd:Vector = sv.Subtract(dv)
-		Local dd:Vector = dv.Subtract(sv)
-		
-		''going behind initial direction? really necessary?
-		If( dd.Dot( dir )<=0 )
-			dv=sv.Copy()
-			Return False
-		Endif
 
-		If( response = COLLISION_RESPONSE_SLIDE )
-			
-			Local d:Float=dd.Length()
-			If( d<=EPSILON ) dv=sv.Copy(); Return False
-			If( d>td ) dd = dd.Multiply(td/d)
-Dprint d+" :: "+td			
-		Elseif( response = COLLISION_RESPONSE_SLIDEXZ )
+'CreateTestLine(new_coords, nv, 200,255,200 )
+
+
+		'' multiple plane hits
 		
-			Local vv:Vector=New Vector( dd.x,0,dd.z )
-			Local d:Float = vv.Length()
-			If( d<=EPSILON ) Then dv=sv.Copy(); Return False
-			If( d>td_xz ) Then dd = dd.Multiply(td_xz/d) Else dd = New Vector(dd.x,0.0,dd.z)
-Print d+" :: "+td_xz		
+		If( n_hit>0 )
+			
+			If( n_hit=1 )
+	'Print ""
+	'Print ""
+'Print ":: n_hit "+n_hit+"  "+planes[0].Distance(nv)+"  "+Abs( planes[0].n.Dot( coll_plane.n ))
+				
+				Local plane_norms# = planes[0].n.Dot( coll_plane.n )
+				
+				If( planes[0].Distance(nv)> radius )
+					n_hit=0
+					
+				Elseif plane_norms < -0.999
+					''SQUISHED! planes are parallel
+					hits=MAX_HITS
+					dv.Overwrite(sv)
+					Return False
+					
+				Elseif( Abs( plane_norms  ) < 1.0-EPSILON )
+					nv=coll_plane.Intersect( planes[0] ).Nearest( dv )
+'Print ":: n_hit1 "+nv	
+'CreateTestLine(nv, nv.Add(pn.Multiply(1.0)), 0,100,0 )
+
+				Endif
+			Else
+				If( planes[0].Distance(nv)> radius And planes[1].Distance(nv)> radius )
+'Print ":: n_hit2 "+n_hit
+					'dv=nv
+					n_hit=0
+				Else
+					dv.Overwrite(sv)
+					Return False
+				Endif
+			Endif
+
+
+			n_hit =0
+			
+'test_dot.Overwrite(nv)
+'Print " cv "+cv.ToString()	
+'CreateTestLine(cv, cv.Add(nn), 200,0,200 )
+	
+	
+	Endif
+
+'CollisionInfo.trigger+=1
+
+
+		Local dd:Vector = nv.Subtract(sv)
+
+'Print "dd "+dd.ToString+"   sv "+sv.ToString+"  nv "+nv.ToString
+
+		''going behind initial direction? really necessary?
+		'If( dd.Dot( dir )<=0 )
+			'Print "***** behind"
+			'dv.Overwrite(sv)
+			'Return False
+		'Endif
+		
+		'' -- apparently, NV gives a correct response
+		Local d:Float=dd.Dot(dd)
+		If  d< EPSILON Then dv.Overwrite(sv); Return False
+		
+		If( response = COLLISION_RESPONSE_SLIDE )
+	
+		Elseif( response = COLLISION_RESPONSE_SLIDEXZ )
+
+			nv.Overwrite( nv.x, coll_line.o.y, nv.z)
+	
 		Endif
 	
-		'coll_line.o=sv.Copy()
-		'coll_line.d=dd
-		dv=sv.Add(dd)
-		n_hit += 1
-		planes[n_hit]=coll_plane
+		'' since we are going back to test more collisions, need to update the coll_line
+		dv=nv
+		coll_line.o.Overwrite(sv)
+		coll_line.d.Overwrite(dv.Subtract(sv))'dd) '' length, from o
 		
+'Print "final dv :"+dv.ToString() '+"   dd:"+dd.ToString()
+		
+	
 		Return True
 		
 	End
@@ -599,11 +819,15 @@ Print d+" :: "+td_xz
 		If (response = COLLISION_RESPONSE_NONE) Then Return False
 
 		If( hits )
+
 			If( hits<MAX_HITS )
 				dv.y *= inv_y_scale
 				coll.col_pos=dv.Copy()
+
 			Else
+
 				coll.col_pos=panic.Copy()
+				
 			Endif
 			Return True
 		Endif
@@ -634,18 +858,15 @@ Class CollisionObject
 	
 	Const ONETHIRD:Float = 1.0/3.0
 	
-	''collision methods
-	Const COLLISION_METHOD_SPHERE:Int=1
-	Const COLLISION_METHOD_POLYGON:Int=2
-	Const COLLISION_METHOD_BOX:Int=3
-
-	''collision actions
-	Const COLLISION_RESPONSE_NONE:Int=0
-	Const COLLISION_RESPONSE_STOP:Int=1
-	Const COLLISION_RESPONSE_SLIDE:Int=2
-	Const COLLISION_RESPONSE_SLIDEXZ:Int=3
+	Global BOXQUADS:Int[]=[
+			2,3,1,0,
+			3,7,5,1,
+			7,6,4,5,
+			6,2,0,4,
+			6,7,3,2,
+			0,1,5,4 ]
 	
-	Field time:Float = 1.0
+	Field time:Float = 2.0
 	Field normal:Vector = New Vector()
 	Field surface:Int=0
 	Field index:Int=0
@@ -654,27 +875,64 @@ Class CollisionObject
 	Field coll_u:Float ''uv coords, only polygon coll
 	Field coll_v:Float
 	
-	Global tform:TransformMat
-	
-	Global col_coords:Vector
-	Global col_normal:Vector
-	Global col_time:Int
-	Global col_surface:Int
-	Global col_index:Int
-	Global col_pos:Vector
-	
-	Global test2x:Float, test2y:Float, test2z:Float
-	
-	Method Update:Int( line:Line,t:Float, n:Vector, u#=0.0, v#=0.0 )
-		
-		''	If( t<0 || t>time ) Return False
-		If( t>time ) Return 0
-		
-		Local p:Plane = New Plane(line.Multiply(t),n)
-	
-		If( p.n.Dot( line.d )>= 0.0 ) Return 0
+	Field rad2:Float
 
-		If( p.Distance(line.o)< -COLLISION_EPSILON ) Return 0
+
+
+	Field tform:TransformMat
+	
+	Field col_coords:Vector = New Vector()
+	Field col_normal:Vector = New Vector()
+	Field col_time:Int
+	Field col_surface:Int
+	Field col_index:Int
+	Field col_pos:Vector = New Vector()
+	
+	Global test2:Vector = New Vector()
+	Global test3:Vector = New Vector()
+	Global renew:Matrix
+	Global scale2:Vector = New Vector()
+	Global tf_offset:Vector = New Vector()
+	Global trip:Int=0
+	
+Private
+	
+	Field int_vec:Vector = New Vector() ''temp intersection vec
+
+Public
+	
+	
+	
+	Method Update:Int( line:Line,t:Float, n:Vector, u#=0.0, v#=0.0, intersect:Vector=Null )
+	
+		''	If( t<0 || t>time ) Return False ''--need to keep negative time
+		
+		If( t>time ) Return 0 ''need the closest intersection
+		
+		Local p:Plane
+		
+		
+		If intersect
+			
+			'' define col_coords here, to manage triangle-plane collisions properly
+			'' col_coords is closest point to triangle plane (in triangle space)
+
+			col_coords = intersect 'tplane.Nearest( line.o.Add(line.d.Multiply(t)) )
+			p = New Plane(col_coords,n) 'tplane
+
+		Else
+		
+			p = New Plane(line.Multiply(t),n)
+			If ( (p.n.Dot(line.o) + p.d ) < -COLLISION_EPSILON ) Return 0 ''starts behind plane
+			
+		Endif
+		
+			
+		If( p.n.Dot( line.d )> -COLLISION_EPSILON ) Return 0 ''moving away from plane
+		'If( p.Distance(line.o)< -COLLISION_EPSILON ) Return 0
+		'If ( (p.n.Dot(line.o) + p.d ) < -COLLISION_EPSILON ) Return 0 ''starts behind plane
+		
+'Print "< UPDATE "+t
 	
 		time=t
 		normal=n
@@ -685,13 +943,36 @@ Class CollisionObject
 		
 	End
 
+	Method AABBCollide:Int( li:Line, box:Box, target:Box)
+		Local n:Vector = New Vector()
+		
+		Local r1:Float, r2:Float, r3:Float, r4:Float, r5:Float, r6:Float, t:Float
+		If box.b.x<target.b.x Then r1 = box.b.x Else r1 = target.b.x
+		If box.a.x>target.a.x Then r2 = box.a.x Else r2 = target.a.x
+		
+		If box.b.y<target.b.y Then r3 = box.b.y Else r3 = target.b.y
+		If box.a.y>target.a.y Then r4 = box.a.y Else r4 = target.a.y
+		
+		If box.b.z<target.b.z Then r5 = box.b.z Else r5 = target.b.z
+		If box.a.z>target.a.z Then r6 = box.a.z Else r6 = target.a.z
+		
+		If Not ((r1>=r2) And (r3>=r4) And (r5>=r6)) Return 0
+		
+		Local target_center:Vector = New Vector( (target.a.x+target.b.x)*0.5, (target.a.y+target.b.y)*0.5, (target.a.z+target.b.z)*0.5)
+		t = li.o.DistanceSquared( target_center)
+		
+		Return Update( li,t, n )
+	
+	End
+
+
 	Method SphereCollide:Int ( line:Line,radius:Float,dest:Vector,dest_radius:Float )
 
 		radius += dest_radius
 		Local l:Line = New Line( line.o.Subtract(dest) ,line.d )
 
 		Local a:Float=l.d.Dot(l.d)
-		If Not a Then Return 0
+		If a<0.001 Then Return 0
 		
 		Local b:Float=l.o.Dot(l.d)*2.0
 		Local c:Float=l.o.Dot(l.o)-radius*radius
@@ -720,7 +1001,7 @@ Class CollisionObject
 	''v0,v1 = edge verts
 	''pn = poly normal
 	''en = edge normal
-	Function EdgeTest:Int ( v0:Vector,v1:Vector,pn:Vector,en:Vector,line:Line,radius:Float, curr_coll:CollisionObject )
+	Method EdgeTest:Int ( v0:Vector,v1:Vector,pn:Vector,en:Vector,line:Line,radius:Float, curr_coll:CollisionObject )
 		
 		''this first part may be wrong, depends on vector->matrix (columns or rows?) The easy fix is to not use transpose
 		Local tm:Matrix = New Matrix( en, v1.Subtract(v0).Normalize(), pn)
@@ -810,23 +1091,17 @@ Class CollisionObject
 
 	Method BoxCollide:Int( line:Line, radius:Float, box:Box )
 
-		Local quads:Int[]=[
-			2,3,1,0,
-			3,7,5,1,
-			7,6,4,5,
-			6,2,0,4,
-			6,7,3,2,
-			0,1,5,4 ]
+		
 	
 		Local hit:Int=False
 		Local p0:Plane, p1:Plane, p2:Plane, p3:Plane
 		
 		For Local n:Int =0 To 23 Step 4  ''6 planes
 
-			Local v0:Vector = box.Corner( quads[n] )
-			Local v1:Vector = box.Corner( quads[n+1] )
-			Local v2:Vector = box.Corner( quads[n+2] )
-			Local v3:Vector = box.Corner( quads[n+3] )
+			Local v0:Vector = box.Corner( BOXQUADS[n] )
+			Local v1:Vector = box.Corner( BOXQUADS[n+1] )
+			Local v2:Vector = box.Corner( BOXQUADS[n+2] )
+			Local v3:Vector = box.Corner( BOXQUADS[n+3] )
 	
 			''quad plane
 			Local p:Plane = New Plane( v0,v1,v2 )
@@ -863,77 +1138,278 @@ Class CollisionObject
 	End
 	
 	
-	Method RayTriangle:Int(li:Line, radius:Float, v0:Vector, v1:Vector, v2:Vector)
-	
-		Local u:Vector, v:Vector, n:Vector             '' triangle vectors
-		Local dst:Vector, w0:Vector, w:Vector          '' ray vectors
-		Local r#, a#, b#             '' params To calc ray-plane intersect
-		Local ru#=  0.0, rv#=0.0
+	Method SphereBox:Int( li:Line, radius:Float, box:Box, scale:Vector)
 		
-		'' get triangle edge vectors And plane normal
-		u = v1.Subtract(v0)
-		v = v2.Subtract(v0)
-		n = u.Cross(v)'.Normalize         '' cross product
+		Local hit:Int= 0
+		Local line_box:Box = New Box(li)
+		line_box.Expand(radius+radius)
+		Local rad_vec:Vector = New Vector(radius,radius,radius)
+		
+		If Not line_box.Overlaps(box) Then Return 0
+		
+		For Local n:Int =0 To 23 Step 4  ''6 planes
+
+			Local v0:Vector = box.Corner( BOXQUADS[n] )'.Multiply(scale)
+			Local v1:Vector = box.Corner( BOXQUADS[n+1] )'.Multiply(scale)
+			Local v2:Vector = box.Corner( BOXQUADS[n+2] )'.Multiply(scale)
+			Local v3:Vector = box.Corner( BOXQUADS[n+3] )'.Multiply(scale)
+			
+			hit = hit | SphereTriangle( li, rad_vec,  v0,v1,v2) | SphereTriangle( li, rad_vec,  v0,v2,v3)
+			
+		Next
+		
+		Return hit
+		
+	End
+	
+	
+	
+	'' infinte ray, no radius
+	Method RayTriangle:Int(li:Line, v0:Vector, v1:Vector, v2:Vector )
+		
+		Local u:Vector, v:Vector, n:Vector             '' triangle vectors
+		Local w:Vector
+		Local i:Vector = New Vector() 		'' interesection point
+		Local r#, a#, b#, radius#             '' params To calc ray-plane intersect
+		
+		
+		'' get triangle plane normal
+		u = v1.Subtract(v0)'.Multiply(scale_vec)
+		v = v2.Subtract(v0)'.Multiply(scale_vec)
+		n = u.Cross(v)'.Normalize        '' cross product
 		If (n.x=0 And n.y=0 And n.z=0) Then Return 0           
 
-		a = li.o.Subtract(v0).Dot(n) 
-		b = -li.d.Dot(n) '' dest vector
-	
-		If radius
-			''returns r along li.d
-			r = SpherePlaneTest(li.o, li.o.Add(li.d), radius, v0, n ) 'vec 0 = v0???
-			'r = SpherePlaneTest(li.o, li.o.Add(li.d), radius, New Vector(0.0,0.0,0.0), n )
-			
-			If r<0.0 Then Return 0
-			
-		Else
+		''sphere plane/ ray plane collision
+		
+		a = li.o.Subtract(v0).Dot(n)
+		b = -li.d.Dot(n)
 
-			If (b < 0.00001 )'And b>-0.00001)     '' ray is parallel To triangle plane or points away from ray
-			    If (a = 0.0) Then Return 1 '(return li.o) ''ray lies in triangle plane
-			    Return 0             '' ray disjoint from plane
+
+		'' infinte ray, no radius
+		
+		If (b =0.0) '< 0.00001 And b>-0.00001)     '' ray is parallel To triangle plane or points away from ray
+		    If (a = 0.0)
+				r=0.0 '(return li.o) ''ray lies in triangle plane
+			Else    
+				Return 0             '' ray disjoint from plane
 			Endif
+		Else
 			
 			'' get intersect point of ray with triangle plane
-			r = a/b
-			'If (r < 0.0) Then Return 0     '' ray goes away from triangle (negative b test)
-			If (r > 1.0) Then Return 0'' For a segment, also test If (r > 1.0) then no intersect
-		
+			r = a/b	
+			i.Overwrite(li.o.x+li.d.x*r, li.o.y+li.d.y*r, li.o.z+li.d.z*r)
 		Endif
 		
-		''exit early for distant triangle
+
+		''exit early for distant triangles
 		If r > time Then Return 0
-	
-Print "* "+(u.Cross(v).y)	
-		'*I = R.P0 + r * dir           '' intersect point of ray And plane
-		Local i:Vector = li.o.Add( New Vector(li.d.x*r, li.d.y*r, li.d.z*r) )
-	
+
 		'' is I inside T?
+				
 		Local uu#, uv#, vv#, wu#, wv#, D#
 		uu = u.Dot(u)
-		uv = u.Dot(v)
 		vv = v.Dot(v)
+		
 		w = i.Subtract(v0)
+		
+		Local ids# = w.DistanceSquared()
+		If ids > uu And ids > vv Then Return 0 ''quick squared distance check
+		
+		uv = u.Dot(v)
 		wu = w.Dot(u)
 		wv = w.Dot(v)
-		D = uv * uv - uu * vv
-		
-		'' get And test parametric coords ''added in radius adjustment for s/t test
-		Local s#, t#
-		s = (uv * wv - vv * wu) / D
-		If (s < (0.0-radius) Or s > (1.0+radius)) Then Return 0       '' I is outside T
-		'If (s < (0.0) Or s > (1.0)) Then Return 0       '' I is outside T
-		
-		t = (uv * wu - uu * wv) / D
+		D = 1.0 / (uv * uv - uu * vv)
+	
+		'' get And test parametric coords
+		Local s#, t#, out%, diff#=0.0
+		s = (uv * wv - vv * wu) * D
+		If (s < 0.0 Or s > 1.0)
+			Return 0
+		Endif
+
+		t = (uv * wu - uu * wv) * D
 		'' does s+t need to be Abs(s)?
-		If (t < (0.0-radius) Or (s + t) > (1.0+radius+radius) ) Then Return 0 '' I is outside T
+		If (t < (0.0) Or (s + t) > (1.0) )
+			Return 0
+		Endif
+
+'Print "TRIHITTIME "+r+" s "+s+"  t "+t		
+'Print "COLCOORDSONTRI "+i.ToString()
+
+		Return Update( li, r, n, s ,t, i.Copy() )
 
 		
-		'normal = n.Normalize()
-		'time = r
-		'coll_u = s
-		'coll_v = t
+	End
 	
-		Return Update( li, r, n.Normalize(),s ,t )
+	
+	
+	Method SphereTriangle:Int(li:Line, tf_radius:Vector, v0:Vector, v1:Vector, v2:Vector )
+		
+		''Notes:
+		'' for this to work, don't use time, use dist squared
+		'' Must return distsq for closest point on TRIANGLE plane
+		
+		'' to get ellipsoid radius to normal: sqrt(xrad.dot(n)^2 + yrad.dot(n)^2 + zrad.dot(n)^2)
+		'' so it's either 9 mults or 12 mults + sqrt,  per triangle
+		
+		Local u:Vector, v:Vector, n:Vector             '' triangle vectors
+		Local dst:Vector, w0:Vector, w:Vector          '' ray vectors
+		Local i:Vector = New Vector() 		'' interesection point
+		Local ix:Vector = New Vector()		'' sphere center at intersection
+		Local r#=-1.0 , a#, b#=0.0, dotradius#             '' params To calc ray-plane intersect
+		Local ru#=  0.0, rv#=0.0
+		Local beneath:Bool = False
+
+		
+		'' get triangle plane normal
+		u = v1.Subtract(v0)'.Multiply(scale_vec)
+		v = v2.Subtract(v0)'.Multiply(scale_vec)
+		n = u.Cross(v)        '' cross product
+		If (n.x=0.0 And n.y=0.0 And n.z=0.0) Then Return 0           
+		n = n.Normalize()
+		
+		''sphere plane/ ray plane collision
+
+
+		Local src:Vector = li.o.Subtract(v0)
+		Local n_radius# = tf_radius.x*tf_radius.x
+		
+		Local o_len# = n.Dot(src)
+		
+		If o_len < 0.0 Then Return 0  '' quick opposite direction check
+		
+		i = (li.o.Subtract( n.Multiply(o_len) )) ''nearest point in plane
+		Local o_radius# = i.DistanceSquared(li.o) 
+		'Local o_radius# = n.Multiply(src.Dot(n)).DistanceSquared() 'n.Multiply(o_len).DistanceSquared() ''distsq from plane to li.o
+		Local diff# = o_radius-n_radius
+'Print "lio "+li.o+"   li.d "+li.d+"  o_rad "+o_radius+"  diff "+diff+"~n nrad "+n_radius+"   n "+n	
+	
+
+		If diff<0.0 And diff>-n_radius*0.5
+
+			''hit plane without moving		
+			beneath = True
+			
+			r = o_radius
+			'r = i.DistanceSquared(li.o) ''same as o_radius
+			
+			'ix = i.Add(n.Multiply(tf_radius.x))
+			ix = li.o '.Add(n.Multiply(Sqrt(o_radius)-Sqrt(n_radius) ))
+			
+		Else
+			
+			'' find moving hit on plane
+			Local nr# = tf_radius.x 'Dot(n)
+			a = o_len 'li.o.Subtract(v0).Dot(n)
+			b = -li.d.Dot(n)
+			b = b + (Sgn(b)*nr)
+			
+			Local r2# = 0.0
+			If b =0.0 Then Return 0
+		
+			r2 = a/b
+
+			If r2<0.0 Or r2>1.0 Then Return 0
+			'If r2<0.0  Then Return 0
+			
+			ix = li.o.Add(li.d.Multiply(r2))
+			''i = li.o.Subtract( n.Multiply(src.Dot(n)) ) ''i=i
+			i = ix.Subtract( n.Multiply(ix.Subtract(v0).Dot(n)) )	
+			'i = li.o.Add(ix)
+			
+			r = i.Subtract(ix).DistanceSquared() 'i.Subtract(li.o).DistanceSquared()	
+			
+		Endif	
+		
+			
+		''exit early for distant triangles
+		If r > time Then Return 0
+
+
+		'' is I inside T?
+				
+		Local uu#, uv#, vv#, wu#, wv#, D#
+		uu = u.Dot(u)
+		vv = v.Dot(v)
+		
+		w = i.Subtract(v0)
+
+		Local ids# = (w.DistanceSquared())*0.5 ''super large radius may fail here
+		If ids > uu And ids > vv Then Return 0 ''quick squared distance check
+	
+
+		uv = u.Dot(v)
+		wu = w.Dot(u)
+		wv = w.Dot(v)
+		D = 1.0 / (uv * uv - uu * vv)
+
+	
+		'' get And test parametric coords ''added in radius adjustment for s/t test
+		Local s#, t#, out%=0, bb:Vector
+		
+		s = (uv * wv - vv * wu) * D
+		If (s < 0.0 Or s > 1.0)
+			'' I is outside T
+			'Return 0
+			out=1
+		Endif
+
+		t = (uv * wu - uu * wv) * D
+		'' does s+t need to be Abs(s)?
+		If (t < 0.0 Or (s + t) > 1.0 ) ''*** made t< -0.05 for smoother poly to poly transitions
+			'' I is outside T
+			'Return 0
+			out=out+1	
+		Endif
+		
+		''edge test
+		
+		If out>0 And tf_radius.x 'And Not beneath
+
+
+			If s+t>1.0
+				bb = i.PointOnSegment(v1,v2)
+			Elseif t<0.0
+				bb = i.PointOnSegment(v0,v1)
+			Else
+				bb = i.PointOnSegment(v0,v2)
+			Endif
+
+			'Local bb:Vector = New Vector(v0.x+(v2.x-v0.x)*t+(v1.x-v0.x)*s, v0.y+(v2.y-v0.y)*t+(v1.y-v0.y)*s, v0.z+(v2.z-v0.z)*t+(v1.z-v0.z)*s)
+
+'test3 = CollisionObject.renew.Multiply(bb) '.Copy()
+
+			Local nr#
+			nr = ix.DistanceSquared(bb) 'li.o.DistanceSquared(bb)
+
+			If (nr > n_radius) Or nr>time  Then Return 0
+			
+			'' ...control the poly time
+
+			'r = nr+n_radius'*0.1
+			r = li.o.DistanceSquared(bb)+n_radius
+
+			'i=bb
+			i = bb.Add(n.Multiply(tf_radius.x*0.01)) ''softens edges
+
+			n = (ix.Subtract(bb)).Normalize() ''nice
+			'n = li.o.Subtract(bb).Normalize()
+
+
+'Print "BENEATH "+Int(beneath)
+'Print "*** OFFFFFFF "+bb+"  i "+i+"  "+r
+'Print "EDGEHIT"
+
+		Elseif out>0
+			
+			Return 0
+			
+		Endif
+
+'Print "TRIHITTIME "+r+" s "+s+"  t "+t		
+'Print "COLCOORDSONTRI "+i.ToString()
+		
+		Return Update( li, r, n, s ,t, i.Copy() )
 		                 
 	End
 	
@@ -958,10 +1434,11 @@ Print "* "+(u.Cross(v).y)
 		''get plane sphere equations
 		Local d0:Float = norm.Dot(c0.Subtract(v0)) '+ pd
 		Local d1:Float = norm.Dot(c1.Subtract(v0)) '+ pd
-		'Print "d0 "+(d0)+" "+(d1)+" r:"+radius+" " '+pd			
+
+		'Print "d0 "+(d0)+" "+(d1)+" r:"+radius+" " '+pd	
 		
 		If (d0 > 0.0 And d0 < radius) Then Return 0.0 ''original hitting the position
-		If (d1 > radius) Then Return -1.0 ''too far from plane
+		If (d1 > radius) Then Return -1.0 ''too far from plane 
 		If d1=0.0 Then Return 1.0 'hit center
 		If d0=d1 Then Return -1.0 ''does not move
 			
@@ -980,3 +1457,29 @@ Function PrintVector(v:Vector)
 	Print v.x+" "+v.y+" "+v.z
 End
 
+Function CreateTestLine(s:Vector, d:Vector, r%=100, g%=0, b%=100)
+	Local ee1:TMesh = TMesh.CreateLine(s, d, r,g,b )
+	ee1.EntityFX 1+64
+End
+
+#rem			
+			''ok, now check triangle edges
+			'' -- if we have point on plane, so break it into axis checks or point on segment
+			Local edge:Vector = New Vector(0,0,0)
+			If radius
+			
+				Local ed1:Vector = i.PointOnSegment(v0,v1)
+				Local ed2:Vector = i.PointOnSegment(v1,v2)
+				Local ed3:Vector = i.PointOnSegment(v0,v2)
+				Local rsq:Float = radius*radius
+				
+				If i.Subtract(ed1).DistanceSquared() <=rsq
+					edge=ed1 '; Print 123
+				Elseif i.Subtract(ed2).DistanceSquared() <=rsq
+					edge=ed2 '; Print 234
+				Elseif i.Subtract(ed3).DistanceSquared() <=rsq
+					edge=ed3 '; Print 456
+				Endif
+				
+			Endif
+#end	

@@ -134,10 +134,10 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 				xx=Int(xi); yy=Int(yi)
 				
 				''ints faster than bytes
-				rgb[0] = GetPixel(xx-1,yy,-1) 
-				rgb[1] = GetPixel(xx+1,yy,-1)
-				rgb[2] = GetPixel(xx,yy-1,-1)
-				rgb[3] = GetPixel(xx,yy+1,-1)
+				rgb[0] = GetPixel(xx-1,yy) 
+				rgb[1] = GetPixel(xx+1,yy)
+				rgb[2] = GetPixel(xx,yy-1)
+				rgb[3] = GetPixel(xx,yy+1)
 				
 				red = (((rgb[0] & $000000ff) + (rgb[1] & $000000ff) +(rgb[2] & $000000ff) +(rgb[3] & $000000ff) )Shr 2) & $000000ff
 				green = (((rgb[0] & $0000ff00) + (rgb[1] & $0000ff00) +(rgb[2] & $0000ff00) +(rgb[3] & $0000ff00) )Shr 2) & $0000ff00 
@@ -146,7 +146,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 				
 				'' extra weight gives better results for enlarge
 				If enlarge
-					rgb[4] = GetPixel(xx,yy,-1)
+					rgb[4] = GetPixel(xx,yy)
 					red = ((red+(rgb[4]&$000000ff))Shr 1) & $000000ff
 					green = ((green+(rgb[4]&$0000ff00))Shr 1) & $0000ff00
 					blue = ((blue+(rgb[4]&$00ff0000))Shr 1) & $00ff0000
@@ -184,7 +184,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 				xx=Int(xi); yy=Int(yi)
 				
 				''ints faster than bytes
-				rgb[0] = GetPixel(xx,yy,-1) 
+				rgb[0] = GetPixel(xx,yy) 
 				
 				newpix.pixels.PokeInt( (x Shl 2)+y*(neww Shl 2), rgb[0] ) '( x*4+y*neww*4, rgb[0] )
 				
@@ -198,7 +198,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	End
 
 	
-	Method GetPixel:Int(x:Int,y:Int,rgba:Int=0)
+	Method GetPixel:Int(x:Int,y:Int)
 		''will repeat edge pixels
 		
 		If x<0
@@ -212,11 +212,36 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 			y=height-1
 		Endif
 		
-		If rgba<0
-			Return pixels.PeekInt( (x Shl 2)+y*(width Shl 2)) '(x*4+y*width*4)
+		'If rgba>0
+			''individual colors
+			'Return pixels.PeekByte((x Shl 2)+y*(width Shl 2)+rgba-1) '(x*4+y*width*4+rgba)
+		'Endif
+		
+		Return pixels.PeekInt( (x Shl 2)+y*(width Shl 2)) '(x*4+y*width*4)
+
+	End
+	
+	Method SetPixel:Void(x:Int,y:Int,r:Int,g:Int,b:Int,a:Int=255)
+		''will repeat edge pixels
+		
+		If x<0
+			x=0
+		Elseif x>width-1
+			x=width-1
+		Endif
+		If y<0
+			y=0
+		Elseif y>height-1
+			y=height-1
 		Endif
 		
-		Return pixels.PeekByte((x Shl 2)+y*(width Shl 2)+rgba) '(x*4+y*width*4+rgba)
+		'If rgba>0
+			''individual colors
+			'Return pixels.PeekByte((x Shl 2)+y*(width Shl 2)+rgba-1) '(x*4+y*width*4+rgba)
+		'Endif
+		
+		'abgr
+		pixels.PokeInt( (x Shl 2)+y*(width Shl 2), (a Shl 24)|(b Shl 16)|(g Shl 8)|r) '(x*4+y*width*4)
 
 	End
 	
@@ -228,7 +253,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 			For Local x:Int = 0 To width-1
 				
 				''ints faster than bytes
-				Local pix:Int = GetPixel(x,y,-1) & $00ffffff
+				Local pix:Int = GetPixel(x,y) & $00ffffff
 				 
 				If maskcolor = pix
 				
@@ -251,7 +276,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 			For Local x:Int = 0 To width-1
 				
 				''ints faster than bytes
-				Local pix:Int = GetPixel(x,y,-1)
+				Local pix:Int = GetPixel(x,y)
 				Local c1:Int = pix & $0000ff
 				Local c2:Int = pix & $00ffff
 				Local c3:Int = pix & $ffffff

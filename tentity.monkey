@@ -1,5 +1,5 @@
 Import minib3d
-Import matrix
+Import minib3d.math.matrix
 Import monkey.math
 Import minib3d.tbone
 
@@ -7,10 +7,21 @@ Import minib3d.tbone
 ''NOTES:
 '' - use EntityListAdd()
 '' - test transform point, using different global matrix approach, not sure if needed or not
-'' - added EntityCollision(type,picktype,x, [y,z,w,d,h]) for faster setup
+'' - added CollisionSetup(type,picktype,x, [y,z,w,d,h]) for faster setup
 '' -- if you need faster operations on mobile, you'll need a fixed-point math library
 
+'' -- note: loc_mat is not updated if parent transformations... use px,py,pz,rx,ry,rz
 
+'' --pitch is flipped, z pos is flipped
+
+Const FXFLAG_NONE% = 0
+Const FXFLAG_FULLBRIGHT% = 1
+Const FXFLAG_VERTEXCOLORS% = 2
+Const FXFLAG_FLATSHADE% = 4
+Const FXFLAG_DISABLE_FOG% = 8
+Const FXFLAG_DISABLE_CULLING% = 16
+Const FXFLAG_FORCE_ALPHA% = 32
+Const FXFLAG_DISABLE_DEPTH% = 64
 
 Class TEntity
 	
@@ -26,9 +37,11 @@ Class TEntity
 	Field parent:TEntity
 	
 	Field mat:Matrix=New Matrix 'global matrix
-	Field loc_mat:Matrix = New Matrix ''local matrix 'rot 'trans 'scale
+	Field loc_mat:Matrix = New Matrix ''local matrix 'rot 'trans 'scale ''-- note: this isnt always kept up-to-date
 	'Field mat_sp:Matrix ''moved to TSprite
 	Field px#,py#,pz#,sx#=1.0,sy#=1.0,sz#=1.0,rx#,ry#,rz#,qw#,qx#,qy#,qz#
+	'Field gpx#=0.0,gpy#=0.0,gpz#=0.0 ''global position
+	'Field grx#=0.0,gry#=0.0,grz#=0.0 ''global rotation
 	Field gsx#=1.0,gsy#=1.0,gsz#=1.0 ''global scale
 	
 	Field name$
@@ -55,13 +68,9 @@ Class TEntity
 	Field no_seqs:Int=0
 	Field anim_update:Int
 	
-	''collision, pick
-	Field radius_x#=1.0,radius_y#=1.0
-	Field box_x#=-1.0,box_y#=-1.0,box_z#=-1.0,box_w#=2.0,box_h#=2.0,box_d#=2.0
 	
-	Field collision_type:Int
 	Field no_collisions:Int
-	Field collision:TCollisionImpact[]
+	Field collision:TCollision = New TCollision
 	Field collision_pair:TCollisionPair = New TCollisionPair
 	Field pick_mode%,obscurer%
 	
@@ -115,8 +124,8 @@ Class TEntity
 		ent.entity_link = entity_list.EntityListAdd(ent)
 	
 		' add to collision entity list
-		If collision_type<>0
-			TCollisionPair.ent_lists[collision_type].AddLast(ent)
+		If collision.type<>0
+			TCollisionPair.ent_lists[collision.type].AddLast(ent)
 		Endif
 		
 		' add to pick entity list
@@ -163,7 +172,6 @@ Class TEntity
 		ent.fade_near=fade_near
 		ent.fade_far=fade_far
 		
-		ent.brush=Null
 		ent.brush=brush.Copy()
 		
 		ent.anim=anim
@@ -180,15 +188,9 @@ Class TEntity
 		ent.anim_update=anim_update
 	
 		ent.cull_radius=cull_radius
-		ent.radius_x=radius_x
-		ent.radius_y=radius_y
-		ent.box_x=box_x
-		ent.box_y=box_y
-		ent.box_z=box_z
-		ent.box_w=box_w
-		ent.box_h=box_h
-		ent.box_d=box_d
-		ent.collision_type=collision_type
+
+		'ent.collision_type=collision_type
+		ent.collision = collision.Copy()
 		ent.pick_mode=pick_mode
 		ent.obscurer=obscurer
 		
@@ -201,7 +203,7 @@ Class TEntity
 		If entity_link Then entity_link.Remove()
 		
 		' remove from collision entity lists
-		If collision_type<>0 collision_pair.ListRemove(Self, collision_type)
+		If collision.type<>0 collision_pair.ListRemove(Self, collision.type)
 		
 		' remove from pick entity list
 		If pick_mode<>0 Then pick_link.Remove()
@@ -291,11 +293,6 @@ Class TEntity
 			'temp_mat.Inverse() ''only 3x3 inverse
 			
 			Local pos:Float[] = temp_mat.TransformPoint(x,y,z) '-z
-	
-			'x=(pos[0]+temp_mat.grid[3][0])/(psx*psx) 'pos[0]/psx
-			'y=(pos[1]+temp_mat.grid[3][1])/(psy*psy) 'pos[1]/psy
-			'z=(pos[2]+temp_mat.grid[3][2])/(psz*psz) '-pos[2]/psz
-			'z=-z
 			
 			x= pos[0]
 			y= pos[1]
@@ -430,9 +427,6 @@ Class TEntity
 		
 		'' treat bones differently
 		If TBone(Self) <> Null
-			gsx=parent.gsx*sx
-			gsy=parent.gsy*sy
-			gsz=parent.gsz*sz
 
 			TBone(Self).ScaleBone(sx,sy,sz,glob)
 			Return
@@ -440,23 +434,18 @@ Class TEntity
 		
 
 		If parent<>Null	
-			gsx=parent.gsx*sx
-			gsy=parent.gsy*sy
-			gsz=parent.gsz*sz
+
 			'mat.Overwrite(parent.mat)
 			'UpdateMat()
-			UpdateMatSca()
+			UpdateMatRot()
 			
 		Else
 		
 			'UpdateMat(True)
-			gsx=sx
-			gsy=sy
-			gsz=sz
-			UpdateMatSca(True)
+			UpdateMatRot(True)
 		Endif
 		
-		If child_list.IsEmpty()<>True Then UpdateChildren(Self,3)
+		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
 
 	End 
 	
@@ -497,7 +486,7 @@ Class TEntity
 			UpdateMatRot(True)
 		Endif
 		
-		If child_list.IsEmpty()<>True Then UpdateChildren(Self,0)
+		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
 
 	End 
 
@@ -899,7 +888,7 @@ Class TEntity
 		brush.tex[index].tex_frame=frame
 		
 		If frame>0 And texture.no_frames>1
-			''move texture
+			''move texture anim
 			Local x:Int = frame Mod texture.frame_xstep
 			Local y:Int =( frame/texture.frame_ystep) Mod texture.frame_ystep
 			brush.tex[index].u_pos = x*texture.frame_ustep
@@ -1015,6 +1004,10 @@ Class TEntity
 		
 	End
 	
+	'' why not?
+	Method PaintEntity(tex:TTexture, frame:Int=0, index:Int=0)
+		EntityTexture(tex,frame,index)
+	End
 	
 	Method EntityOrder(order_no)
 	
@@ -1068,18 +1061,18 @@ Class TEntity
 	
 	End 
 	
-	Method EntityParent(parent_ent:TEntity,glob:Int=True)
+	Method EntityParent(parent_ent:TEntity,glob:Bool=True)
 
 		'' remove old parent
 
 		' get global values
-		Local gpx:Float=EntityX(True)
-		Local gpy:Float=EntityY(True)
-		Local gpz:Float=EntityZ(True)
+		Local gpx_:Float=EntityX(True)
+		Local gpy_:Float=EntityY(True)
+		Local gpz_:Float=EntityZ(True)
 		
-		Local grx:Float=EntityPitch(True)
-		Local gry:Float=EntityYaw(True)
-		Local grz:Float=EntityRoll(True)
+		Local grx_:Float=EntityPitch(True)
+		Local gry_:Float=EntityYaw(True)
+		Local grz_:Float=EntityRoll(True)
 		
 		'Local gsx:Float=EntityScaleX(True) 'gsx is now kept
 		'Local gsy:Float=EntityScaleY(True)
@@ -1093,17 +1086,17 @@ Class TEntity
 
 		' entity no longer has parent, so set local values to equal global values
 		' must get global values before we reset transform matrix with UpdateMat
-		px=gpx
-		py=gpy
-		pz=-gpz
-		rx=-grx
-		ry=gry
-		rz=grz
+		px=gpx_
+		py=gpy_
+		pz=-gpz_
+		rx=-grx_
+		ry=gry_
+		rz=grz_
 		'sx=gsx
 		'sy=gsy
 		'sz=gsz
 		
-		''
+
 		
 		' No new parent
 		If parent_ent=Null
@@ -1115,19 +1108,19 @@ Class TEntity
 	
 		If parent_ent<>Null
 			
-			If glob=True
+			If glob
 
 				AddParent(parent_ent)
 				'UpdateMat()
 
-				PositionEntity(gpx,gpy,gpz,True)
-				RotateEntity(grx,gry,grz,True)
+				PositionEntity(gpx_,gpy_,gpz_,True)
+				RotateEntity(grx_,gry_,grz_,True)
 				ScaleEntity(gsx,gsy,gsz,True)
 
 			Else
-			
+		
 				AddParent(parent_ent)
-				UpdateMat()
+				'UpdateMat()
 				
 			Endif
 			
@@ -1144,7 +1137,8 @@ Class TEntity
 		If parent<>Null
 
 			mat.Overwrite(parent.mat)
-		
+			Self.UpdateMat()
+			
 			parent_link = parent.child_list.AddLast(Self)
 		
 		Endif
@@ -1212,7 +1206,7 @@ Class TEntity
 			
 		Else
 		
-			Local ang#=ATan2( mat.grid[2][1],Sqrt( mat.grid[2][0]*mat.grid[2][0]+mat.grid[2][2]*mat.grid[2][2] ) )
+			Local ang#= ATan2( mat.grid[2][1],Sqrt( mat.grid[2][0]*mat.grid[2][0]+mat.grid[2][2]*mat.grid[2][2] ) )
 			If ang<=0.0001 And ang>=-0.0001 Then ang=0
 		
 			Return ang
@@ -1550,7 +1544,17 @@ Class TEntity
 	Method ResetEntity()
 	
 		no_collisions=0
-		collision=collision[..0]
+		collision.impact=collision.impact[..0]
+		old_x=EntityX(True)
+		old_y=EntityY(True)
+		old_z=EntityZ(True)
+	
+	End 
+	
+	Method ResetCollisions()
+	
+		no_collisions=0
+		collision.impact=collision.impact[..0]
 		old_x=EntityX(True)
 		old_y=EntityY(True)
 		old_z=EntityZ(True)
@@ -1559,19 +1563,19 @@ Class TEntity
 	
 	Method EntityRadius(rx#,ry#=0.0)
 	
-		radius_x=rx
-		If ry=0.0 Then radius_y=rx Else radius_y=ry
+		collision.radius_x=rx
+		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
 	
 	End 
 	
 	Method EntityBox(x#,y#,z#,w#,h#,d#)
 	
-		box_x=x
-		box_y=y
-		box_z=z
-		box_w=w
-		box_h=h
-		box_d=d
+		collision.box_x=x
+		collision.box_y=y
+		collision.box_z=z
+		collision.box_w=w
+		collision.box_h=h
+		collision.box_d=d
 	
 	End 
 
@@ -1579,20 +1583,20 @@ Class TEntity
 	
 
 		' add to collision entity list if new type no<>0 and not previously added
-		If collision_type=0 And type_no<>0
+		If collision.type=0 And type_no<>0
 		
 			collision_pair.ListAddLast(Self, type_no)
 			
 		Endif
 		
 		' remove from collision entity list if new type no=0 and previously added
-		If collision_type<>0 And type_no=0
+		If collision.type<>0 And type_no=0
 			'ListRemove(TCollisionPair.ent_lists[type_no],Self)
-			collision_pair.ListRemove(Self,collision_type)
+			collision_pair.ListRemove(Self,collision.type)
 		Endif
 
 
-		collision_type=type_no
+		collision.type=type_no
 		
 		old_x=EntityX(True)
 		old_y=EntityY(True)
@@ -1634,7 +1638,7 @@ Class TEntity
 	
 		' if self is source entity and type_no is dest entity
 		For Local i=1 To CountCollisions()
-			If CollisionEntity(i).collision_type=type_no Then Return CollisionEntity(i)
+			If CollisionEntity(i).collision.type=type_no Then Return CollisionEntity(i)
 		Next
 	
 		' if self is dest entity and type_no is src entity
@@ -1649,16 +1653,27 @@ Class TEntity
 	End 
 
 	'' NEW -- a faster way to setup collisions
-	Method EntityCollision(type_no:Int, pick_mode:Int, x:Float, y:Float=0.0, z:Float=0.0, w:Float=0.0, d:Float=0.0, h:Float=0.0)
+	Method CollisionSetup(type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, d:Float=0.0, h:Float=0.0)
 		
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
 		
+		If Not x And Not w
+			'' pull from cull radius
+			x=1.0
+			
+			If TMesh(Self)
+				If Not cull_radius Then TMesh(Self).GetBounds()
+				x = cull_radius * gsx
+			Endif
+			
+		Endif
+		
 		If Not y Then y=x
 		
-		If Not z And Not w Then EntityRadius(Abs(x),Abs(y))
+		If Not w Then EntityRadius(Abs(x),Abs(y))
 		
-		If z And w Then EntityBox(x,y,z,w,d,h)
+		If w Then EntityBox(x,y,z,w,d,h)
 		
 	End
 
@@ -1673,7 +1688,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].x
+			Return collision.impact[index-1].x
 		
 		Endif
 	
@@ -1683,7 +1698,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].y
+			Return collision.impact[index-1].y
 		
 		Endif
 	
@@ -1693,7 +1708,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].z
+			Return collision.impact[index-1].z
 		
 		Endif
 	
@@ -1703,7 +1718,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].nx
+			Return collision.impact[index-1].nx
 		
 		Endif
 	
@@ -1713,7 +1728,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].ny
+			Return collision.impact[index-1].ny
 		
 		Endif
 	
@@ -1723,7 +1738,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].nz
+			Return collision.impact[index-1].nz
 		
 		Endif
 	
@@ -1733,7 +1748,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].time
+			Return collision.impact[index-1].time
 		
 		Endif
 	
@@ -1743,7 +1758,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].ent
+			Return collision.impact[index-1].ent
 		
 		Endif
 	
@@ -1753,7 +1768,7 @@ Class TEntity
 
 		If index>0 And index<=no_collisions And TMesh(Self)
 
-			Return TMesh(Self).GetSurface(collision[index-1].surf)
+			Return TMesh(Self).GetSurface(collision.impact[index-1].surf)
 		
 		Endif
 	
@@ -1763,7 +1778,7 @@ Class TEntity
 	
 		If index>0 And index<=no_collisions
 		
-			Return collision[index-1].tri
+			Return collision.impact[index-1].tri
 		
 		Endif
 	
@@ -1771,7 +1786,7 @@ Class TEntity
 	
 	Method GetEntityType()
 
-		Return collision_type
+		Return collision.type
 
 	End 
 	
@@ -1952,24 +1967,34 @@ Class TEntity
 				mat.LoadIdentity()
 			Endif
 			
+			If load_identity=False And parent
+				''load parent mat
+				mat.Overwrite(parent.mat)
+			Endif
+			
 			mat.Translate(px,py,pz)
 			mat.Rotate(rx,ry,rz)
 			mat.Scale(sx,sy,sz)
+			
+			
+			'UpdateMatTrans(load_identity)
+			'UpdateMatRot(load_identity)
 		
 			If load_identity Then loc_mat.Overwrite(mat)
 			
 			If parent
-				gsx=parent.gsx*sx
-				gsy=parent.gsy*sy
-				gsz=parent.gsz*sz
+				gsx=parent.gsx*sx; gsy=parent.gsy*sy; gsz=parent.gsz*sz
+			Else
+				gsx=sx; gsy=sy; gsz=sz
 			Endif
+			
 	End 
 	
 	Method UpdateMatTrans(load_identity:Bool =False)
 		
 		If load_identity=False And parent
 			''load parent mat
-			'mat.Overwrite(parent.mat)
+			mat.Overwrite(parent.mat)
 			'mat.Translate4(px,py,pz)
 			mat.grid[3][0] = parent.mat.grid[0][0]*px + parent.mat.grid[1][0]*py + parent.mat.grid[2][0]*pz + parent.mat.grid[3][0]
 			mat.grid[3][1] = parent.mat.grid[0][1]*px + parent.mat.grid[1][1]*py + parent.mat.grid[2][1]*pz + parent.mat.grid[3][1]
@@ -1980,7 +2005,8 @@ Class TEntity
 			mat.grid[3][1] = py
 			mat.grid[3][2] = pz
 		Endif
-	
+
+		
 		If load_identity Then loc_mat.Overwrite(mat)
 
 	End
@@ -1998,33 +2024,17 @@ Class TEntity
 		Else
 			mat.FastRotateScale(rx,ry,rz,sx,sy,sz)
 		Endif
-	
-		If load_identity Then loc_mat.Overwrite(mat)
-
-	End
-	
-	Method UpdateMatSca(load_identity:Bool =False)
-		
-		If load_identity=False And parent
-			''load parent mat
-			mat.grid[0][0] = parent.mat.grid[0][0]; mat.grid[0][1] = parent.mat.grid[0][1]; mat.grid[0][2] = parent.mat.grid[0][2]
-			mat.grid[1][0] = parent.mat.grid[1][0]; mat.grid[1][1] = parent.mat.grid[1][1]; mat.grid[1][2] = parent.mat.grid[1][2]
-			mat.grid[2][0] = parent.mat.grid[2][0]; mat.grid[2][1] = parent.mat.grid[2][1]; mat.grid[2][2] = parent.mat.grid[2][2]
-			mat.Rotate(rx,ry,rz)
-			mat.Scale(sx,sy,sz)
-		Else
-			mat.FastRotateScale(rx,ry,rz,sx,sy,sz)
-		Endif
 		
 		If parent
-			gsx=parent.gsx*sx
-			gsy=parent.gsy*sy
-			gsz=parent.gsz*sz
+			gsx=parent.gsx*sx; gsy=parent.gsy*sy; gsz=parent.gsz*sz
+		Else
+			gsx=sx; gsy=sy; gsz=sz
 		Endif
 		
 		If load_identity Then loc_mat.Overwrite(mat)
 
 	End
+	
 	
 	
 	
@@ -2048,12 +2058,6 @@ Class TEntity
 					ent_c.mat.Overwrite(ent_p.mat)
 					ent_c.UpdateMat()
 					'ent_c.UpdateMatRot() ''wont update positions	
-				Elseif type = 3
-					'' update global scale for children
-					ent_c.gsx=ent_c.parent.gsx*ent_c.sx
-					ent_c.gsy=ent_c.parent.gsy*ent_c.sy
-					ent_c.gsz=ent_c.parent.gsz*ent_c.sz
-					ent_c.UpdateMatSca()
 				Endif
 				
 				UpdateChildren(ent_c,type)
@@ -2138,7 +2142,30 @@ Class TEntity
 			
 		Endif
 	End
+	
+	
+	'' -- positions entity to a specific vertex on a mesh, no orientation, world coordinates
+	Method PositionToVertex:Void(mesh:TMesh, surf_no:Int, v:Int)
+		
+		Local vec:Vector = New Vector(0,0,0)
+		
+		Local surf:TSurface = mesh.GetSurface(surf_no)
 
+		If surf	
+			Local animsurf:TSurface = mesh.anim_surf[surf.surf_id]
+
+			If animsurf	And animsurf.vert_anim ''vert anim
+				vec = animsurf.vert_anim[ mesh.AnimTime() ].PeekVertCoords(v)
+			Elseif animsurf ''bone anim
+				vec = animsurf.vert_data.PeekVertCoords(v)
+			Else
+				vec = surf.vert_data.PeekVertCoords(v)
+			Endif
+		Endif
+		
+		Local pos:Float[] = mesh.mat.TransformPoint(vec.x,vec.y,vec.z)
+		px = pos[0]; py = pos[1]; pz = pos[2]
+	End
 
 End
 

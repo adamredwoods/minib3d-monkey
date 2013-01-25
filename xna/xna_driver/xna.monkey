@@ -324,12 +324,13 @@ Class XNASamplerState = "XNASamplerState"
 	Method MaxAnisotropy:Void(value%)Property = "SetMaxAnisotropy"
 	Method MaxMipLevel:Void(value%)Property = "SetMaxMipLevel"
 	Method MipMapLevelOfDetailBias:Void(value%)Property = "SetMipMapLevelOfDetailBias"
+	Method ToString:String() = "ToString"
 	
 	Function Create:XNASamplerState() = "XNASamplerState.Create"
 	Function Create:XNASamplerState(filter, adressU, adressV) = "XNASamplerState.Create"
-	Function AnisotropicWrap:XNASamplerState() = "XNASamplerState.AnisotropicClamp"
-	Function LinearClamp:XNASamplerState() = "XNASamplerState.AnisotropicWrap"
-	Function LinearWrap:XNASamplerState() = "XNASamplerState.LinearClamp"
+	Function AnisotropicWrap:XNASamplerState() = "XNASamplerState.AnisotropicWrap"
+	Function LinearClamp:XNASamplerState() = "XNASamplerState.LinearClamp"
+	Function LinearWrap:XNASamplerState() = "XNASamplerState.LinearWrap"
 	Function PointClamp:XNASamplerState() = "XNASamplerState.PointClamp"
 	Function PointWrap:XNASamplerState() = "XNASamplerState.PointWrap"
 End 
@@ -423,6 +424,7 @@ Class XNAGraphicsDevice  = "XNAGraphicsDevice"
 	Method ClearScreen:Void(r#,g#,b#, back? , depth? , stencil? )
 	Method Viewport:Void(x,y,width, height)
 	Method GetShaderVersion:Float()
+	Method GraphicsDeviceStatus:Int()
 End
 
 '----------------------------------------------------------------------------------------------------------

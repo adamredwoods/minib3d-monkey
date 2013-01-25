@@ -1,8 +1,8 @@
 ''NOTES
 '' needs TCollision to be ported over
 Import minib3d
-Import geom
-Import tcollision
+Import minib3d.math.geom
+Import minib3d.tcollision
 
 Class TPick
 
@@ -19,7 +19,10 @@ Class TPick
 	Global picked_ent:TEntity
 	Global picked_surface:Int = -1
 	Global picked_triangle:Int
-
+	
+	Global mat:Matrix=New Matrix
+	Global tform:TransformMat = New TransformMat()
+	
 	Function CameraPick:TEntity(cam:TCamera,vx:Float,vy:Float)
 		
 		Local vec:Vector
@@ -162,13 +165,15 @@ Class TPick
 	Global vec_j:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_k:Vector =New Vector(0.0,0.0,0.0)
 
-	Global mat:Matrix=New Matrix		
+			
 	Global vec_v:Vector =New Vector(0.0,0.0,0.0)
-	Global tform:TransformMat = New TransformMat(mat,vec_v)
+	
 	
 	' requires two absolute positional values
 	Function Pick:TEntity(ax:Float,ay:Float,az:Float,bx:Float,by:Float,bz:Float,radius:Float=0.0)
-
+		
+		mat.LoadIdentity()
+		
 		picked_ent=Null
 		picked_time=1.0
 		Local pick:Int =False
@@ -187,8 +192,8 @@ Class TPick
 		col_info.radius = radius
 		col_info.radii = New Vector(radius,radius,radius)
 		col_info.y_scale = 1.0
-		
-		
+
+	
 		For Local ent:TEntity=Eachin ent_list
 		
 			If ent.pick_mode=0 Or ent.Hidden()=True Then Continue
@@ -210,7 +215,7 @@ Class TPick
 				
 			Endif
 			
-			col_info.CollisionSetup(ent, ent.pick_mode)
+			col_info.CollisionSetup(ent, ent.pick_mode, col_obj)
 			pick = col_info.CollisionDetect(col_obj)
 	
 			
@@ -237,11 +242,11 @@ Class TPick
 			
 			'picked_ent=ent
 			If TMesh(picked_ent)<>Null
-				picked_surface=col_obj.surface & $0000ffff
+				picked_surface=col_obj.surface '& $0000ffff
 			Else
 				picked_surface=-1
 			Endif
-			picked_triangle=((col_obj.surface & $ffff0000) Shr 16) ''byte packed
+			picked_triangle=col_obj.index 
 	
 		Endif
 		
