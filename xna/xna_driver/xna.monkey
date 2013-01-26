@@ -10,6 +10,40 @@ Import brl.databuffer
 
 Import "native/xna.${TARGET}.${LANG}"
 
+' Determines how render target data is used once a new render target is set.
+Const RenderTargetUsage_DiscardContents = 0
+Const RenderTargetUsage_PreserveContents = 1
+Const RenderTargetUsage_PlatformContents = 2
+		
+' Defines various types of surface formats.
+Const SurfaceFormat_Color = 0
+Const SurfaceFormat_Bgr565 = 1
+Const SurfaceFormat_Bgra5551 = 2
+Const SurfaceFormat_Bgra4444 = 3
+Const SurfaceFormat_Dxt1 = 4
+Const SurfaceFormat_Dxt3 = 5
+Const SurfaceFormat_Dxt5 = 6
+Const SurfaceFormat_NormalizedByte2 = 7
+Const SurfaceFormat_NormalizedByte4 = 8
+Const SurfaceFormat_Rgba1010102 = 9
+Const SurfaceFormat_Rg32 = 10
+Const SurfaceFormat_Rgba64 = 11
+Const SurfaceFormat_Alpha8 = 12
+Const SurfaceFormat_Single = 13
+Const SurfaceFormat_Vector2 = 14
+Const SurfaceFormat_Vector4 = 15
+Const SurfaceFormat_HalfSingle = 16
+Const SurfaceFormat_HalfVector2 = 17
+Const SurfaceFormat_HalfVector4 = 18
+Const SurfaceFormat_HdrBlendable = 19
+
+' Defines the format of data in a depth-stencil buffer. Reference page contains
+' links to related conceptual articles.
+Const DepthFormat_None = 0
+Const DepthFormat_Depth16 = 1
+Const DepthFormat_Depth24 = 2
+Const DepthFormat_Depth24Stencil8 = 3
+
 ' Defines classes that can be used for effect parameters or shader constants.
 Const EFFECT_PARAMETER_CLASS_MATRIX 	= 0
 Const EFFECT_PARAMETER_CLASS_OBJECT 	= 1
@@ -106,15 +140,9 @@ Const VERTEX_POSITION_TEXTURE 			= 3
 
 Extern
 
-#rem
-Class IDisposable
-	Method Dispose()
-End
-
-
 '----------------------------------------------------------------------------------------------------------
 ' Queries and prepares resources.
-Class XNAGraphicsResource extends IDisposable 
+Class XNAGraphicsResource
 	Method GraphicsDevice:XNAGraphicsDevice() = "GetGraphicsDevice"
 	Method Name$()= "GetName"
 	Method Tag:Object()= "GetTag"
@@ -122,143 +150,6 @@ Class XNAGraphicsResource extends IDisposable
 	Method Tag:Object()= "SetTag"
 	Method Dispose()= "Dispose"
 End 
-
-
-'----------------------------------------------------------------------------------------------------------
-' Defines a plane.
-' TODO: Needs to be implemented
-Class XNAPlane = "XNAPlane"
-	Method D:Vector4() Property = "GetD"
-	Method Normal:Vector() Property = "GetNormal"
-	Method DotNormal:Vector() Property = "GetDotNormal"
-	Method DorCoordinate(v:Vector) = "DorCoordinateA"
-	Method DorCoordinate(v:Vector, v2#) = "DorCoordinateB"	
-	Method Equals?(p:Plane ) = "Equals"
-	Method Intersects?(value:BoundingBox) = "IntersectsBox"
-	Method Intersects?(value:BoundingBox, containmentType) = "IntersectsBox2"
-	Method Intersects?(value:BoundingSphere) = "IntersectsSphere"
-	Method Intersects?(value:BoundingSphere, containmentType) = "IntersectsSphere2"
-	Method Intersects?(value:BoundingFrustum) = "IntersectsFrustum"
-	Method Normalize() = "NormalizeA"
-	Method Normalize(p:Plane) = "NormalizeB"
-	Method Normalize(p:Plane, q:Plane) = "NormalizeC"
-	
-	Function Create:XNAPlane(v1#,v2#,v3#,v4#) = "XNAPlane.CreateA"
-	Function Create:XNAPlane(v1:Vector, v2#) = "XNAPlane.CreateB"
-	Function Create:XNAPlane(v1:Vector,v2:Vector,v3:Vector) = "XNAPlane.CreateC"
-	Function Create:XNAPlane(v1:Vector4) = "XNAPlane.CreateD"
-End
-
-
-
-'----------------------------------------------------------------------------------------------------------
-' Defines an axis-aligned box-shaped 3D volume.
-' TODO: Needs to be implemented
-Class XNABoundingBox = "XNABoundingBox"
-	Method CornerCount%() Property = "GetConrnerCount"
-	Method Min:Vector() Property = "GetMin"
-	Method Max:Vector() Property = "GetMax"
-	Method Intersects?(value:BoundingBox) = "IntersectsBox"
-	Method Intersects?(value:BoundingSphere) = "IntersectsSphere"
-	Method Intersects?(value:BoundingFrustum) = "IntersectsFrustum"
-	Method Intersects?(value:Plane) = "IntersectsPlane"
-	Method Contains?(value:BoundingBox) = "ContainsBox"
-	Method Contains?(value:BoundingBox, containmentType) = "ContainsBox2"
-	Method Contains?(value:BoundingSphere) = "ContainsSphere"
-	Method Contains?(value:BoundingSphere, containmentType) = "ContainsSphere2"
-	Method Contains?(value:BoundingFrustum) = "ContainsFrustum"
-	Method Contains?(value:Vector,containmentType) = "ContainsVector"
-	
-	Function Create:XNABoundingBox(min:Vector,max:Vector) = "XNABoundingBox.Create"
-	Function CreateFromBoundingSphere:XNABoundingBox(box:XNABoundingSphere) = "XNABoundingBox.CreateFromBoundingSphere"
-	Function CreateFromFrustum:XNABoundingBox(frustum:XNABoundingFrustum) = "XNABoundingBox.CreateFromFrustum"
-	Function CreateFromPoints:XNABoundingBox(points:Vector[]) = "XNABoundingBox.CreateFromPoints"
-	Function CreateMerged:XNABoundingBox(a:XNABoundingBox, b:XNABoundingBox) = "XNABoundingBox.CreateMerged"
-	Function Op_Equality?(a:XNABoundingBox, b:XNABoundingBox) = "XNABoundingBox.op_Equality"
-	Function Op_Inequality?(a:XNABoundingBox, b:XNABoundingBox) = "XNABoundingBox.op_Inequality"
-End
-
-'----------------------------------------------------------------------------------------------------------
-' Defines a sphere.
-' TODO: Needs to be implemented
-Class XNABoundingSphere = "XNABoundingSphere"
-	Method Radius#() Property  = "GetRadius"
-	Method Radius(value#) Property  = "SetRadius"
-	Method Center:Vector() Property = "GetCenter"
-	Method Center(value:Vector) Property = "SetCenter"
-	Method Transform(mat:Matrix) = "Transform"
-	Method Intersects?(value:Plane) = "IntersectsPlane"
-	Method Intersects?(value:BoundingBox) = "IntersectsBox"
-	Method Intersects?(value:BoundingSphere) = "IntersectsSphere"
-	Method Intersects?(value:BoundingFrustum) = "IntersectsFrustum"
-	Method Contains?(value:BoundingBox) = "ContainsBox"
-	Method Contains?(value:BoundingBox, containmentType) = "ContainsBox2"
-	Method Contains?(value:BoundingSphere) = "ContainsSphere"
-	Method Contains?(value:BoundingSphere, containmentType) = "ContainsSphere2"
-	Method Contains?(value:BoundingFrustum) = "ContainsFrustum"
-	Method Contains?(value:Vector,containmentType) = "ContainsVector"
-	
-	Function Create:XNABoundingSphere(center:Vector, mat:Matrix) = "XNABoundingSphere.Create"
-	Function CreateFromBoundingBox:XNABoundingSphere(box:XNABoundingBox) = "XNABoundingSphere.CreateFromBoundingBox"
-	Function CreateFromFrustum:XNABoundingSphere(frustum:XNABoundingFrustum) = "XNABoundingSphere.CreateFromFrustum"
-	Function CreateFromPoints:XNABoundingSphere(points:Vector[]) = "XNABoundingSphere.CreateFromPoints"
-	Function CreateMerged:XNABoundingSphere(a:XNABoundingSphere, b:XNABoundingSphere) = "XNABoundingSphere.CreateMerged"
-	Function Op_Equality?(a:XNABoundingSphere, b:XNABoundingSphere) = "XNABoundingSphere.op_Equality"
-	Function Op_Inequality?(a:XNABoundingSphere, b:XNABoundingSphere) = "XNABoundingSphere.op_Inequality"
-End
-
-'----------------------------------------------------------------------------------------------------------
-' Defines a frustum and helps determine whether forms intersect with it.
-' TODO: Needs to be implemented
-Class XNABoundingFrustum = "XNABoundingFrustum"
-	Method ConrnerCount%() Property = "GetConrnerCount"
-	Method Bottom:Plane() Property = "GetBottom"
-	Method Far:Plane() Property = "GetFar"
-	Method Left:Plane() Property = "GetLeft"
-	Method Near:Plane() Property = "GetNear"
-	Method Right:Plane() Property = "GetRight"
-	Method Top:Plane() Property = "GetTop"
-	Method Matrix:Matrix() Property = "GetMatrix"
-	Method Matrix(value:Matrix) Property = "SetMatrix"
-	Method Intersects?(value:BoundingBox) = "IntersectsBox"
-	Method Intersects?(value:BoundingSphere) = "IntersectsSphere"
-	Method Intersects?(value:BoundingFrustum) = "IntersectsFrustum"
-	Method Intersects?(value:Plane) = "IntersectsPlane"
-	Method Contains?(value:BoundingBox) = "ContainsBox"
-	Method Contains?(value:BoundingBox, containmentType) = "ContainsBox2"
-	Method Contains?(value:BoundingSphere) = "ContainsSphere"
-	Method Contains?(value:BoundingSphere, containmentType) = "ContainsSphere2"
-	Method Contains?(value:BoundingFrustum) = "ContainsFrustum"
-	Method Contains?(value:Vector,containmentType) = "ContainsVector"
-	
-	Function Create:XNABoundingFrustum(mat:Matrix) = "XNABoundingFrustum.Create"
-	Function Op_Equality?(a:XNABoundingFrustum, b:XNABoundingFrustum) = "XNABoundingFrustum.op_Equality"
-	Function Op_Inequality?(a:XNABoundingFrustum, b:XNABoundingFrustum) = "XNABoundingFrustum.op_Inequality"
-End
-
-
-'----------------------------------------------------------------------------------------------------------
-' Defines the window dimensions of a render-target surface 
-' onto which a 3D volume projects.
-Class XNAViewport = "XNAViewport"
-	Method AspectRatio#() Property		= " getAspectRatio"
-	Method X#() Property				= " getX"
-	Method Y#() Property				= " getY"
-	Method Width#() Property			= " getWidth"
-	Method Height#() Property			= " getHeight"
-	Method X(value%) Property			= " setX"
-	Method Y(value%) Property			= " setY"
-	Method Width(value%) Property		= " setWidth"
-	Method Height(value%) Property		= " setHeight"
-	Method MaxDepth#() Property			= " getMaxDepth"
-	Method MinDepth#() Property			= " getMinDepth"
-	Method MaxDepth(value%) Property	= " setMaxDepth"
-	Method MinDepth(value%) Property	= " setMinDepth"
-	
-	Function Create:XNAViewport(x,y,width, height) = "XNAViewport.Create"
-End
-#end
-
 
 '----------------------------------------------------------------------------------------------------------
 ' Contains blend state for the device.
@@ -377,7 +268,7 @@ Class XNADepthStencilState = "XNADepthStencilState"
 End
 
 '----------------------------------------------------------------------------------------------------------
-Class XNATextureBase = "XNATextureBase"
+Class XNATextureBase Extends XNAGraphicsResource = "XTextureBase"
     Method Format() Property =  "GetFormat"
     Method LevelCount() Property = "GetLevelCount"
 End 
@@ -415,7 +306,7 @@ Class XNAGraphicsDevice  = "XNAGraphicsDevice"
 	Method LoadTexture:XNATexture(filename$)
 	Method CreateMesh:XNAMesh()
 	Method CreateBasicEffect:XNABasicEffect()
-	'Method LoadEffect:XNAEffect(filename$)' custom effetcts not supported in REACH profile
+	Method LoadEffect:XNAEffect(filename$)
 	Method BlendState:Void(blend:XNABlendState) Property = "SetBlend"
 	Method RasterizerState:Void(state:XNARasterizerState ) Property = "SetRasterizerState"
 	Method DepthStencilState:Void(state:XNADepthStencilState) Property = "SetDepthStencilState"
@@ -423,25 +314,7 @@ Class XNAGraphicsDevice  = "XNAGraphicsDevice"
 	Method ClearScreen:Void(r#,g#,b#, back? , depth? , stencil? )
 	Method Viewport:Void(x,y,width, height)
 	Method GetShaderVersion:Float()
-End
-
-'----------------------------------------------------------------------------------------------------------
-' Represents a color using Red, Green, Blue, and Alpha values.
-Class XNAColor = "XNAColor"
-	Method R#() Property = "GetR"
-	Method G#() Property = "GetG"
-	Method B#() Property = "GetB"
-	Method A#() Property = "GetA"
-	Method R:Void(value#) Property = "SetR"
-	Method G:Void(value#) Property = "SetG"
-	Method B:Void(value#) Property = "SetB"
-	Method A:Void(value#) Property = "SetA"
-	
-	Function FromArgb:XNAColor(r#,g#,b#,a#) = "XNAColor.FromARGB"
-	Function Black:XNAColor() 				= "XNAColor.Black"
-	Function White:XNAColor() 				= "XNAColor.White"
-	Function Red:XNAColor()   				= "XNAColor.Red"
-	Function Blue:XNAColor()  				= "XNAColor.Blue"
+	Method PreferMultiSampling(value?) = "SetPreferMultiSampling"
 End
 
 '----------------------------------------------------------------------------------------------------------
@@ -476,14 +349,10 @@ Class XNABasicEffect Extends XNAEffect = "XNABasicEffect"
 	Method Texture:Void(value:XNATexture) Property = "SetTexture"
 	Method VertexColorEnabled:Void(value?) Property = "SetVertexColorEnabled"
 	Method TextureEnabled:Void(value?) Property = "SetTextureEnabled"
-	Method Projection:Void(fieldOfView#, aspect#, near#, far#)  = "SetProjection"
-	Method View:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetView"
-	Method World:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetWorld"
-	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjMat"
-	Method ViewMatrix:Void(mat:Float[]) = "SetViewMat"
-	Method WorldMatrix:Void(mat:Float[]) = "SetWorldMat"
+	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjection"
+	Method ViewMatrix:Void(mat:Float[]) = "SetView"
+	Method WorldMatrix:Void(mat:Float[]) = "SetWorld"
 End
-
 
 '----------------------------------------------------------------------------------------------------------
 ' Contains a configurable effect that supports environment mapping.
@@ -508,9 +377,9 @@ Class XNAEnvironmentMapEffect Extends XNAEffect
 	Method FogStart:Void(value#) Property = "SetFogStart"
 	
 	' Method Texture:Void(value:XNATexture) Property = "SetTexture"
-	Method Projection:Void(fieldOfView#, aspect#, near#, far#)  = "SetProjection"
-	Method View:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetView"
-	Method World:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetWorld"
+	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjection"
+	Method ViewMatrix:Void(mat:Float[]) = "SetView"
+	Method WorldMatrix:Void(mat:Float[]) = "SetWorld"
 End 
 
 '----------------------------------------------------------------------------------------------------------
@@ -525,15 +394,10 @@ Class XNAEffect = "XNAEffect"
 	Method GetTechnique:XNAEffectTechnique(name$) Property= "GetTechnique"
 	Method CountTechniques() Property
 	
-
 	' may only be used with effects that usually implements IEffectMatrices
-	Method Projection:Void(fieldOfView#, aspect#, near#, far#)  = "SetProjection"
-	Method View:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetView"
-	Method World:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetWorld"
-	
-	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjMat"
-	Method ViewMatrix:Void(mat:Float[]) = "SetViewMat"
-	Method WorldMatrix:Void(mat:Float[]) = "SetWorldMat"
+	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjection"
+	Method ViewMatrix:Void(mat:Float[]) = "SetView"
+	Method WorldMatrix:Void(mat:Float[]) = "SetWorld"
 
 	
 	' may only be used with effects that usually implements IEffectFog
@@ -550,7 +414,6 @@ Class XNAEffect = "XNAEffect"
 	Method DirectionalLight2:XNADirectionalLight() Property = "GetDirectionalLight2"	
 	Method LightingEnabled:Void(value?)  Property= "SetLightingEnabled"
 	Method PreferPerPixelLighting:Void(value?)  Property= "SetPreferPerPixelLighting"
-	
 End
 
 '----------------------------------------------------------------------------------------------------------
@@ -578,19 +441,24 @@ Class XNAEffectParameter  = "XNAEffectParameter"
 	Method ParameterType() Property = "GetParameterType"
 	Method Name$() Property = "GetName"
 	Method Semantic$() Property = "GetSemantic"
-	Method SetValue:Void(value?)		= "SetBool"
+	Method SetValue:Void(v0?)	= "SetBool"
+	Method SetValue:Void(v0?,v1?)	= "SetBool"
+	Method SetValue:Void(v0?,v1?,v2?)	= "SetBool"
+	Method SetValue:Void(v0?,v1?,v2?,v3?)	= "SetBool"
 	Method SetValue:Void(value?[])	= "SetBoolArray"
-	Method SetValue:Void(value%)		= "SetInt"
+	Method SetValue:Void(v0%)	= "SetInt"
+	Method SetValue:Void(v0%,v1%)	= "SetInt"
+	Method SetValue:Void(v0%,v1%,v2%)	= "SetInt"
+	Method SetValue:Void(v0%,v1%,v2%,v3%)	= "SetInt"
 	Method SetValue:Void(value%[])	= "SetIntArray"
 	Method SetValue:Void(value#)	= "SetFloat"
+	Method SetValue:Void(v0#)	= "SetFloat"
+	Method SetValue:Void(v0#,v1#)	= "SetFloat"
+	Method SetValue:Void(v0#,v1#,v2#)	= "SetFloat"
+	Method SetValue:Void(v0#,v1#,v2#,v3#)	= "SetFloat"
 	Method SetValue:Void(value#[])	= "SetFloatArray"
 	Method SetValue:Void(value$)	= "SetString"
 	Method SetValue:Void(value:XNATexture)	= "SetTexture"
-	#rem
-	Method SetValue(value:Matrix)	= "SetMatrix"
-	Method SetValue(value:Matrix[])		= "SetMatrixArray"
-	Method SetValue(value:Vector)		= "SetVector"
-	#end
 End
 
 #rem

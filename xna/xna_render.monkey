@@ -3,19 +3,17 @@
 Import mojo
 Import xna 
 
-Import xna_pixmap
 Import minib3d.trender
 Import minib3d
 
+Import xna_pixmap
+Import xna_common
 
 #rem
 
-minib3d fix:
-- fixed null reference in Quaternion.RotateVector
-
 Notes:
-------------------------------------------------------------------------------------------------------------------------
-Hardare caps		-	http://msdn.microsoft.com/en-us/library/ff604995.aspx
+ 
+ http://msdn.microsoft.com/en-us/library/ff604995.aspx
 
 vbos - xna must use vbo, as data is loaded in via byte buffer (yes, in xna)
 lights - no point or spotlight or multiple light without HLSL
@@ -23,18 +21,6 @@ lights - no point or spotlight or multiple light without HLSL
 -- make sure to clear states before returning to mojo
 
 #end 
-
-
-#XNA_PERPIXEL_LIGHNING=True
-#XNA_MIPMAP_FILTER=1' 0 for point(deafult) / 1 for linear
-#XNA_MIPMAP_QUALITY=2 ' sets bias to 0=0.5, 1=0, 2=-0.5
-
-Function SetRender(flags:Int=0)
-	
-	TRender.render = New XNARender
-	TRender.render.GraphicsInit(flags)
-	
-End
 
 Class XNARender Extends TRender
 	
@@ -360,6 +346,8 @@ Public
 	
 	Method BackBufferToTex(mipmap_no=0,frame=0)
 	End 
+	
+	'''
 	
 	Field _spriteBatch:XNASpriteBatch
 	Field _xnaTex:XNATexture
@@ -906,39 +894,6 @@ Function TransformTexCoords(surf:TSurface, angle#, tx#, ty#, sx#, sy#, orig_uv#[
 	Next
 	
 End
-
-
-
-Class UVSamplerState
-
-	Field _cU_cV:XNASamplerState
-	Field _wU_cV:XNASamplerState
-	Field _cU_wV:XNASamplerState
-	Field _wU_wV:XNASamplerState
-	
-	Function Create:UVSamplerState(filter:Int, bias:Float)
-	
-		Local s:UVSamplerState = New UVSamplerState
-		
-		s._cU_cV = XNASamplerState.Create(filter, TextureAddressMode_Clamp, TextureAddressMode_Clamp)
-		s._cU_cV.MipMapLevelOfDetailBias = bias
-		
-		s._wU_cV = XNASamplerState.Create(filter, TextureAddressMode_Wrap, TextureAddressMode_Clamp)
-		s._wU_cV.MipMapLevelOfDetailBias = bias
-		
-		s._cU_wV = XNASamplerState.Create(filter, TextureAddressMode_Clamp, TextureAddressMode_Wrap)
-		s._cU_wV.MipMapLevelOfDetailBias = bias
-		
-		s._wU_wV = XNASamplerState.Create(filter, TextureAddressMode_Wrap, TextureAddressMode_Wrap)
-		s._wU_wV.MipMapLevelOfDetailBias = bias
-		
-		Return s
-		
-	End
-	
-End
-
-
 
 Interface IEffectContainer
 	Method Effect:XNAEffect() 

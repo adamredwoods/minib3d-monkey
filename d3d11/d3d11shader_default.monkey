@@ -47,8 +47,7 @@ Private
 	Const MAX_TEXTURES = 8
 	Const DEG_TO_RAD:Float = 0.0174532925199432957692369076848861
 	
-	'' light settings are collected and 
-	'' send to the shader by .Apply
+	'' light settings are cached and updated through .Update()
 	Field _lightCount = 0
 	Field _updateLights? = False
 	Field _lights:= New List<TLight>

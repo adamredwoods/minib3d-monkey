@@ -174,23 +174,31 @@ public class XNAGraphicsDevice
     }
 	
 	public XNABasicEffect CreateBasicEffect()
-	{
-		return new XNABasicEffect(this,new BasicEffect(_device));
-	}
-	
-	public XNAEffect LoadEffect(string filename)
-	{
-		//var effect = gxtkApp.game.Content.Load<Effect>(filename);
-		//if( effect != null ) return new XNAEffect(effect, this);
-		return null;
-	}	
+    {
+        return new XNABasicEffect(this, new BasicEffect(_device));
+    }
+        
+    public XNAEffect LoadEffect(string filename)
+    {
+        #if WINDOWS_PHONE
+        #else
+        var effect = BBXnaGame.XnaGame().GetXNAGame().Content.Load<Effect>("Content/monkey/" + filename);
+        if (effect != null) return new XNAEffect(effect, this);
+        #endif
+        return null;
+    }         
+        
+    public void SetPreferMultiSampling(bool value)
+    {
+    	//graphicsManager.PreferMultiSampling = value;
+    }
 	
 	public XNAMesh CreateMesh()
 	{
 		return new XNAMesh(_device);
 	}
 
-	 public void SetBlend(XNABlendState blend)
+	public void SetBlend(XNABlendState blend)
     {
 		_device.BlendState = blend._state;
     }
@@ -285,9 +293,13 @@ public class XNABlendState
 		return (int)_state.AlphaSourceBlend;
 	}
 
-    public XNAColor GetBlendFactor()
+    public void GetBlendFactor(float[] arr)
 	{
-        return new XNAColor(_state.BlendFactor);
+        var factor = _state.BlendFactor;
+        arr[0] = (float)factor.R / 255.0f;
+        arr[1] = (float)factor.G / 255.0f;
+        arr[2] = (float)factor.B / 255.0f;
+        arr[3] = (float)factor.A / 255.0f;
 	}
 	
 	public int GetColorBlendFunction()
@@ -320,9 +332,9 @@ public class XNABlendState
         _state.AlphaSourceBlend = (Blend)value;
 	}
 	
-	public void SetBlendFactor(XNAColor value)
+	public void SetBlendFactor(float r, float g, float b, float a)
 	{
-        _state.BlendFactor = value._color;
+        _state.BlendFactor = new Color(r,g,b,a);
 	}
 	
 	public void SetColorBlendFunction(int value)
@@ -1057,258 +1069,6 @@ public class XNAMesh
     }
 };
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-public class Utility
-{
-    public static double RAD_TO_DEG = 57.2957795130823208767981548141052;
-    public static double DEG_TO_RAD = 0.0174532925199432957692369076848861;
-
-    public static void MatrixTranslate(ref Matrix mat, Vector3 vec)
-    {
-        mat.M41 += mat.M11 * vec.X + mat.M21 * vec.Y + mat.M31 * vec.Z;
-        mat.M42 += mat.M12 * vec.X + mat.M22 * vec.Y + mat.M32 * vec.Z;
-        mat.M43 += mat.M13 * vec.X + mat.M23 * vec.Y + mat.M33 * vec.Z;
-    }
-
-    public static void MatrixRotate(ref Matrix mat, Vector3 vec)
-    {
-  // yaw
-
-        float cos_ang = (float)Cos((double)vec.Y);
-        float sin_ang = (float)Sin((double)vec.Y);
-	
-		float m11 = mat.M11 * cos_ang + mat.M31 * -sin_ang;
-		float m12 = mat.M12 * cos_ang + mat.M32 * -sin_ang;
-		float m13 = mat.M13 * cos_ang + mat.M33 * -sin_ang;
-		
-		mat.M31 = mat.M11 * sin_ang + mat.M31 * cos_ang;
-		mat.M32 = mat.M12 * sin_ang + mat.M32 * cos_ang;
-		mat.M33 = mat.M13 * sin_ang + mat.M33 * cos_ang;
-
-        mat.M11 = m11;
-        mat.M12 = m12;
-        mat.M13 = m13;
-		
-  // pitch
-
-        cos_ang = (float)Cos((double)vec.X);
-        sin_ang = (float)Sin((double)vec.X);
-	
-        float m21 = mat.M21 * cos_ang + mat.M31 * sin_ang;
-		float m22 = mat.M22 * cos_ang + mat.M32 * sin_ang;
-		float m23 = mat.M23 * cos_ang + mat.M33 * sin_ang;
-        
-        mat.M31 = mat.M21 * -sin_ang + mat.M31 * cos_ang;
-		mat.M32 = mat.M22 * -sin_ang + mat.M32 * cos_ang;
-		mat.M33 = mat.M23 * -sin_ang + mat.M33 * cos_ang;
-		
-		mat.M21=m21;
-		mat.M22=m22;
-		mat.M23=m23;
-		
-  // roll
-
-        cos_ang = (float)Cos((double)vec.Z);
-        sin_ang = (float)Sin((double)vec.Z);
-
-		m11 = mat.M11 * cos_ang + mat.M21 * sin_ang;
-		m12 = mat.M12 * cos_ang + mat.M22 * sin_ang;
-		m13 = mat.M13 * cos_ang + mat.M23 * sin_ang;
-		
-		mat.M21 = mat.M11 * -sin_ang + mat.M21 * cos_ang;
-		mat.M22 = mat.M12 * -sin_ang + mat.M22 * cos_ang;
-		mat.M23 = mat.M13 * -sin_ang + mat.M23 * cos_ang;
-		
-		mat.M11 = m11;
-		mat.M12 = m12;
-        mat.M13 = m13;
-    }
-
-    public static void MatrixScale(ref Matrix mat, Vector3 vec)
-    {
-        mat.M11 *= vec.X;
-        mat.M12 *= vec.X;
-        mat.M13 *= vec.X;
-
-        mat.M21 *= vec.Y;
-        mat.M22 *= vec.Y;
-        mat.M23 *= vec.Y;
-
-        mat.M31 *= vec.Z;
-        mat.M32 *= vec.Z;
-        mat.M33 *= vec.Z;
-    }
-
-    public static Matrix MatrixCopy(Matrix m)
-    {
-        return new Matrix(m.M11, m.M12, m.M13, m.M14,
-                            m.M21, m.M22, m.M23, m.M24,
-                            m.M31, m.M32, m.M33, m.M34,
-                            m.M41, m.M42, m.M43, m.M44);
-
-    }
-
-    public static void MatrixOverride(ref Matrix dest, Matrix src)
-    {
-        dest.M11 = src.M11;
-        dest.M12 = src.M12;
-        dest.M13 = src.M13;
-        dest.M14 = src.M14;
-        dest.M21 = src.M21;
-        dest.M22 = src.M22;
-        dest.M23 = src.M23;
-        dest.M24 = src.M24;
-        dest.M31 = src.M31;
-        dest.M32 = src.M32;
-        dest.M33 = src.M33;
-        dest.M34 = src.M34;
-        dest.M41 = src.M41;
-        dest.M42 = src.M42;
-        dest.M43 = src.M43;
-        dest.M44 = src.M44;
-
-    }
-
-    public static double Cos(double x)
-    {
-        return Math.Cos(x * DEG_TO_RAD);
-    }
-
-    public static double tan(double x)
-    {
-        return Math.Tan(x * DEG_TO_RAD);
-    }
-
-    public static double Sin(double x)
-    {
-        return Math.Sin(x * DEG_TO_RAD);
-    }
-
-    public static double ASin(double x)
-    {
-        return Math.Asin(x) * RAD_TO_DEG;
-    }
-
-    public static double ACos(double x)
-    {
-        return Math.Acos(x) * RAD_TO_DEG;
-    }
-
-    public static double ATan(double x)
-    {
-        return Math.Atan(x) * RAD_TO_DEG;
-    }
-
-    public static double ATan2(double y, double x)
-    {
-        return Math.Atan2(y, x) * RAD_TO_DEG;
-    }
-};
-
-
-public class XNAVector
-{
-	public Vector3 _vector;
-	
-	public XNAVector(float x,float y,float z)
-	{
-		_vector = new Vector3(x,y,z);
-	}
-	
-	public static XNAVector CreateVector(float x,float y,float z)
-	{
-		return new XNAVector(x,y,z);
-	}
-	
-	public float X() 
-	{
-		return _vector.X;
-	}
-	
-	public float Y() 
-	{
-		return _vector.Y;
-	}
-	
-	public float Z() 
-	{
-		return _vector.Z;
-	}
-	
-	/*
-	Method Set(x#,y#,z#)
-		_x = x
-		_y = y
-		_z = z
-		_w = 3
-	End
-	
-	Method Add(vec:Vector)
-		_x+=vec._x
-		_y+=vec._y
-		_z+=vec._z
-	End 
-	
-	Method Subtract(vec:Vector)
-		_x-=vec._x
-		_y-=vec._y
-		_z-=vec._z
-	End 
-	
-	Method Multiply(value#)
-		_x*=value
-		_y*=value
-		_z*=value
-	End 
-	
-	Method Divide(val#)
-		_x/=val
-		_y/=val
-		_z/=val
-	End 
-	
-	Method Dot:Float(vec:Vector)
-		Return (_x*vec._x)+(_y*vec._y)+(_z*vec._z)
-	End 
-	
-	Method Cross:Vector0(vec:Vector)
-		Return new Vector0((_y*vec._z)-(_z*vec._y),(_z*vec._x)-(_x*vec._z),(_x*vec._y)-(_y*vec._x))
-	End 
-	
-	Method Normalize()
-		Local d#=1.0/Sqr(_x*_x+_y*_y+_z*_z)
-		_x*=d
-		_y*=d
-		_z*=d
-	End 
-	
-	Method Length#()	
-		Return Sqr(_x*_x+_y*_y+_z*_z)
-	End 
-	
-	Method SquaredLength#()
-		Return _x*_x+_y*_y+_z*_z
-	End Method
-	
-	Method SetLength(value#)
-		Normalize()
-		_x*=value
-		_y*=value
-		_z*=value
-	End Method
-	
-	Method Compare( q:Vector )
-		If _x-q._x>EPSILON Return 1
-		If _q.x-_x>EPSILON Return -1
-		If _y-q._y>EPSILON Return 1
-		If _q.y-_y>EPSILON Return -1
-		If _z-q._z>EPSILON Return 1
-		If q._z-_z>EPSILON Return -1
-		Return 0
-	End 
-	*/
-}
-
 public class XNADirectionalLight 
 {
 	public DirectionalLight _light;
@@ -1451,19 +1211,17 @@ public class XNAEnvironmentMapEffect : XNAEffect
 
     // IEffectMatrices
 
-    public override void SetProjection(float fieldOfView, float aspectRatio, float near, float far)
+    public override void SetWorld(float[] mat)
     {
-        SetProjection<EnvironmentMapEffect>(_environmentEffect, fieldOfView, aspectRatio, near, far);
+        SetWorldMat<EnvironmentMapEffect>(_environmentEffect, mat);
     }
-
-    public override void SetView(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
+    public override void SetProjection(float[] mat)
     {
-        SetView<EnvironmentMapEffect>(_environmentEffect, px, py, pz, rx, ry, rz, sx, sy, sz);
+        SetProjMat<EnvironmentMapEffect>(_environmentEffect, mat);
     }
-
-    public override void SetWorld(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
+    public override void SetView(float[] mat)
     {
-        SetWorld<EnvironmentMapEffect>(_environmentEffect, px, py, pz, rx, ry, rz, sx, sy, sz);
+        SetViewMat<EnvironmentMapEffect>(_environmentEffect, mat);
     }
 }
 
@@ -1579,30 +1337,15 @@ public class XNABasicEffect : XNAEffect
 		_basicEffect.VertexColorEnabled = value;
 	}
 	
-	public override void SetProjection(float fieldOfView, float aspectRatio, float near, float far) 
-	{
-	    SetProjection<BasicEffect>(_basicEffect, fieldOfView, aspectRatio, near, far );
-    }
-	
-	public override void SetView(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
-	{
-        SetView<BasicEffect>(_basicEffect, px, py, pz, rx, ry, rz, sx, sy, sz);
-	}
-	
-	public override void SetWorld(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
-	{
-        SetWorld<BasicEffect>(_basicEffect, px, py, pz, rx, ry, rz, sx, sy, sz);
-	}
-	
-	public override void SetWorldMat(float[] mat)
+	public override void SetWorld(float[] mat)
 	{
 		SetWorldMat<BasicEffect>(_basicEffect, mat);
 	}
-	public override void SetProjMat(float[] mat)
+	public override void SetProjection(float[] mat)
 	{
 		SetProjMat<BasicEffect>(_basicEffect, mat);
 	}
-	public override void SetViewMat(float[] mat)
+    public override void SetView(float[] mat)
 	{
 		SetViewMat<BasicEffect>(_basicEffect, mat);
 	}
@@ -1678,126 +1421,31 @@ public class XNAEffect
 	
 	// IEffectMatrices
 	
-	public virtual void SetProjection(float fieldOfView, float aspectRatio, float near, float far) 
-	{
-	}
-	
-	public virtual void SetView(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
-	{
-	}
-	
-	public virtual void SetWorld(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
-	{
-	}
-	
-	public virtual void SetWorldMat( float[] mat) {}
-	public virtual void SetViewMat( float[] mat) {}
-	public virtual void SetProjMat( float[] mat) {}
+	public virtual void SetWorld( float[] mat) {}
+	public virtual void SetView( float[] mat) {}
+	public virtual void SetProjection( float[] mat) {}
 	
 	
 	// IEffectFog
 	
-	public virtual void SetFogColor(float r, float g, float b)	
-	{
-	}
-
-	public virtual bool GetFogEnabled()
-	{
-		return false;
-	}
-	
-	public virtual void SetFogEnabled(bool value)	
-	{
-	}
-		
-	public virtual void SetFogEnd(float value)	
-	{
-	}
-	
-	public virtual void SetFogStart(float value)	
-	{
-	}
+	public virtual void SetFogColor(float r, float g, float b)	{}
+	public virtual bool GetFogEnabled(){return false;}
+	public virtual void SetFogEnabled(bool value){}	
+	public virtual void SetFogEnd(float value){}
+	public virtual void SetFogStart(float value){}
 	
 	
 	// IEffectLights
 	
-	public virtual XNADirectionalLight GetDirectionalLight0()	
-	{
-		return null;
-	}
-		
-	public virtual XNADirectionalLight GetDirectionalLight1()	
-	{
-		return null;
-	}
-	
-	public virtual XNADirectionalLight GetDirectionalLight2()	
-	{
-		return null;
-	}
-
-	public virtual void SetLightingEnabled(bool value)	
-	{
-	}
-	
-	public virtual void SetPreferPerPixelLighting(bool value)	
-	{
-	}
-	
-	public virtual void SetAmbientLightColor(float r, float g, float b)	
-	{
-	}
+	public virtual XNADirectionalLight GetDirectionalLight0(){return null;}
+	public virtual XNADirectionalLight GetDirectionalLight1(){return null;}
+	public virtual XNADirectionalLight GetDirectionalLight2(){return null;}
+	public virtual void SetLightingEnabled(bool value){}
+	public virtual void SetPreferPerPixelLighting(bool value){}
+	public virtual void SetAmbientLightColor(float r, float g, float b){}
 	
     // helper
 
-    public static void SetProjection<T>(T effect, float fieldOfView, float aspectRatio, float near, float far)
-        where T : IEffectMatrices 
-    {
-        float fov = Math.Min((float)Math.PI - 0.00001f, Math.Max(0.00001f, (float)Utility.DEG_TO_RAD * fieldOfView));
-        effect.Projection = Matrix.CreatePerspectiveFieldOfView(fov, aspectRatio, near, far);
-    }
-
-    public static void SetView<T>(T effect, float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
-        where T : IEffectMatrices 
-
-    {
-        var _mat = Matrix.Identity;
-
-        Utility.MatrixTranslate(ref _mat, new Vector3(px, py, -pz));
-        Utility.MatrixRotate(ref _mat, new Vector3(-rx, ry, rz));
-        Utility.MatrixScale(ref _mat, new Vector3(sx, sy, sz));
-
-        // only rotation
-        Matrix mCam = new Matrix(_mat.M11, _mat.M12, _mat.M13, _mat.M14,
-                                 _mat.M21, _mat.M22, _mat.M23, _mat.M24,
-                                 _mat.M31, _mat.M32, _mat.M33, _mat.M34,
-                                 _mat.M41, _mat.M42, _mat.M43, _mat.M44);
-
-        mCam.M41 = 0.0f;
-        mCam.M42 = 0.0f;
-        mCam.M43 = 0.0f;
-
-        // Calculate Lookat
-        Vector3 vWorldLook = Vector3.TransformNormal(Vector3.Forward, mCam);
-        Vector3 vUp = Vector3.TransformNormal(Vector3.Up, mCam);
-        Vector3 vPos = new Vector3(_mat.M41, _mat.M42, _mat.M43);
-        Vector3 vLookAt = vPos + vWorldLook;
-
-        effect.View = Matrix.CreateLookAt(vPos, vLookAt, vUp * 1);
-    }
-
-    public static void SetWorld<T>(T effect, float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
-        where T : IEffectMatrices
-    {
-        var _mat = Matrix.Identity;
-
-        Utility.MatrixTranslate(ref _mat, new Vector3(px, py, -pz));
-        Utility.MatrixRotate(ref _mat, new Vector3(rx, ry, rz));
-        Utility.MatrixScale(ref _mat, new Vector3(sx, sy, sz));
-
-        effect.World = _mat;
-    }
-	
 	public static void SetWorldMat<T>(T effect, float[] mat)
 		where T : IEffectMatrices
 	{
@@ -1833,15 +1481,8 @@ public class XNAEffectTechnique
 		}
 	}
 	
-	public string GetName()
-	{
-		return _technique.Name;
-	}
-	
-	public XNAEffectPass[] GetPasses()
-	{
-		return _passes;
-	}
+	public string GetName(){return _technique.Name;}
+	public XNAEffectPass[] GetPasses(){return _passes;}
 }
 
 public class XNAEffectPass
@@ -1853,15 +1494,8 @@ public class XNAEffectPass
 		_pass = pass;
 	}
 	
-	public string GetName()
-	{
-		return _pass.Name;
-	}
-	
-	public void Apply()
-	{
-		_pass.Apply();
-	}
+	public string GetName(){return _pass.Name;}
+	public void Apply(){_pass.Apply();}
 }
 
 public class XNAEffectParameter
@@ -1872,490 +1506,16 @@ public class XNAEffectParameter
 	{
 		_parameter = parameter;
 	}
-	
-	public int GetParameterClass() 
-	{
-		return (int)_parameter.ParameterClass;
-	}
-	
-	public int GetParameterType() 
-	{
-		return (int)_parameter.ParameterType;
-	}
-	
-	public string GetName() 	
-	{
-		return _parameter.Name;
-	}
-	
-	public string GetSemantic() 	
-	{
-	    return _parameter.Semantic;
-	}
-	
-	public void  SetBool(bool value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetBoolArray(bool[] value)		
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetInt(int value)	
-	{
-		_parameter.SetValue(value);
-	}
-		
-	public void  SetIntArray(int[] value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetFloat(float value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetFloatArray(float[] value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetString(string value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetTexture(XNATexture value)	
-	{
-		_parameter.SetValue(value._texture);
-	}
-	
-	/*
-	public void  SetValue(Matrix value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetValue(Matrix[] value)	
-	{
-		_parameter.SetValue(value);
-	}
-		
-	public void  SetValue(Quaternion value)	
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetValue(Quaternion[] value)		
-	{
-		_parameter.SetValue(value);
-	}
-	
-	public void  SetValue(Vector value)	
-	{
-		_parameter.SetValue(value);
-	}
-	*/
+
+	public int GetParameterClass() {return (int)_parameter.ParameterClass;}
+	public int GetParameterType(){return (int)_parameter.ParameterType;}
+	public string GetName() {return _parameter.Name;}
+	public string GetSemantic(){ return _parameter.Semantic;}
+	public void  SetTexture(XNATexture value){_parameter.SetValue(value._texture);}
+	public void  SetBool(bool v0){ _parameter.SetValue(v0); }
+	public void  SetBoolArray(bool[] value)	{_parameter.SetValue(value); }
+	public void  SetInt(int v0){ _parameter.SetValue(v0); }	
+	public void  SetIntArray(int[] value){_parameter.SetValue(value);}
+	public void  SetFloat(float v0){ _parameter.SetValue(v0); }
+	public void  SetFloatArray(float[] value){ _parameter.SetValue(value);}
 }
-
-public class XNAColor
-{
-	public Color _color;
-	
-	public static XNAColor White()
-	{
-		return new XNAColor(1,1,1,1);
-	}
-	
-	public static XNAColor Black()
-	{
-		return new XNAColor(0,0,0,1);
-	}
-	
-	public static XNAColor Red()
-	{
-		return new XNAColor(1,0,0,1);
-	}
-	
-	public static XNAColor Blue()
-	{
-		return new XNAColor(0,0,1,1);
-	}
-	
-	public static XNAColor FromARGB(float r, float g, float b, float a)
-	{
-		return new XNAColor(r,g,b,a);
-	}
-	
-	public XNAColor(float r, float g, float b, float a)
-	{
-		_color = new Color(r,g,b,a);
-	}
-	
-	public XNAColor(Color color)
-	{
-		_color = color;
-	}
-	
-	public float GetR()
-	{
-		return (float)_color.R / 255.0f;
-	}
-	
-	public float GetG()
-	{
-		return (float)_color.G/ 255.0f;
-	}
-	
-	public float GetB()
-	{
-		return (float)_color.B/ 255.0f;
-	}
-	
-	public float GetA()
-	{
-		return (float)_color.A/ 255.0f;
-	}
-	
-	public void SetR(float value)
-	{
-		_color.R = (byte)(value*255.0f);
-	}
-	
-	public void SetG(float value)
-	{
-		_color.G = (byte)(value*255.0f);
-	}
-	
-	public void SetB(float value)
-	{
-		_color.B = (byte)(value*255.0f);
-	}
-	
-	public void SetA(float value)
-	{
-		_color.A = (byte)(value*255.0f);
-	}
-}
-
-class XNAMatrix
-{
-	public Matrix mat;
-	
-	public XNAMatrix()
-	{
-		mat = new Matrix();
-	}
-	
-	public static XNAMatrix MatrixIdentity()
-	{
-		var matrix = new XNAMatrix();
-		matrix.mat = Matrix.Identity;
-		return matrix;
-	}
-	
-	public static XNAMatrix CreateMatrixA()
-	{
-		var matrix = new XNAMatrix();
-		matrix.mat = new Matrix();
-		return matrix;
-	}
-	
-	public static XNAMatrix CreateMatrixB(XNAMatrix mat)
-	{
-		return null;// Todo
-	}
-	
-	public float GetM11(){return mat.M11;}
-	public float GetM12(){return mat.M12;}
-	public float GetM13(){return mat.M13;}
-	public float GetM14(){return mat.M14;}
-	public float GetM21(){return mat.M21;}
-	public float GetM22(){return mat.M22;}
-	public float GetM23(){return mat.M23;}
-	public float GetM24(){return mat.M24;}
-	public float GetM31(){return mat.M31;}
-	public float GetM32(){return mat.M32;}
-	public float GetM33(){return mat.M33;}
-	public float GetM34(){return mat.M34;}
-	public float GetM41(){return mat.M41;}
-	public float GetM42(){return mat.M42;}
-	public float GetM43(){return mat.M43;}
-	public float GetM44(){return mat.M44;}
-	
-	public void SetM11(float value){mat.M11 = value;}
-	public void SetM12(float value){mat.M12 = value;}
-	public void SetM13(float value){mat.M13 = value;}
-	public void SetM14(float value){mat.M14 = value;}
-	public void SetM21(float value){mat.M21 = value;}
-	public void SetM22(float value){mat.M22 = value;}
-	public void SetM23(float value){mat.M23 = value;}
-	public void SetM24(float value){mat.M24 = value;}
-	public void SetM31(float value){mat.M31 = value;}
-	public void SetM32(float value){mat.M32 = value;}
-	public void SetM33(float value){mat.M33 = value;}
-	public void SetM34(float value){mat.M34 = value;}
-	public void SetM41(float value){mat.M41 = value;}
-	public void SetM42(float value){mat.M42 = value;}
-	public void SetM43(float value){mat.M43 = value;}
-	public void SetM44(float value){mat.M44 = value;}
-	
-	public static XNAMatrix CreateMatrixC(XNAMatrix mat)
-	{
-		var matrix = new XNAMatrix();
-		matrix.mat = new Matrix(mat.mat.M11, mat.mat.M12, mat.mat.M13, mat.mat.M14,
-                   mat.mat.M21, mat.mat.M22, mat.mat.M23, mat.mat.M24,
-                   mat.mat.M31, mat.mat.M32, mat.mat.M33, mat.mat.M34,
-                   mat.mat.M41, mat.mat.M42, mat.mat.M43, mat.mat.M44);
-		return matrix;
-	}
-	
-	public void Overwrite(XNAMatrix matrix)
-	{
-		mat.M11 = matrix.mat.M11;
-        mat.M12 = matrix.mat.M12;
-        mat.M13 = matrix.mat.M13;
-        mat.M14 = matrix.mat.M14;
-        mat.M21 = matrix.mat.M21;
-        mat.M22 = matrix.mat.M22;
-        mat.M23 = matrix.mat.M23;
-        mat.M24 = matrix.mat.M24;
-        mat.M31 = matrix.mat.M31;
-        mat.M32 = matrix.mat.M32;
-        mat.M33 = matrix.mat.M33;
-        mat.M34 = matrix.mat.M34;
-        mat.M41 = matrix.mat.M41;
-        mat.M42 = matrix.mat.M42;
-        mat.M43 = matrix.mat.M43;
-        mat.M44 = matrix.mat.M44;
-	}
-	
-	public XNAMatrix Inverse()
-	{
-		var m = new XNAMatrix();
-		m.mat = Matrix.Invert(mat);
-		return m;
-	}
-	
-	public XNAMatrix Multiply(XNAMatrix matrix)
-	{
-		var m = new XNAMatrix();
-		m.mat = Matrix.Multiply(mat,matrix.mat);
-		return m;
-	}
-	
-	public void Translate(float x,float y,float z)
-	{
-		mat.M41 += mat.M11 * x + mat.M21 * y + mat.M31 * z;
-        mat.M42 += mat.M12 * x + mat.M22 * y + mat.M32 * z;
-        mat.M43 += mat.M13 * x + mat.M23 * y + mat.M33 * z;
-	}
-	
-	public void Scale(float x,float y,float z)
-	{
-		mat.M11 *= x;
-        mat.M12 *= x;
-        mat.M13 *= x;
-
-        mat.M21 *= y;
-        mat.M22 *= y;
-        mat.M23 *= y;
-
-        mat.M31 *= z;
-        mat.M32 *= z;
-        mat.M33 *= z;
-	}
-	
-	public void Rotate(float x,float y,float z)
-	{
-		 // yaw
-
-        float cos_ang = (float)Utility.Cos((double)y);
-        float sin_ang = (float)Utility.Sin((double)y);
-	
-		float m11 = mat.M11 * cos_ang + mat.M31 * -sin_ang;
-		float m12 = mat.M12 * cos_ang + mat.M32 * -sin_ang;
-		float m13 = mat.M13 * cos_ang + mat.M33 * -sin_ang;
-		
-		mat.M31 = mat.M11 * sin_ang + mat.M31 * cos_ang;
-		mat.M32 = mat.M12 * sin_ang + mat.M32 * cos_ang;
-		mat.M33 = mat.M13 * sin_ang + mat.M33 * cos_ang;
-
-        mat.M11 = m11;
-        mat.M12 = m12;
-        mat.M13 = m13;
-		
-  		// pitch
-
-        cos_ang = (float)Utility.Cos((double)x);
-        sin_ang = (float)Utility.Sin((double)x);
-	
-        float m21 = mat.M21 * cos_ang + mat.M31 * sin_ang;
-		float m22 = mat.M22 * cos_ang + mat.M32 * sin_ang;
-		float m23 = mat.M23 * cos_ang + mat.M33 * sin_ang;
-        
-        mat.M31 = mat.M21 * -sin_ang + mat.M31 * cos_ang;
-		mat.M32 = mat.M22 * -sin_ang + mat.M32 * cos_ang;
-		mat.M33 = mat.M23 * -sin_ang + mat.M33 * cos_ang;
-		
-		mat.M21=m21;
-		mat.M22=m22;
-		mat.M23=m23;
-		
-  		// roll
-
-        cos_ang = (float)Utility.Cos((double)z);
-        sin_ang = (float)Utility.Sin((double)z);
-
-		m11 = mat.M11 * cos_ang + mat.M21 * sin_ang;
-		m12 = mat.M12 * cos_ang + mat.M22 * sin_ang;
-		m13 = mat.M13 * cos_ang + mat.M23 * sin_ang;
-		
-		mat.M21 = mat.M11 * -sin_ang + mat.M21 * cos_ang;
-		mat.M22 = mat.M12 * -sin_ang + mat.M22 * cos_ang;
-		mat.M23 = mat.M13 * -sin_ang + mat.M23 * cos_ang;
-		
-		mat.M11 = m11;
-		mat.M12 = m12;
-        mat.M13 = m13;
-	}
-	
-	public void RotatePitch(float ang)
-	{
-		float cos_ang = (float)Utility.Cos((double)ang);
-        float sin_ang = (float)Utility.Sin((double)ang);
-	
-        float m21 = mat.M21 * cos_ang + mat.M31 * sin_ang;
-		float m22 = mat.M22 * cos_ang + mat.M32 * sin_ang;
-		float m23 = mat.M23 * cos_ang + mat.M33 * sin_ang;
-        
-        mat.M31 = mat.M21 * -sin_ang + mat.M31 * cos_ang;
-		mat.M32 = mat.M22 * -sin_ang + mat.M32 * cos_ang;
-		mat.M33 = mat.M23 * -sin_ang + mat.M33 * cos_ang;
-		
-		mat.M21=m21;
-		mat.M22=m22;
-		mat.M23=m23;
-	}
-	
-	public void RotateYaw(float ang)
-	{
-		float cos_ang = (float)Utility.Cos((double)ang);
-        float sin_ang = (float)Utility.Sin((double)ang);
-	
-		float m11 = mat.M11 * cos_ang + mat.M31 * -sin_ang;
-		float m12 = mat.M12 * cos_ang + mat.M32 * -sin_ang;
-		float m13 = mat.M13 * cos_ang + mat.M33 * -sin_ang;
-		
-		mat.M31 = mat.M11 * sin_ang + mat.M31 * cos_ang;
-		mat.M32 = mat.M12 * sin_ang + mat.M32 * cos_ang;
-		mat.M33 = mat.M13 * sin_ang + mat.M33 * cos_ang;
-
-        mat.M11 = m11;
-        mat.M12 = m12;
-        mat.M13 = m13;
-	}
-	
-	public void RotateRoll(float ang) 
-	{
-		float cos_ang = (float)Utility.Cos((double)ang);
-        float sin_ang = (float)Utility.Sin((double)ang);
-
-		float m11 = mat.M11 * cos_ang + mat.M21 * sin_ang;
-		float m12 = mat.M12 * cos_ang + mat.M22 * sin_ang;
-		float m13 = mat.M13 * cos_ang + mat.M23 * sin_ang;
-		
-		mat.M21 = mat.M11 * -sin_ang + mat.M21 * cos_ang;
-		mat.M22 = mat.M12 * -sin_ang + mat.M22 * cos_ang;
-		mat.M23 = mat.M13 * -sin_ang + mat.M23 * cos_ang;
-		
-		mat.M11 = m11;
-		mat.M12 = m12;
-        mat.M13 = m13;
-	}
-}
-
-public class XNAViewport
-{
-    public Viewport _viewport;
-
-    public XNAViewport(int x, int y, int width, int height)
-    {
-        _viewport = new Viewport(x, y, width, height);
-    }
-
-    public static XNAViewport Create(int x, int y, int width, int height)
-    {
-        return new XNAViewport(x, y, width, height);
-    }
-
-    public float getAspectRatio()
-    {
-        return _viewport.AspectRatio;
-    }
-
-    public int getX()
-    {
-        return _viewport.X;
-    }
-
-    public int getY()
-    {
-        return _viewport.Y;
-    }
-
-    public int getWidth()
-    {
-        return _viewport.Width;
-    }
-
-    public int getHeight()
-    {
-        return _viewport.Height;
-    }
-
-    public void setX(int value)
-    {
-        _viewport.X = value;
-    }
-
-    public void setY(int value)
-    {
-        _viewport.Y = value;
-    }
-
-    public void setWidth(int value)
-    {
-        _viewport.Width = value;
-    }
-
-    public void setHeight(int value)
-    {
-        _viewport.Height = value;
-    }
-
-    public float getMaxDepth()
-    {
-        return _viewport.MaxDepth;
-    }
-
-    public float getMinDepth()
-    {
-        return _viewport.MaxDepth;
-    }
-
-    public void setMaxDepth(float value)
-    {
-        _viewport.MaxDepth = value;
-    }
-
-    public void setMinDepth(float value)
-    {
-        _viewport.MinDepth = value;
-    }
-}
-
-

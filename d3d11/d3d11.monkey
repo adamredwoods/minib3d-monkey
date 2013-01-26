@@ -4,37 +4,6 @@
 '' (C) 2012 Sascha Schmidt
 ''--------------------------------------------------------
 
-#rem
-
-Notes:
-
-	Limmitations:
-	--------------------------------------------------------
-	
-	- Needs at least feature level 9.3 hardware capabilities for the implemented default shaders.
-	- Runtime shader compilation is not supported for deployment.(handled internally)
-	- No write access to 'monkey://data/' = manual shader copy before redistribution 
-	
-	
-	Using custom shaders:
-	--------------------------------------------------------
-	
-	- copy D3Dcompiler_46.dll to '..\Release\MonkeyGame\AppX'
-	- make sure that #MINIB3D_D3D11_RELEASE is set to "false" during development
-
-
-	Redistributing applications with custom shaders:
-	--------------------------------------------------------
-	
-	See build output for app specific 'monkey://internal/' path!
-	
-	- remove D3Dcompiler_46.Dll from '..\Release\MonkeyGame\AppX'
-	- copy precompiled shaders(monkey://internal/*.bin) to 'monkey://data/'
-	- copy shader reflection info(monkey://internal/*.refl.bin) to 'monkey://data/'
-	- set #MINIB3D_D3D11_RELEASE to "true"
-	- rebuild the monkey project
-
-#end 
 
 #MINIB3D_DRIVER="d3d11"
 #MINIB3D_D3D11_RELEASE="true" ' set to false for runtime shader compilation during development
