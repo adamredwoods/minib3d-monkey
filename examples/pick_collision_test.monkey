@@ -77,7 +77,7 @@ Class Game Extends App
 		whitebrush.BrushColor(200,200,200)
 		sphere1.PaintEntity( whitebrush)
 
-		sphere1.EntityCollision(1, COLLISION_METHOD_POLYGON, 1.0)		
+		sphere1.CollisionSetup(1, COLLISION_METHOD_POLYGON, 1.0)		
 		sphere1.EntityFX(2)
 		sphere1.RotateEntity(145,145,0)
 		sphere1.ScaleEntity(2.0,2.0,2.0)
