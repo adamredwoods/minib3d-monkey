@@ -106,8 +106,7 @@ Class OpenglES11 Extends TRender
 		last_sprite = Null ''used to preserve last surface states
 		last_tex_count = 8
 		TRender.alpha_pass = 0
-		
-		wireframe = False
+
 	End
 	
 	

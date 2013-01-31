@@ -425,7 +425,7 @@ Class TCamera Extends TEntity
 		Local d#
 	
 		If ent.frustum_cache<>0
-			Local fc% = ent.frustum_cache
+			Local fc% = ent.frustum_cache-1
 			d = frustum[fc][0] * x + frustum[fc][1] * y + frustum[fc][2] * -z + frustum[fc][3]
 			If d <= -radius Then Return 0
 			

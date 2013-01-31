@@ -26,7 +26,7 @@ Class TRender
 	
 	Global width:Int,height:Int,mode:Int,depth:Int,rate:Int
 	
-	Global wireframe:Bool=False ''draw meshes as lines or filled
+	Global wireframe:int=False ''draw meshes as lines or filled
 	Global disable_lighting:Bool = False ''turns off light shading, renders full color
 	
 	Global alpha_pass:Int = 0 ''for optimizing the TMesh render routine
@@ -271,6 +271,8 @@ Class TRender
 		camera2D.draw2D = 1
 		
 		alpha_pass=1
+		Local wireFrameIsEnabled:= wireframe
+		wireframe = False
 		'camera2D.ExtractFrustum()
 		'camera2D.CameraProjMode(3)
 		
@@ -299,6 +301,8 @@ Class TRender
 			TRender.render.Render(mesh,camera2D)
 		Next
 		
+		wireframe = wireFrameIsEnabled
+		
 		TRender.render.Finish()
 		draw_list.Clear()
 		
@@ -306,7 +310,7 @@ Class TRender
 	
 	
 	Method RenderCamera:Void(cam:TCamera, skip:Int=0)
-		
+			
 		Reset() ''reset render pass
 		
 
@@ -334,7 +338,7 @@ Class TRender
 		''Perform camera clipping, alpha ordering, and entity sort
 		Local mesh:TMesh
 		Local alpha_count:Int=0
-
+		Local wireFrameIsEnabled:= wireframe
 		
 		For Local ent:TEntity=Eachin TEntity.entity_list
 			
@@ -362,8 +366,8 @@ Class TRender
 'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
 
 				If inview
-					
-					If mesh.wireframe Or wireframe Then wireframe = True
+				
+					wireframe = wireframe | mesh.wireframe
 					
 					If mesh.auto_fade=True Then mesh.AutoFade(cam)
 					
@@ -389,7 +393,7 @@ Class TRender
 	
 					Endif
 					
-					wireframe = False
+					wireframe = wireFrameIsEnabled
 					
 				Endif
 			Endif
@@ -410,11 +414,11 @@ Class TRender
 		
 		For mesh = Eachin render_alpha_list
 			
-			If mesh.wireframe Or wireframe Then wireframe = True
+			wireframe = wireframe | mesh.wireframe
 			
 			TRender.render.Render(mesh,cam)
 			
-			wireframe = False
+			wireframe = wireFrameIsEnabled
 
 		Next
 		

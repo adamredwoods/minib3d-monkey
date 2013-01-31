@@ -144,8 +144,7 @@ Print s
 		cam_matrix_upload=0
 		
 		ResetLights()
-		
-		wireframe = False
+
 		'Print "....begin render...."
 		
 	End
