@@ -864,6 +864,12 @@ Class TEntity
 	
 	End
 	
+	Method EntityColor( color:Int )
+		
+		EntityColor( (color & $00ff0000) Shr 16, (color & $00ff00) Shr 8 , color & $0000ff )
+		
+	End
+	
 	Method EntityAlpha(a#)
 	
 		brush.alpha=a
@@ -1007,6 +1013,11 @@ Class TEntity
 	'' why not?
 	Method PaintEntity(tex:TTexture, frame:Int=0, index:Int=0)
 		EntityTexture(tex,frame,index)
+	End
+	
+	''hex color
+	Method PaintEntity(color:Int)
+		EntityColor( color )
 	End
 	
 	Method EntityOrder(order_no)
