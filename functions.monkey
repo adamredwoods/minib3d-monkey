@@ -319,7 +319,11 @@ bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=CollisionNZ">
 Function CollisionNZ#(ent:TEntity,index)
 	Return ent.CollisionNZ(index)
 End 
-	
+
+Function CollisionSetup:Void(ent:TEntity, type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, d:Float=0.0, h:Float=0.0)
+	ent.CollisionSetup(type_no,pick_mode,x,y,z,w,d,h)
+End
+
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=CollisionSurface">Online Help</a>
 #End 
