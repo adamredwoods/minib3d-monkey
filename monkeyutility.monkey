@@ -155,7 +155,7 @@ Class Base64 Extends BufferReader
 		
 		length=Int((m_length-pad)/4+0.5)*3 ''round up
 		'bytes=New Int[length]
-		Local buf:DataBuffer = CreateDataBuffer(length)
+		Local buf:DataBuffer = CreateDataBuffer(length+3) ''making this +3 will catch early eof errors
 		Local bb:Int[4]
 		
 		While p<m_length-1
@@ -180,7 +180,8 @@ Class Base64 Extends BufferReader
 			Next
 
 			Local b24:Int =(bb[0] Shl 18)|(bb[1] Shl 12)|(bb[2] Shl 6)|bb[3]		
-
+			
+			''beware of early eof
 			buf.PokeByte( i+0, (b24 Shr 16)&255)
 			buf.PokeByte( i+1, (b24 Shr 8)&255)
 			buf.PokeByte( i+2, (b24 )&255)

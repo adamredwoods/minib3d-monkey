@@ -406,6 +406,7 @@ Class XNAMesh = "XNAMesh"
 	Method Bind:Void()
 	Method Render:Void()
 	Method SetVertices:Void(data:DataBuffer, count, flags)
+	Method SetVerticesPosition:Void(data:DataBuffer, count, flags)
 	Method SetIndices:Void(data:DataBuffer, count, flags)
 End
 

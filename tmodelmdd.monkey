@@ -113,7 +113,7 @@ Class TModelMDD
 			'' probably dont need to flip endian
 			pc_string = stream.ReadString(12)
 			
-			If pc_string<>"POINTCACHE2~0" Then Print "** TModelMDD: Not a PointCache2 file"; Return
+			If pc_string<>"POINTCACHE2~0" Then Print "** TModelPC2: Not a PointCache2 file"; Return
 			
 			pc_version = stream.ReadInt()
 			total_points = stream.ReadInt()
@@ -175,8 +175,8 @@ Class TModelMDD
 			anim_surf.vert_anim = New TVertexAnim[total_frames]
 			For Local frame:Int = 0 To total_frames-1
 			
-				anim_surf.vert_anim[frame] = New TVertexAnim
-				anim_surf.vert_anim[frame].vert_buffer = FloatBuffer.Create(anim_surf.no_verts*3)
+				'anim_surf.vert_anim[frame] = New TVertexAnim
+				anim_surf.vert_anim[frame] = TVertexAnim.Create(anim_surf.no_verts*3)
 				
 			Next
 			
@@ -186,7 +186,7 @@ Class TModelMDD
 				vert_set.Add(surf, anim_surf,v)
 				
 				''set frame0 while we're here
-				anim_surf.vert_anim[0].vert_buffer.PokeVertCoords(v, surf.VertexX(v), surf.VertexY(v), -surf.VertexZ(v) )
+				anim_surf.vert_anim[0].PokeVertCoords(v, surf.VertexX(v), surf.VertexY(v), -surf.VertexZ(v) )
 				
 			Next
 	
@@ -332,7 +332,7 @@ Class VertexSet
 		If vert_set[i]
 			For Local v:VSSurface = Eachin (vert_set[i].list)
 			
-				v.surf.vert_anim[frame].vert_buffer.PokeVertCoords(v.id,x, y, z)
+				v.surf.vert_anim[frame].PokeVertCoords(v.id,x, y, z)
 				
 			Next
 		Endif

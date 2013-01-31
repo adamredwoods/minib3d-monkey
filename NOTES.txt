@@ -1,4 +1,8 @@
 ****************************************
+minib3d v0.33.2
+bug fixes: xna, xna fog, xna vertex animation improved. opengl1.1 texture fix.
+
+****************************************
 minib3d v0.33
 
 - MDD and PC2 import for vertex animation

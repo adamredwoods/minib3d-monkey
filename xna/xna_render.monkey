@@ -243,8 +243,19 @@ Public
 		End
 
 		If surf.reset_vbo=-1 Then surf.reset_vbo=255
-			
-		If surf.reset_vbo&1 Or surf.reset_vbo&2 Or surf.reset_vbo&4 Or surf.reset_vbo&8
+		
+		''update mesh positions
+		If surf.reset_vbo&1
+			If surf.vert_anim
+				'' vertex animation
+				m.SetVerticesPosition(surf.vert_anim[surf.anim_frame].buf, surf.no_verts, 2)
+			Else
+				m.SetVerticesPosition(surf.vert_data.buf, surf.no_verts, surf.vbo_dyn)
+			Endif
+		Endif
+		
+		''update rest of vertex info
+		If surf.reset_vbo&2 Or surf.reset_vbo&4 Or surf.reset_vbo&8
 			m.SetVertices(surf.vert_data.buf, surf.no_verts, surf.vbo_dyn)
 		Endif
 
@@ -586,7 +597,7 @@ Public
 	End
 	
 	Method Fog(near# ,far# ,r#,g#, b#, enabled?)
-		If enabled>0
+		If enabled
 			_lastEffect.Effect().FogEnabled = True
 			_lastEffect.Effect().FogStart = near
 	        _lastEffect.Effect().FogEnd = far
@@ -831,7 +842,7 @@ Public
 			If BasicEffect(e) Then BasicEffect(e).NoLighting
 		Endif
 		
-		If e._disable_fog
+		If e._disable_fog Or cam.fog_mode=0
 			e.Fog(False)
 		Else
 			e.Fog(True)
@@ -1168,10 +1179,7 @@ Class Draw2DEffect Extends BasicEffect
 		_effect = effect
 		_name = "draw2d"
 
-#if XNA_PERPIXEL_LIGHNING=1
-		Local e:= XNABasicEffect(_effect)
-		e.PreferPerPixelLighting = True
-#Endif		
+	
 		
 		Reset()
 	End 

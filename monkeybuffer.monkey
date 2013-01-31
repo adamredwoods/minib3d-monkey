@@ -296,27 +296,23 @@ Class FloatBuffer
 	End
 	
 	Method Poke:Void(i:Int,v:Float)
-		'i =i*SIZE
-		'i2f.PokeFloat(0,v)
-		'buf.PokeByte(i+0,(i2f.PeekByte(0) & $000000ff))
-		'buf.PokeByte(i+1,(i2f.PeekByte(1) & $000000ff) )
-		'buf.PokeByte(i+2,(i2f.PeekByte(2) & $000000ff) )
-		'buf.PokeByte(i+3,(i2f.PeekByte(3) & $000000ff) )
 		
 		buf.PokeFloat(i*SIZE,v)
 	End
 	
 	Method PokeVertCoords:Void(i:Int,v0:Float, v1:Float, v2:Float)
 		
-		buf.PokeFloat(i*12,v0)
-		buf.PokeFloat((i)*12+4,v1)
-		buf.PokeFloat((i)*12+8,v2)
+		Local i3% = i*12
+		buf.PokeFloat(i3,v0)
+		buf.PokeFloat(i3+4,v1)
+		buf.PokeFloat(i3+8,v2)
 		
 	End
 	
 	Method PeekVertCoords:Vector(i:Int)
-		
-		Return New Vector(buf.PeekFloat(i*12), buf.PeekFloat((i)*12+4), buf.PeekFloat((i)*12+8))
+	
+		Local i3% = i*12
+		Return New Vector(buf.PeekFloat(i3), buf.PeekFloat(i3+4), buf.PeekFloat(i3+8))
 		
 	End
 	
@@ -351,18 +347,11 @@ Class ShortBuffer
 	End
 	
 	Method Poke:Void(i:Int,v:Int)
-		'i =i*SIZE
-		'i2f.PokeShort(0,v)
-		'buf.PokeByte(i+0,(i2f.PeekByte(0) & $000000ff))
-		'buf.PokeByte(i+1,(i2f.PeekByte(1) & $000000ff) )
-		
+
 		buf.PokeShort(i*SIZE,v)
 	End
 	
 	Method Peek:Int(i:Int)
-		'i =i*SIZE  
-		'i2f.PokeShort(0, ( ((buf.PeekByte(i+1)& $000000ff) Shl 8) | (buf.PeekByte(i)& $000000ff) ))
-		'Return i2f.PeekShort(0)
 	
 		Return buf.PeekShort(i*SIZE)
 	End
@@ -459,12 +448,14 @@ Class BufferReader
 
 	Method ReadByte:Int()
 		pos += 1
+		If pos>size Then Return 0
 		Return data.PeekByte(pos-1)
 	End
 
 	''Endianness is different for targets, so use PeekInt()
 	Method ReadInt:Int()
 		pos += 4
+		If pos>size Then Return 0
 		'i2f.PokeByte(0,data.PeekByte(pos-4))
 		'i2f.PokeByte(1,data.PeekByte(pos-3))
 		'i2f.PokeByte(2,data.PeekByte(pos-2))
@@ -477,6 +468,7 @@ Class BufferReader
 	''reads across 4-byte alignment, important!
 	Method ReadFloat:Float()
 		pos += 4
+		If pos>size Then Return 0.0
 		'i2f.PokeByte(0,data.PeekByte(pos-4))
 		'i2f.PokeByte(1,data.PeekByte(pos-3))
 		'i2f.PokeByte(2,data.PeekByte(pos-2))
@@ -491,6 +483,17 @@ Class BufferReader
 		If pos+3>size Then Return 0
 		Return ((data.PeekByte(pos+3) Shl 24) | (data.PeekByte(pos+2) Shl 16) | (data.PeekByte(pos+1) Shl 8) | (data.PeekByte(pos)))
 
+	End
+
+	'' len in bytes/chars
+	Method ReadString:String(len:Int)
+		Local st:String = ""
+		
+		For Local i:Int=0 To len-1
+			st = st+String.FromChar(ReadByte())
+		Next
+		
+		Return st
 	End
 
 	Method Position:Int()

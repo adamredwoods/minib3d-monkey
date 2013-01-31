@@ -82,7 +82,7 @@ Class TEntity
 	'' used by TCamera for camera layer
 	Field use_cam_layer:Bool = False
 	Field cam_layer:TCamera
-	
+	Field frustum_cache:Int ''frustum cache
 		
 	''blitz3d functions-- can be deprecated
 	Global global_mat:Matrix = New Matrix
@@ -1993,8 +1993,6 @@ Class TEntity
 	Method UpdateMatTrans(load_identity:Bool =False)
 		
 		If load_identity=False And parent
-			''load parent mat
-			mat.Overwrite(parent.mat)
 			'mat.Translate4(px,py,pz)
 			mat.grid[3][0] = parent.mat.grid[0][0]*px + parent.mat.grid[1][0]*py + parent.mat.grid[2][0]*pz + parent.mat.grid[3][0]
 			mat.grid[3][1] = parent.mat.grid[0][1]*px + parent.mat.grid[1][1]*py + parent.mat.grid[2][1]*pz + parent.mat.grid[3][1]

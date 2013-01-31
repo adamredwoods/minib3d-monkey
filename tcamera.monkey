@@ -416,31 +416,42 @@ Class TCamera Extends TEntity
 			
 			Local gs:Float = Max(Max(ent.gsx,ent.gsy),ent.gsz) ''optimizing ABS()
 			radius = radius*gs
-			If radius<0 Then radius=-radius
+			If radius<0.0 Then radius=-radius
 			
 		Endif
 	
 		' is sphere in frustum
 
 		Local d#
-
+	
+		If ent.frustum_cache<>0
+			Local fc% = ent.frustum_cache
+			d = frustum[fc][0] * x + frustum[fc][1] * y + frustum[fc][2] * -z + frustum[fc][3]
+			If d <= -radius Then Return 0
+			
+		Endif	
+		
+		ent.frustum_cache = 0
+		
 		d = frustum[0][0] * x + frustum[0][1] * y + frustum[0][2] * -z + frustum[0][3]
-		If d <= -radius Then Return 0
+		If d <= -radius Then ent.frustum_cache = 1 ; Return 0	
 		d = frustum[1][0] * x + frustum[1][1] * y + frustum[1][2] * -z + frustum[1][3]
-		If d <= -radius Then Return 0
+		If d <= -radius Then ent.frustum_cache = 2 ; Return 0
 		d = frustum[2][0] * x + frustum[2][1] * y + frustum[2][2] * -z + frustum[2][3]
-		If d <= -radius Then Return 0
+		If d <= -radius Then ent.frustum_cache = 3 ; Return 0
 		d = frustum[3][0] * x + frustum[3][1] * y + frustum[3][2] * -z + frustum[3][3]
-		If d <= -radius Then Return 0
+		If d <= -radius Then ent.frustum_cache = 4 ; Return 0
 		d = frustum[4][0] * x + frustum[4][1] * y + frustum[4][2] * -z + frustum[4][3]
-		If d <= -radius Then Return 0
+		If d <= -radius Then ent.frustum_cache = 5 ; Return 0
 		d = frustum[5][0] * x + frustum[5][1] * y + frustum[5][2] * -z + frustum[5][3]
-		If d <= -radius Then Return 0
+		If d <= -radius Then ent.frustum_cache = 6 ; Return 0
 
-
+		
+		
 		Return d + radius
 	
 	End
+	
 	
 	
 	''move to trender, keep frustum update here

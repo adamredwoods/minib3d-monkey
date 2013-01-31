@@ -104,8 +104,10 @@ Class OpenglES11 Extends TRender
 		''reset globals used for state caching
 		last_texture = Null ''used to preserve texture states
 		last_sprite = Null ''used to preserve last surface states
+		last_tex_count = 8
 		TRender.alpha_pass = 0
 		
+		wireframe = False
 	End
 	
 	
@@ -329,7 +331,7 @@ Class OpenglES11 Extends TRender
 			
 			'' fx flag 32 - force alpha
 			
-			'' fx flag 64 - disable depth testing (new 2012)
+			'' fx flag 64 - disable depth testing (new)
 			If fx&64
 			
 				glDisable(GL_DEPTH_TEST)
@@ -447,18 +449,30 @@ Class OpenglES11 Extends TRender
 				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
 			
-			''disable any extra textures from last pass ''-- what is this and why do i have this here?
+			
+			'' disable any extra textures from last pass
+			'' turn off textures if no textures
 			If tex_count < last_tex_count 
-				For Local i:Int = tex_count To MAX_TEXTURES-1
+			
+				For Local ix:=0 To last_tex_count-1
+			
+					glActiveTexture(GL_TEXTURE0+ix)
+					glClientActiveTexture(GL_TEXTURE0+ix)
+					'glBindTexture(GL_TEXTURE_2D,0)
+					glDisable(GL_TEXTURE_2D)
+					glDisableClientState(GL_TEXTURE_COORD_ARRAY)		
+					
+					' reset texture matrix
+					'glMatrixMode(GL_TEXTURE)
+					'glLoadIdentity()
+					'glDisable(GL_TEXTURE_CUBE_MAP)
+					'glDisable(GL_TEXTURE_GEN_S)
+					'glDisable(GL_TEXTURE_GEN_T)
+					'glDisable(GL_TEXTURE_GEN_R)
 				
-					'glActiveTexture(GL_TEXTURE0+i)
-					'glClientActiveTexture(GL_TEXTURE0+i)
-					'glDisableClientState(GL_TEXTURE_COORD_ARRAY)
-					'glDisable(GL_TEXTURE_2D)
 				Next
-
+				
 			Endif
-			last_tex_count = tex_count
 			
 			
 			For Local ix=0 To tex_count-1			
@@ -521,7 +535,7 @@ Class OpenglES11 Extends TRender
 					Endif ''end preserve texture states---------------------------------
 					
 					
-					glEnable(GL_TEXTURE_2D)
+					If tex_count<>0 Then glEnable(GL_TEXTURE_2D)
 					
 					
 					''assuming sprites with same surfaces are identical, preserve states---------
@@ -723,30 +737,9 @@ Class OpenglES11 Extends TRender
 			
 			
 			
-			'' turn off textures if no textures
-			If tex_count = 0
 			
-				For Local ix:=0 To tex_count-1
-			
-					glActiveTexture(GL_TEXTURE0+ix)
-					glClientActiveTexture(GL_TEXTURE0+ix)
-					
-					' reset texture matrix
-					glMatrixMode(GL_TEXTURE)
-					glLoadIdentity()
-					glDisableClientState(GL_TEXTURE_COORD_ARRAY)
-					
-					'glDisable(GL_TEXTURE_CUBE_MAP)
-					'glDisable(GL_TEXTURE_GEN_S)
-					'glDisable(GL_TEXTURE_GEN_T)
-					'glDisable(GL_TEXTURE_GEN_R)
-				
-				Next
-				glDisable(GL_TEXTURE_2D)
-				
-				last_texture = Null
-				
-			Endif
+			If tex_count =0 Then glDisable(GL_TEXTURE_2D); last_texture = Null
+			last_tex_count = tex_count
 			
 				
 			'' draw tris
@@ -942,10 +935,10 @@ Class OpenglES11 Extends TRender
 				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
 				If surf.reset_vbo <> 255
 					''update just anim data
-					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].vert_buffer.buf )
+					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].buf )
 				Else
 					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
-					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].vert_buffer.buf,GL_DYNAMIC_DRAW)
+					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].buf,GL_DYNAMIC_DRAW)
 				Endif
 				
 			Else

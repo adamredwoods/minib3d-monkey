@@ -1,6 +1,9 @@
 Import minib3d
 Import minib3d.tmesh
 
+'' NOTES:
+'' -- sprites default on TexBlend=3 (additive blend)
+
 Class TSprite Extends TMesh
 
 	Field angle#

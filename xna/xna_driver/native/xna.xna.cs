@@ -750,15 +750,15 @@ public class XNAMesh
 {
     public struct VERTEX : IVertexType
     {
-        public Vector4 Position;
+        //public Vector4 Position;
         public Vector4 Normal;
         public Vector4 Color;
         public Vector2 TextureCoordinate0;
         public Vector2 TextureCoordinate1;
 
-        public VERTEX(Vector4 pos, Vector4 norm, Vector4 color, Vector2 tex0, Vector2 tex1)
+        public VERTEX( Vector4 norm, Vector4 color, Vector2 tex0, Vector2 tex1)
         {
-            Position = pos;
+            //Position = pos;
             Normal = norm;
             Color = color;
             TextureCoordinate0 = tex0;
@@ -767,7 +767,8 @@ public class XNAMesh
 		
         public readonly static VertexDeclaration VertexDeclaration = new VertexDeclaration
         (
-            new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
+			VERTEXSIZE,
+            //new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0),
             new VertexElement(16, VertexElementFormat.Vector3, VertexElementUsage.Normal, 0),
             new VertexElement(32, VertexElementFormat.Vector4, VertexElementUsage.Color, 0),
             new VertexElement(48, VertexElementFormat.Vector2, VertexElementUsage.TextureCoordinate, 0),
@@ -776,12 +777,58 @@ public class XNAMesh
 
         VertexDeclaration IVertexType.VertexDeclaration { get { return VertexDeclaration; } }        
     };
+	
+	// VERTEXMESH
+	// use with the same dataset as VERTEX
+	
+	public struct VERTEXMESH : IVertexType
+    {
+        public Vector4 Position;
+		
+        public VERTEXMESH(Vector4 pos)
+        {
+            Position = pos;
+
+        }
+		
+        public readonly static VertexDeclaration VertexDeclaration = new VertexDeclaration
+        (	
+			VERTEXSIZE,
+            new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0)
+        );
+
+        VertexDeclaration IVertexType.VertexDeclaration { get { return VertexDeclaration; } }        
+    };
+	
+	// VERTEXANIM
+	// tightly packed vector3 floats
+	
+	public struct VERTEXANIM : IVertexType
+    {
+        public Vector4 Position;
+		
+        public VERTEXANIM(Vector4 pos)
+        {
+            Position = pos;
+
+        }
+		
+        public readonly static VertexDeclaration VertexDeclaration = new VertexDeclaration
+        (	
+			VERTEXANIMSIZE,
+            new VertexElement(0, VertexElementFormat.Vector3, VertexElementUsage.Position, 0)
+        );
+
+        VertexDeclaration IVertexType.VertexDeclaration { get { return VertexDeclaration; } }        
+    };
 
     public const int VERTEXSIZE = 64;
     public const int INDEXSIZE = 2;
-
+	public const int VERTEXANIMSIZE = 12;
+	
 	public GraphicsDevice _device;
     public VertexBuffer _vBuffer;
+	public VertexBuffer _mBuffer;
     public IndexBuffer _iBuffer;
     public short[] _iData;
 	public byte[] _vData;
@@ -805,38 +852,71 @@ public class XNAMesh
             if (_vBuffer != null)
             {
                 _vBuffer.Dispose();
+				_mBuffer.Dispose();
             }
-			if (false) { //flags==0) {
-				_vBuffer = new VertexBuffer(_device, typeof(VERTEX), count, BufferUsage.WriteOnly);
+			
+			_vBuffer = new DynamicVertexBuffer(_device, VERTEX.VertexDeclaration, count, BufferUsage.WriteOnly);
+			_dynamicMesh = true;
+			
+			if (flags > 1) {
+				_mBuffer = new DynamicVertexBuffer(_device, VERTEXANIM.VertexDeclaration, count, BufferUsage.WriteOnly);
 			} else {
-				_vBuffer = new DynamicVertexBuffer(_device, typeof(VERTEX), count, BufferUsage.WriteOnly);
-				_dynamicMesh = true;
+				_mBuffer = new DynamicVertexBuffer(_device, VERTEXMESH.VertexDeclaration, count, BufferUsage.WriteOnly);
+				
 			}
+	
         }
-        catch
+        catch(Exception ex)
         {
             _vboEnabled = false;
+			bb_std_lang.Print(ex.ToString() );
         }
     }
+/*
+	public void CreateMeshBuffer(int count, int flags)
+    {
+        try
+        {
+            _vboEnabled = true;
 
+            if (_vBuffer != null) _mBuffer.Dispose();
+
+			if (flags > 0) {
+				_mBuffer = new DynamicVertexBuffer(_device, VERTEXANIM.VertexDeclaration, count, BufferUsage.WriteOnly);
+			} else {
+				_mBuffer = new DynamicVertexBuffer(_device, VERTEXMESH.VertexDeclaration, count, BufferUsage.WriteOnly);
+			}
+			_dynamicMesh = true;
+	
+        }
+        catch(Exception ex)
+        {
+            _vboEnabled = false;
+			bb_std_lang.Print(ex.ToString() );
+        }
+    }*/
+	
     public void CreateIndexBuffer(int count, int flags)
     {
         try
         {
+			_vboEnabled = true;
+			
             if (_iBuffer != null)
             {
                 _iBuffer.Dispose();
             }
 			if (false) { //flags==0) {
-				_iBuffer = new IndexBuffer(_device, typeof(short), count, BufferUsage.WriteOnly);
+				//_iBuffer = new IndexBuffer(_device, typeof(short), count, BufferUsage.WriteOnly);
 			} else {
 				_iBuffer = new DynamicIndexBuffer(_device, typeof(short), count, BufferUsage.WriteOnly);
 				_dynamicMesh = true;
 			}
         }
-        catch
+        catch(Exception ex)
         {
             _vboEnabled = false;
+			bb_std_lang.Print(ex.ToString() );
         }
     }
 	
@@ -845,39 +925,14 @@ public class XNAMesh
     public void SetVertices(BBDataBuffer data, int count, int flags)
     {
         _vCnt = count;
-        //if (flags == 0) // Shawn Hargreaves said:  For dynamic geometry, you should use DrawUserPrimitives //or dynamicvertexbuffer
-        //{
+        // Shawn Hargreaves said:  For dynamic geometry, you should use DrawUserPrimitives //or dynamicvertexbuffer
+
 			
-            if (_vBuffer == null || _vBuffer.VertexCount != count)
-            {
-                CreateVertexBuffer(count, flags);
-            }
-        //} else if (flags== 1)
-		//{
-			//_dynamicMesh = true;
-		//}
+		if (_vBuffer == null || _vBuffer.VertexCount != count  )
+		{
+			CreateVertexBuffer(count, flags);
+		}
 
-        if (_vData == null || _vData.Length != count)
-        {
-            //_vData = new VERTEX[count];
-			//Buffer.BlockCopy(data._data, 0, _vData, 0, count*64);
-
-        }
-
-        // _vBuffer.SetData<float> does not work funnily enough, so always use VERTEX[]
-        // since VBOs are only used for static meshes, there's no problem
-        // TEST: Converting VerteDataBuffer to VERTEX(currently based on float, makes also a second copy unnecessary )
-		/*
-        for (int i = 0; i < count; ++i)
-        {
-            _vData[i] = new VERTEX(
-                new Vector4(data.VertexX(i), data.VertexY(i), data.VertexZ(i), 1),
-                new Vector4(data.VertexNX(i), data.VertexNY(i), data.VertexNZ(i), 1),
-                new Vector4(data.VertexR(i), data.VertexG(i), data.VertexB(i), data.VertexA(i)),
-                new Vector2(data.VertexU(i, 0), data.VertexV(i, 0)),
-                new Vector2(data.VertexU(i, 1), data.VertexV(i, 1)));
-        }
-		*/
 		
 		_vData = data._data;
 		
@@ -885,12 +940,43 @@ public class XNAMesh
         {
 			if(_dynamicMesh) {
 				DynamicVertexBuffer dvb = _vBuffer as DynamicVertexBuffer;
-				if (dvb != null) dvb.SetData<byte>(data._data, 0, count *VERTEXSIZE, SetDataOptions.Discard); //keeps tile rendering ok
-			} else {
+
+				if (dvb != null) {
+					dvb.SetData<byte>(data._data, 0, count*VERTEXSIZE, SetDataOptions.Discard); //keeps tile rendering ok
+				}
+			} 
+			else {
 				_vBuffer.SetData<byte>(data._data, 0, count *VERTEXSIZE);
-			//_vBuffer.SetData<VERTEX>(_vData, 0, count );
+				//_vBuffer.SetData<VERTEX>(_vData, 0, count );
 			}
         }
+    }
+	
+	public void SetVerticesPosition(BBDataBuffer data, int count, int flags)
+    {
+        _vCnt = count;
+
+		if (_mBuffer == null || _mBuffer.VertexCount != count )
+		{
+			CreateVertexBuffer(count, flags); //will this dump out _vBuffer?
+			//CreateMeshBuffer(count, flags);
+		}
+		
+        if (_vboEnabled)
+        {
+
+			DynamicVertexBuffer dvm = _mBuffer as DynamicVertexBuffer;
+			if (dvm != null) {
+				if (flags >1) {
+					dvm.SetData<byte>(data._data, 0, count*VERTEXANIMSIZE, SetDataOptions.Discard);
+				} else {
+					dvm.SetData<byte>(data._data, 0, count*VERTEXSIZE, SetDataOptions.Discard);
+				}
+			}
+			
+        } else {
+			_mBuffer.SetData<byte>(data._data, 0, count *VERTEXSIZE);
+		}
     }
 
     public void SetIndices(BBDataBuffer data, int count, int flags)
@@ -898,21 +984,10 @@ public class XNAMesh
         // use short[] istead of DataBuffer in miniB3d, 
 		// then data is not needed to be copied
         _iCnt = count;
-        if (_iData == null || _iData.Length != count)
-        {
-           // _iData = new short[count];
-			
-        }
-		
-		/*
-        for( int i = 0; i< count; ++i)
-        {
-            _iData[i] = (short)data.PeekShort(i*2);
-        }
-		*/
+
         
 		//_iData = Array.ConvertAll(data._data, b => (short)b);
-		
+
 		_iData = new short[count];
 		Buffer.BlockCopy(data._data, 0, _iData, 0, count*2);
 		
@@ -927,7 +1002,8 @@ public class XNAMesh
 			if(_dynamicMesh) {
 				DynamicIndexBuffer dvi = _iBuffer as DynamicIndexBuffer;
 				if (dvi != null) dvi.SetData<short>(_iData, 0, count, SetDataOptions.Discard );
-			} else {
+			} 
+			else {
 				_iBuffer.SetData<short>(_iData, 0, count); 
 			}
         }
@@ -955,8 +1031,16 @@ public class XNAMesh
     {
         if (_vboEnabled)
         {
-            _device.Indices = _iBuffer;
-            _device.SetVertexBuffer(_vBuffer);
+			_device.Indices = _iBuffer;
+			
+
+				VertexBufferBinding[] vbBindings = new VertexBufferBinding[2];
+				vbBindings[0] = new VertexBufferBinding(_vBuffer, 0);
+				vbBindings[1] = new VertexBufferBinding(_mBuffer, 0);
+				
+				_device.SetVertexBuffers(vbBindings);
+
+
         }
     }
 

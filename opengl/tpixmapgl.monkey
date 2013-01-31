@@ -113,7 +113,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
-	
+
 		''simple average 4pixel
 		''softer
 		Local enlarge:Int=0
@@ -165,7 +165,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	End
 	
 	Method ResizePixmapNoSmooth:TPixmap(neww:Int, newh:Int)
-	
+
 		''no average, straight pixels better for fonts, details
 		''pixelation ok
 		Local enlarge:Int=0

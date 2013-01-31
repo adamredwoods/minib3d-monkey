@@ -22,11 +22,6 @@ Class TSurface
 	Field tris:ShortBuffer = New ShortBuffer
 	Field vert_data:VertexDataBuffer = New VertexDataBuffer 'interleaved
 	
-	'Field vert_coords:FloatBuffer = New FloatBuffer
-	'Field vert_tex_coords0:FloatBuffer = New FloatBuffer
-	'Field vert_tex_coords1:FloatBuffer = New FloatBuffer
-	'Field vert_norm:FloatBuffer = New FloatBuffer
-	'Field vert_col:FloatBuffer = New FloatBuffer
 	
 	' arrays containing vertex bone no and weights info - used by animated meshes only
 	
@@ -45,7 +40,7 @@ Class TSurface
 
 	' vertex animation coords per frame
 	' not copied in tsurface, but in tmesh
-	Field vert_anim:TVertexAnim[] ''surf.vert_anim array should be null until it is set by BoneToVertexAnimation
+	Field vert_anim:TVertexAnim[] ''surf.vert_anim array should be null until it is set
 	Field anim_frame:Int=0 ''current frame array index
 
 	' brush applied to surface
@@ -96,7 +91,7 @@ Class TSurface
 	
 		TRender.render.FreeVBO(Self)
 		no_verts=0; no_tris=0
-		tris=Null; vert_data=null
+		tris=Null; vert_data=Null
 			
 	End 
 	
@@ -124,11 +119,7 @@ Class TSurface
 		
 		surf.tris=CopyShortBuffer(tris, ShortBuffer.Create(no_tris*3) )
 		surf.vert_data=CopyDataBuffer(vert_data, VertexDataBuffer.Create(no_verts) )
-		'surf.vert_coords=CopyFloatBuffer(vert_coords, FloatBuffer.Create(no_verts*3) )
-		'surf.vert_tex_coords0=CopyFloatBuffer(vert_tex_coords0, FloatBuffer.Create(no_verts*2) )
-		'surf.vert_tex_coords1=CopyFloatBuffer(vert_tex_coords1, FloatBuffer.Create(no_verts*2) )
-		'surf.vert_norm=CopyFloatBuffer(vert_norm, FloatBuffer.Create(no_verts*3) )
-		'surf.vert_col=CopyFloatBuffer(vert_col, FloatBuffer.Create(no_verts*4) )
+
 		
 		surf.vert_bone1_no=vert_bone1_no[..]
 		surf.vert_bone2_no=vert_bone2_no[..]
@@ -188,11 +179,6 @@ Class TSurface
 			no_verts=0
 			
 			vert_data=VertexDataBuffer.Create(0)
-			'vert_coords=FloatBuffer.Create(0)
-			'vert_tex_coords0=FloatBuffer.Create(0)
-			'vert_tex_coords1=FloatBuffer.Create(0)
-			'vert_norm=FloatBuffer.Create(0)
-			'vert_col=FloatBuffer.Create(0)
 			
 			vert_array_size=1
 		
@@ -221,11 +207,7 @@ Class TSurface
 		If no_verts<1 And no_tris<1 Then Return
 	
 		vert_data= CopyDataBuffer(vert_data, VertexDataBuffer.Create(no_verts) )
-		'vert_coords= CopyFloatBuffer(vert_coords, FloatBuffer.Create(no_verts*3) )
-		'vert_tex_coords0= CopyFloatBuffer(vert_tex_coords0, FloatBuffer.Create(no_verts*2) )
-		'vert_tex_coords1= CopyFloatBuffer(vert_tex_coords1, FloatBuffer.Create(no_verts*2) )
-		'vert_norm= CopyFloatBuffer(vert_norm, FloatBuffer.Create(no_verts*3) )
-		'vert_col= CopyFloatBuffer(vert_col, FloatBuffer.Create(no_verts*4) )
+
 		tris=CopyShortBuffer(tris, ShortBuffer.Create(no_tris*3) )
 		
 		vert_array_size = no_verts
@@ -250,11 +232,7 @@ Class TSurface
 			Local vas=vert_array_size
 		
 			vert_data= CopyDataBuffer(vert_data, VertexDataBuffer.Create(vas) )
-			'vert_coords= CopyFloatBuffer(vert_coords, FloatBuffer.Create(vas*3) )
-			'vert_tex_coords0= CopyFloatBuffer(vert_tex_coords0, FloatBuffer.Create(vas*2) )
-			'vert_tex_coords1= CopyFloatBuffer(vert_tex_coords1, FloatBuffer.Create(vas*2) )
-			'vert_norm= CopyFloatBuffer(vert_norm, FloatBuffer.Create(vas*3) )
-			'vert_col= CopyFloatBuffer(vert_col, FloatBuffer.Create(vas*4) )
+
 	
 		Endif
 
@@ -326,20 +304,14 @@ Class TSurface
 
 		vert_data.PokeVertCoords(vid,x,y,-z)
 
-		
 		' mesh shape has changed - update reset flag
 		reset_vbo = reset_vbo|1
 	
 	End 
 			
 	Method VertexColor(vid,r#,g#,b#,a#=1.0)
-	
-		'vid=vid*4
+
 		vert_data.PokeColor(vid,r* inverse_255,g* inverse_255,b* inverse_255,a)
-		'vert_col.Poke(vid,r * inverse_255)
-		'vert_col.Poke(vid+1,g * inverse_255)
-		'vert_col.Poke(vid+2,b * inverse_255)
-		'vert_col.Poke(vid+3,a)
 		
 		' mesh state has changed - update reset flags
 		reset_vbo = reset_vbo|8
@@ -348,12 +320,7 @@ Class TSurface
 	
 	Method VertexColorFloat(vid,r#,g#,b#,a#=1.0)
 	
-		'vid=vid*4
 		vert_data.PokeColor(vid,r,g,b,a)
-		'vert_col.Poke(vid,r)
-		'vert_col.Poke(vid+1,g)
-		'vert_col.Poke(vid+2,b)
-		'vert_col.Poke(vid+3,a)
 		
 		' mesh state has changed - update reset flags
 		reset_vbo = reset_vbo|8
@@ -361,12 +328,8 @@ Class TSurface
 	End
 	
 	Method VertexNormal(vid,nx#,ny#,nz#)
-	
-		'vid=vid*3
+
 		vert_data.PokeNormals(vid,nx,ny,-nz)
-		'vert_norm.Poke(vid,nx)
-		'vert_norm.Poke(vid+1,ny)
-		'vert_norm.Poke(vid+2,-nz) ' ***ogl***
 		
 		' mesh state has changed - update reset flags
 		reset_vbo = reset_vbo|4
@@ -374,20 +337,14 @@ Class TSurface
 	End 
 	
 	Method VertexTexCoords(vid,u#,v#,w#=0.0,coord_set=0)
-	
-		'vid=vid*2
 		
 		If coord_set=0
 			
 			vert_data.PokeTexCoords0(vid,u,v)
-			'vert_tex_coords0.Poke(vid,u)
-			'vert_tex_coords0.Poke(vid+1,v)
 
 		Elseif coord_set=1
 			
 			vert_data.PokeTexCoords1(vid,u,v)
-			'vert_tex_coords1.Poke(vid,u)
-			'vert_tex_coords1.Poke(vid+1,v)
 		
 		Endif
 		
@@ -400,86 +357,72 @@ Class TSurface
 	Method VertexX#(vid)
 		
 		Return vert_data.VertexX(vid)
-		'Return vert_coords.Peek(vid*3)
 
 	End 
 
 	Method VertexY#(vid)
 		
 		Return vert_data.VertexY(vid)
-		'Return vert_coords.Peek((vid*3)+1)
 
 	End 
 	
 	Method VertexZ#(vid)
 		
-		Return -vert_data.VertexZ(vid)
-		'Return -vert_coords.Peek((vid*3)+2) ' ***ogl***
+		Return -vert_data.VertexZ(vid)' ***ogl***
 
 	End 
 	
 	Method VertexRed#(vid)
 		
 		Return vert_data.VertexRed(vid)*255.0
-		'Return vert_col.Peek(vid*4)*255.0
 
 	End 
 	
 	Method VertexGreen#(vid)
 		
 		Return vert_data.VertexGreen(vid)*255.0
-		'Return vert_col.Peek((vid*4)+1)*255.0
 
 	End 
 	
 	Method VertexBlue#(vid)
 		
 		Return vert_data.VertexBlue(vid)*255.0
-		'Return vert_col.Peek((vid*4)+2)*255.0
 
 	End Method
 	
 	Method VertexAlpha#(vid)
 		
 		Return vert_data.VertexAlpha(vid)*255.0
-		'Return vert_col.Peek((vid*4)+3)
 
 	End 
 	
 	Method VertexNX#(vid)
 		
 		Return vert_data.VertexNX(vid)
-		'Return vert_norm.Peek(vid*3)
 
 	End 
 	
 	Method VertexNY#(vid)
 		
 		Return vert_data.VertexNY(vid)
-		'Return vert_norm.Peek((vid*3)+1)
 
 	End 
 	
 	Method VertexNZ#(vid)
 		
-		Return -vert_data.VertexNZ(vid)
-		'Return -vert_norm.Peek((vid*3)+2) ' ***ogl***
+		Return -vert_data.VertexNZ(vid)' ***ogl***
 
 	End 
 	
 	Method VertexU#(vid:Int ,coord_set=0)
 		
 		Return vert_data.VertexU(vid,coord_set)
-		'If coord_set=0 Then Return vert_tex_coords0.Peek(vid*2)
-		'If coord_set=1 Then Return vert_tex_coords1.Peek(vid*2)
 
 	End 
 	
 	Method VertexV#(vid,coord_set=0)
 		
 		Return vert_data.VertexV(vid,coord_set)
-		'If coord_set=0 Then Return vert_tex_coords0.Peek((vid*2)+1)
-		'If coord_set=1 Then Return vert_tex_coords1.Peek((vid*2)+1)
 
 	End 
 	
@@ -494,25 +437,11 @@ Class TSurface
 	'' --returns vertex id
 	Method TriangleVertex:Int(tri_no:Int,corner:Int)
 		
-		'Local vid:Int[3]
-		
-		'tri_no=(tri_no+1)*3
-		'vid[0]=tris.Peek(tri_no-1)
-		'vid[1]=tris.Peek(tri_no-2)
-		'vid[2]=tris.Peek(tri_no-3)
-			
-		'Return vid[corner]
-		
 		Return tris.Peek( tri_no*3+(2-corner) )
 	End
 	
 	Method GetVertexCoords:Vector(vert_no:Int)
 		
-		'Local vx# = vert_data.VertexX(vert_no) 'vert_coords.Peek(vert_no*3+0)
-		'Local vy# = vert_data.VertexY(vert_no) 'vert_coords.Peek(vert_no*3+1)
-		'Local vz# = -vert_data.VertexZ(vert_no) '-vert_coords.Peek(vert_no*3+2)
-		
-		'Return New Vector(vx, vy, vz)
 		Return vert_data.PeekVertCoords(vert_no)
 	End
 		
@@ -574,9 +503,7 @@ Class TSurface
 				norm = norm.Normalize()
 				
 				vert_data.PokeNormals(v,norm.x,norm.y,norm.z)
-				'vert_norm.Poke(v*3+0,norm.x)
-				'vert_norm.Poke(v*3+1,norm.y)
-				'vert_norm.Poke(v*3+2,norm.z)
+
 			Endif
 			
 		Next
@@ -641,17 +568,17 @@ Class TSurface
 		
 	End 
 	
-	Method UpdateVBO() ''--deprecated
+	'Method UpdateVBO() ''--deprecated
 		
-		'OpenglES11.render.UpdateVBO(Self)
+		'TRender.render.UpdateVBO(Self)
 		
-	End 
+	'End 
 	
-	Method FreeVBO() ''--deprecated
+	'Method FreeVBO() ''--deprecated
 		
-		'OpenglES11.render.FreeVBO(Self)
+		'TRender.render.FreeVBO(Self)
 	
-	End 
+	'End 
 	
 	' removes a tri from a surface
 	Method RemoveTri(tri)
@@ -752,11 +679,7 @@ Class TSurface
 		''replace surface
 		tris = new_surf.tris
 		vert_data = new_surf.vert_data
-		'vert_coords = new_surf.vert_coords
-		'vert_tex_coords0 = new_surf.vert_tex_coords0
-		'vert_tex_coords1 = new_surf.vert_tex_coords1
-		'vert_norm = new_surf.vert_norm
-		'vert_col = new_surf.vert_col
+
 		
 		vert_array_size = new_surf.vert_array_size
 		no_verts = total
