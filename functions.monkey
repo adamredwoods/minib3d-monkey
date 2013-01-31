@@ -617,7 +617,7 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=EntityParent">Online Help</a>
 #End 
-Function EntityParent(ent:TEntity,parent_ent:TEntity,glob:Int=True)
+Function EntityParent(ent:TEntity,parent_ent:TEntity,glob:Bool=True)
 	ent.EntityParent(parent_ent,glob)
 End 
 
