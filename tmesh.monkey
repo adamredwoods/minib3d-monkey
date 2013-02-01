@@ -83,7 +83,7 @@ Class TMesh Extends TEntity
 		mesh.surf_list=surf_list
 		
 		' copy anim surf list
-		mesh.anim_surf = CopyAnimSurfs()
+		mesh.anim_surf = Self.CopyAnimSurfs()
 		
 		mesh.col_tree=col_tree
 	
@@ -111,11 +111,7 @@ Class TMesh Extends TEntity
 			
 					
 			' copy vertex, full copy
-			'If fullcopy
-				new_surf[id] = anim_surf2.Copy()
-			'Else
-				'new_surf[id] = New TSurface
-			'Endif
+			new_surf[id] = anim_surf2.Copy()
 			
 			new_surf[id].no_verts=anim_surf2.no_verts
 			
@@ -125,10 +121,10 @@ Class TMesh Extends TEntity
 			new_surf[id].vmin=anim_surf2.vmin
 			new_surf[id].vmax=anim_surf2.vmax
 			
-			surf.surf_id = anim_surf2.surf_id
+			new_surf[id].surf_id = anim_surf2.surf_id
 
-			surf.vbo_dyn=anim_surf2.vbo_dyn
-			surf.alpha_enable=anim_surf2.alpha_enable
+			new_surf[id].vbo_dyn=anim_surf2.vbo_dyn
+			new_surf[id].alpha_enable=anim_surf2.alpha_enable
 			
 			new_surf[id].reset_vbo=-1 ' (-1 = all)
 			
