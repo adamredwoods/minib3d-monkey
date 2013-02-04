@@ -395,7 +395,7 @@ Class TBatchSprite Extends TSprite
 		''
 		''add a parent to the entire batch mesh
 		''-- position only
-		Function BatchSpriteParent(id:Int=0, ent:TEntity,glob:Int=True)
+		Function BatchSpriteParent( id:Int=0, ent:TEntity, glob:Bool=True )
 			
 			If id = 0 Then id = total_batch
 			If id = 0 Then Return
