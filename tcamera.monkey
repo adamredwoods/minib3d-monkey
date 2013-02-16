@@ -6,6 +6,8 @@ Import minib3d.math.matrix
 '' - will need a new gluProject()
 '' -created a CameraLayer() mode, to isolate individual objects and their children from being rendered only by certain cameras
 '' -  camera should maintain its own MVP matrices
+'' - view matrix and mod matrix are the same thing
+'' - projview matrix is created in Update()
 
 Class TCamera Extends TEntity
 
@@ -176,7 +178,6 @@ Class TCamera Extends TEntity
 		inv_zoom = 1.0/zoom_val
 		fov_y =ATan(1.0/(zoom*(Float(vwidth)/vheight)))*2.0
 		
-		
 	End
 	
 	Method CameraProjMode(mode:Int=1)
@@ -280,38 +281,33 @@ Class TCamera Extends TEntity
 		
 	Method ExtractFrustum()
 
-		Local proj#[] = proj_mat.ToArray()
-		Local modl#[] = mod_mat.ToArray()
-		Local clip#[16]
+		'Local proj#[] = proj_mat.ToArray()
+		'Local modl#[] = mod_mat.ToArray()
+		Local clip#[] = projview_mat.ToArray() '[16]"
 		Local t#
 		
-		' Get the current PROJECTION matrix from OpenGL
-		'glGetFloatv( GL_PROJECTION_MATRIX, proj )
-		
-		' Get the current MODELVIEW matrix from OpenGL
-		'glGetFloatv( GL_MODELVIEW_MATRIX, modl )
 		
 
 		' Combine the two matrices (multiply projection by modelview)
-		clip[ 0] = modl[ 0] * proj[ 0] + modl[ 1] * proj[ 4] + modl[ 2] * proj[ 8] + modl[ 3] * proj[12]
-		clip[ 1] = modl[ 0] * proj[ 1] + modl[ 1] * proj[ 5] + modl[ 2] * proj[ 9] + modl[ 3] * proj[13]
-		clip[ 2] = modl[ 0] * proj[ 2] + modl[ 1] * proj[ 6] + modl[ 2] * proj[10] + modl[ 3] * proj[14]
-		clip[ 3] = modl[ 0] * proj[ 3] + modl[ 1] * proj[ 7] + modl[ 2] * proj[11] + modl[ 3] * proj[15]
+		'clip[ 0] = modl[ 0] * proj[ 0] + modl[ 1] * proj[ 4] + modl[ 2] * proj[ 8] + modl[ 3] * proj[12]
+		'clip[ 1] = modl[ 0] * proj[ 1] + modl[ 1] * proj[ 5] + modl[ 2] * proj[ 9] + modl[ 3] * proj[13]
+		'clip[ 2] = modl[ 0] * proj[ 2] + modl[ 1] * proj[ 6] + modl[ 2] * proj[10] + modl[ 3] * proj[14]
+		'clip[ 3] = modl[ 0] * proj[ 3] + modl[ 1] * proj[ 7] + modl[ 2] * proj[11] + modl[ 3] * proj[15]
 		
-		clip[ 4] = modl[ 4] * proj[ 0] + modl[ 5] * proj[ 4] + modl[ 6] * proj[ 8] + modl[ 7] * proj[12]
-		clip[ 5] = modl[ 4] * proj[ 1] + modl[ 5] * proj[ 5] + modl[ 6] * proj[ 9] + modl[ 7] * proj[13]
-		clip[ 6] = modl[ 4] * proj[ 2] + modl[ 5] * proj[ 6] + modl[ 6] * proj[10] + modl[ 7] * proj[14]
-		clip[ 7] = modl[ 4] * proj[ 3] + modl[ 5] * proj[ 7] + modl[ 6] * proj[11] + modl[ 7] * proj[15]
+		'clip[ 4] = modl[ 4] * proj[ 0] + modl[ 5] * proj[ 4] + modl[ 6] * proj[ 8] + modl[ 7] * proj[12]
+		'clip[ 5] = modl[ 4] * proj[ 1] + modl[ 5] * proj[ 5] + modl[ 6] * proj[ 9] + modl[ 7] * proj[13]
+		'clip[ 6] = modl[ 4] * proj[ 2] + modl[ 5] * proj[ 6] + modl[ 6] * proj[10] + modl[ 7] * proj[14]
+		'clip[ 7] = modl[ 4] * proj[ 3] + modl[ 5] * proj[ 7] + modl[ 6] * proj[11] + modl[ 7] * proj[15]
 		
-		clip[ 8] = modl[ 8] * proj[ 0] + modl[ 9] * proj[ 4] + modl[10] * proj[ 8] + modl[11] * proj[12]
-		clip[ 9] = modl[ 8] * proj[ 1] + modl[ 9] * proj[ 5] + modl[10] * proj[ 9] + modl[11] * proj[13]
-		clip[10] = modl[ 8] * proj[ 2] + modl[ 9] * proj[ 6] + modl[10] * proj[10] + modl[11] * proj[14]
-		clip[11] = modl[ 8] * proj[ 3] + modl[ 9] * proj[ 7] + modl[10] * proj[11] + modl[11] * proj[15]
+		'clip[ 8] = modl[ 8] * proj[ 0] + modl[ 9] * proj[ 4] + modl[10] * proj[ 8] + modl[11] * proj[12]
+		'clip[ 9] = modl[ 8] * proj[ 1] + modl[ 9] * proj[ 5] + modl[10] * proj[ 9] + modl[11] * proj[13]
+		'clip[10] = modl[ 8] * proj[ 2] + modl[ 9] * proj[ 6] + modl[10] * proj[10] + modl[11] * proj[14]
+		'clip[11] = modl[ 8] * proj[ 3] + modl[ 9] * proj[ 7] + modl[10] * proj[11] + modl[11] * proj[15]
 		
-		clip[12] = modl[12] * proj[ 0] + modl[13] * proj[ 4] + modl[14] * proj[ 8] + modl[15] * proj[12]
-		clip[13] = modl[12] * proj[ 1] + modl[13] * proj[ 5] + modl[14] * proj[ 9] + modl[15] * proj[13]
-		clip[14] = modl[12] * proj[ 2] + modl[13] * proj[ 6] + modl[14] * proj[10] + modl[15] * proj[14]
-		clip[15] = modl[12] * proj[ 3] + modl[13] * proj[ 7] + modl[14] * proj[11] + modl[15] * proj[15]
+		'clip[12] = modl[12] * proj[ 0] + modl[13] * proj[ 4] + modl[14] * proj[ 8] + modl[15] * proj[12]
+		'clip[13] = modl[12] * proj[ 1] + modl[13] * proj[ 5] + modl[14] * proj[ 9] + modl[15] * proj[13]
+		'clip[14] = modl[12] * proj[ 2] + modl[13] * proj[ 6] + modl[14] * proj[10] + modl[15] * proj[14]
+		'clip[15] = modl[12] * proj[ 3] + modl[13] * proj[ 7] + modl[14] * proj[11] + modl[15] * proj[15]
 	
 		
 		
@@ -414,7 +410,7 @@ Class TCamera Extends TEntity
 			
 			'' radius - apply entity scale
 			
-			Local gs:Float = Max(Max(ent.gsx,ent.gsy),ent.gsz) ''optimizing ABS()
+			Local gs:Float = Max(Max(ent.gsx,ent.gsy),ent.gsz)
 			radius = radius*gs
 			If radius<0.0 Then radius=-radius
 			
@@ -424,29 +420,20 @@ Class TCamera Extends TEntity
 
 		Local d#
 	
-		If ent.frustum_cache<>0
-			Local fc% = ent.frustum_cache-1
-			d = frustum[fc][0] * x + frustum[fc][1] * y + frustum[fc][2] * -z + frustum[fc][3]
-			If d <= -radius Then Return 0
-			
-		Endif	
-		
-		ent.frustum_cache = 0
 		
 		d = frustum[0][0] * x + frustum[0][1] * y + frustum[0][2] * -z + frustum[0][3]
-		If d <= -radius Then ent.frustum_cache = 1 ; Return 0	
+		If d <= -radius Then Return 0	
 		d = frustum[1][0] * x + frustum[1][1] * y + frustum[1][2] * -z + frustum[1][3]
-		If d <= -radius Then ent.frustum_cache = 2 ; Return 0
+		If d <= -radius Then Return 0
 		d = frustum[2][0] * x + frustum[2][1] * y + frustum[2][2] * -z + frustum[2][3]
-		If d <= -radius Then ent.frustum_cache = 3 ; Return 0
+		If d <= -radius Then Return 0
 		d = frustum[3][0] * x + frustum[3][1] * y + frustum[3][2] * -z + frustum[3][3]
-		If d <= -radius Then ent.frustum_cache = 4 ; Return 0
+		If d <= -radius Then Return 0
 		d = frustum[4][0] * x + frustum[4][1] * y + frustum[4][2] * -z + frustum[4][3]
-		If d <= -radius Then ent.frustum_cache = 5 ; Return 0
+		If d <= -radius Then Return 0
 		d = frustum[5][0] * x + frustum[5][1] * y + frustum[5][2] * -z + frustum[5][3]
-		If d <= -radius Then ent.frustum_cache = 6 ; Return 0
+		If d <= -radius Then Return 0
 
-		
 		
 		Return d + radius
 	
@@ -462,7 +449,7 @@ Class TCamera Extends TEntity
 		'Local jy#=0 'TGlobal.j[TGlobal.jitter][1]	
 		'If TGlobal.aa=False Then jx=0;jy=0
 
-
+		
 		accPerspective(fov_y,range_near,range_far,0,0)
 
 		'mod_mat = LoadIndentity()
@@ -529,6 +516,7 @@ Class TCamera Extends TEntity
 			proj_mat.grid[1][3] = 0.0
 			proj_mat.grid[2][3] = -1.0
 			proj_mat.grid[3][3] = 0.0
+
 		Else If proj_mode = 2
 			'testdata=[1,left_+dx,right_+dx,bottom+dy,top+dy,zNear,zFar]
 			'glOrthof(left_+dx,right_+dx,bottom+dy,top+dy,zNear,zFar)

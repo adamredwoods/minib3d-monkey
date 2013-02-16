@@ -9,7 +9,8 @@ Import minib3d
 '	TRender.render.Graphicsinit(flags)
 'End
 
-
+''Method DeleteTexture(glid:Int[]) Abstract  '' **** DEPRECATE THIS ****** (use DeleteTexture(tx:Texture))
+'' and update BindTextureStack()
 
 Class TRender
 
@@ -21,12 +22,13 @@ Class TRender
 
 	Global render:TRender
 	Global vbo_enabled:Bool=False ' this is set in GraphicsInit - will be set to true if USE_VBO is true and the hardware supports vbos
+	Global MAX_TEXTURES:Int = 3
 	
 	Global shader_enabled:Bool = False
 	
 	Global width:Int,height:Int,mode:Int,depth:Int,rate:Int
 	
-	Global wireframe:int=False ''draw meshes as lines or filled
+	Global wireframe:Int=False ''draw meshes as lines or filled
 	Global disable_lighting:Bool = False ''turns off light shading, renders full color
 	
 	Global alpha_pass:Int = 0 ''for optimizing the TMesh render routine
@@ -43,7 +45,7 @@ Class TRender
 	
 	Public
 	
-	
+	'Method ContextReady:Bool() Abstract ''must return true when ready to render
 	Method GetVersion:Float() Abstract ''returns version of graphics platform being used
 	
 	Method Reset:Void() Abstract ''reset, called before render for each camera
@@ -57,7 +59,9 @@ Class TRender
 
 	
 	Method BindTexture:TTexture(tex:TTexture,flags:Int) Abstract
-	Method DeleteTexture(glid:Int[]) Abstract
+	Method DeleteTexture(glid:Int[]) Abstract  '' **** DEPRECATE THIS ******
+	Method DeleteTexture(tex:TTexture)
+	End
 	
 	Method UpdateLight(cam:TCamera, light:TLight) Abstract
 	Method DisableLight(light:TLight) Abstract
@@ -160,7 +164,7 @@ Class TRender
 					
 						TAnimation.AnimateVertex(mesh,mesh.anim_time,first,last)
 						
-					Elseif mesh.anim >=4
+					Elseif mesh.anim =4
 						
 						TBone.UpdateBoneChildren( mesh)
 						
@@ -221,6 +225,8 @@ Class TRender
 	
 	Function  RenderWorld:Void()
 		
+		'If Not TRender.render.ContextReady() Then Return
+		
 		''process texture binds
 		TRender.render.BindTextureStack()		
 		
@@ -260,6 +266,7 @@ Class TRender
 	
 	Function RenderDrawList:Void()
 
+		'If draw_list.IsEmpty Or Not TRender.render.ContextReady() Then Return
 		If draw_list.IsEmpty Then Return
 		
 		TRender.render.SetDrawShader()
@@ -311,7 +318,7 @@ Class TRender
 	
 	Method RenderCamera:Void(cam:TCamera, skip:Int=0)
 			
-		Reset() ''reset render pass
+		TRender.render.Reset() ''reset render pass
 		
 
 		'' use skip to render without updating camera
@@ -360,12 +367,12 @@ Class TRender
 		
 				' Perform frustum cull
 				
-				Local inview:Int =cam.EntityInFrustum(mesh)
+				Local inview:Float =cam.EntityInFrustum(mesh)
 				
 'Print "// mesh "+mesh.classname+" "+inview	
 'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
 
-				If inview
+				If inview > 0.00001
 				
 					wireframe = wireframe | mesh.wireframe
 					
