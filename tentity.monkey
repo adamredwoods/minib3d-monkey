@@ -3,8 +3,8 @@ Import minib3d.math.matrix
 Import monkey.math
 Import minib3d.tbone
 
-
-''NOTES:
+#rem
+'' NOTES:
 '' - use EntityListAdd()
 '' - test transform point, using different global matrix approach, not sure if needed or not
 '' - added CollisionSetup(type,picktype,x, [y,z,w,d,h]) for faster setup
@@ -13,6 +13,10 @@ Import minib3d.tbone
 '' -- note: loc_mat is not updated if parent transformations... use px,py,pz,rx,ry,rz
 
 '' --pitch is flipped, z pos is flipped
+
+Field anim_render:Int ' true to render as anim mesh, false = static ''**** DEPRECATE THIS SOON! use anim=0 to check for anim
+
+#end
 
 Const FXFLAG_NONE% = 0
 Const FXFLAG_FULLBRIGHT% = 1
@@ -55,8 +59,8 @@ Class TEntity
 	Field brush:TBrush=New TBrush
 	Field shader_brush:TShader ''don't forget to fill in copy, etc.
 
-	Field anim:Int ' =1 if mesh contains bone anim data, =2 if vertex anim data
-	Field anim_render:Int ' true to render as anim mesh
+	Field anim:Int ' =1 if mesh contains bone anim data, =2 if vertex anim data, =0 for none or bone program
+	Field anim_render:Int ' true to render as anim mesh, false = static ''**** DEPRECATE THIS SOON!
 	Field anim_mode:Int
 	Field anim_time#
 	Field anim_speed#
@@ -82,7 +86,6 @@ Class TEntity
 	'' used by TCamera for camera layer
 	Field use_cam_layer:Bool = False
 	Field cam_layer:TCamera
-	Field frustum_cache:Int ''frustum cache
 		
 	''blitz3d functions-- can be deprecated
 	Global global_mat:Matrix = New Matrix
@@ -1591,24 +1594,9 @@ Class TEntity
 	End 
 
 	Method EntityType(type_no:Int ,recursive=False)
-	
 
-		' add to collision entity list if new type no<>0 and not previously added
-		If collision.type=0 And type_no<>0
-		
-			collision_pair.ListAddLast(Self, type_no)
-			
-		Endif
-		
-		' remove from collision entity list if new type no=0 and previously added
-		If collision.type<>0 And type_no=0
-			'ListRemove(TCollisionPair.ent_lists[type_no],Self)
-			collision_pair.ListRemove(Self,collision.type)
-		Endif
+		collision_pair.SetType(Self, type_no)
 
-
-		collision.type=type_no
-		
 		old_x=EntityX(True)
 		old_y=EntityY(True)
 		old_z=EntityZ(True)
@@ -1664,7 +1652,7 @@ Class TEntity
 	End 
 
 	'' NEW -- a faster way to setup collisions
-	Method CollisionSetup(type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, d:Float=0.0, h:Float=0.0)
+	Method CollisionSetup:Void(type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, d:Float=0.0, h:Float=0.0)
 		
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
@@ -1675,7 +1663,7 @@ Class TEntity
 			
 			If TMesh(Self)
 				If Not cull_radius Then TMesh(Self).GetBounds()
-				x = cull_radius * gsx
+				x = cull_radius * Max(Max(gsx,gsy),gsz)
 			Endif
 			
 		Endif

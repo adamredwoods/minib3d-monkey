@@ -11,7 +11,8 @@ Import minib3d.math.matrix
 '' - changed TreeCheck to CreateMeshTree() to reflect what its actually doing
 ''
 '' - need to move createtreemesh() routine to somewhere we can init it in OnCreate() rather than during click time
-'' - (limit of 65000 tris because of meshcollider packing)
+'' 
+'' - c_col_tree.tri_verts[] could be a floatbuffer for speed/better cache hits
 
 Class TColTree
 	
@@ -60,11 +61,14 @@ Class TColTree
 				
 			Next
 			
-	
+			
 			c_col_tree =  New MeshCollider(total_verts, total_tris) ''mesh_coll
 			
 			''combine all surfaces and vertex into one array
 			Local s:Int=0
+			Local temp_vec0:Vector = New Vector()
+			Local temp_vec1:Vector = New Vector()
+			Local temp_vec2:Vector = New Vector()
 			For Local surf:TSurface = Eachin mesh.surf_list
 				
 				s+=1
@@ -74,37 +78,53 @@ Class TColTree
 										
 				If no_tris<>0
 					
+					
+					
+					''SPEEDUP MOD 2/4/2013
 					'do vert coords first
-					For Local i:=0 To no_verts-1
+					'For Local i:=0 To no_verts-1
 						
-						c_col_tree.tri_verts[i+total_verts_count].x = surf.vert_data.VertexX(i) 'surf.vert_coords.Peek(i*3+0)
-						c_col_tree.tri_verts[i+total_verts_count].y = surf.vert_data.VertexY(i) 'surf.vert_coords.Peek(i*3+1)
-						c_col_tree.tri_verts[i+total_verts_count].z = -surf.vert_data.VertexZ(i) '-surf.vert_coords.Peek(i*3+2) ' negate z vert coords
+						'c_col_tree.tri_verts[i+total_verts_count].x = surf.vert_data.VertexX(i) 'surf.vert_coords.Peek(i*3+0)
+						'c_col_tree.tri_verts[i+total_verts_count].y = surf.vert_data.VertexY(i) 'surf.vert_coords.Peek(i*3+1)
+						'c_col_tree.tri_verts[i+total_verts_count].z = -surf.vert_data.VertexZ(i) '-surf.vert_coords.Peek(i*3+2) ' negate z vert coords
 						
-					Next
+					'Next
 				
 					' inc vert index
 					' per tri
 					For Local i:=0 To no_tris-1
-
-						Local v0:Int = surf.tris.Peek(i*3+0) + total_verts_count
-						Local v1:Int = surf.tris.Peek(i*3+1) + total_verts_count
-						Local v2:Int = surf.tris.Peek(i*3+2) + total_verts_count
+						
+						Local i3% = i*3
+						Local v0:Int = surf.tris.Peek(i3+0) '+ total_verts_count
+						Local v1:Int = surf.tris.Peek(i3+1) '+ total_verts_count
+						Local v2:Int = surf.tris.Peek(i3+2) '+ total_verts_count
 						
 						' reverse vert order
-						Local ti:Int = triindex*3
-						c_col_tree.tri_vix[ti+0]= v2
-						c_col_tree.tri_vix[ti+1]= v1
-						c_col_tree.tri_vix[ti+2]= v0				
-					
+						Local ti% = triindex*3
+						c_col_tree.tri_vix[ti+0]= v2 + total_verts_count
+						c_col_tree.tri_vix[ti+1]= v1 + total_verts_count
+						c_col_tree.tri_vix[ti+2]= v0 + total_verts_count			
+		
 						''Add to MeshCollider
 						
-						c_col_tree.tri_centres[triindex].x = c_col_tree.tri_verts[v0].x+c_col_tree.tri_verts[v1].x+c_col_tree.tri_verts[v2].x
-						c_col_tree.tri_centres[triindex].y = c_col_tree.tri_verts[v0].y+c_col_tree.tri_verts[v1].y+c_col_tree.tri_verts[v2].y
-						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_verts[v0].z+c_col_tree.tri_verts[v1].z+c_col_tree.tri_verts[v2].z
-						c_col_tree.tri_centres[triindex].x = c_col_tree.tri_centres[triindex].x*ONETHIRD
-						c_col_tree.tri_centres[triindex].y = c_col_tree.tri_centres[triindex].y*ONETHIRD
-						c_col_tree.tri_centres[triindex].z = c_col_tree.tri_centres[triindex].z*ONETHIRD
+						'c_col_tree.tri_centres[triindex].x = c_col_tree.tri_verts[v0].x+c_col_tree.tri_verts[v1].x+c_col_tree.tri_verts[v2].x
+						'c_col_tree.tri_centres[triindex].y = c_col_tree.tri_verts[v0].y+c_col_tree.tri_verts[v1].y+c_col_tree.tri_verts[v2].y
+						'c_col_tree.tri_centres[triindex].z = c_col_tree.tri_verts[v0].z+c_col_tree.tri_verts[v1].z+c_col_tree.tri_verts[v2].z
+						
+						''SPEEDUP MOD 2/4/2013
+						surf.vert_data.GetVertCoords(temp_vec0, v0); temp_vec0.z=-temp_vec0.z
+						surf.vert_data.GetVertCoords(temp_vec1, v1); temp_vec1.z=-temp_vec1.z
+						surf.vert_data.GetVertCoords(temp_vec2, v2); temp_vec2.z=-temp_vec2.z
+						c_col_tree.tri_verts[v0 + total_verts_count]=temp_vec0.Copy()
+						c_col_tree.tri_verts[v1 + total_verts_count]=temp_vec1.Copy()
+						c_col_tree.tri_verts[v2 + total_verts_count]=temp_vec2.Copy()
+						c_col_tree.tri_centres[triindex].x = (temp_vec0.x + temp_vec1.x + temp_vec2.x)*ONETHIRD
+						c_col_tree.tri_centres[triindex].y = (temp_vec0.y + temp_vec1.y + temp_vec2.y)*ONETHIRD
+						c_col_tree.tri_centres[triindex].z = (temp_vec0.z + temp_vec1.z + temp_vec2.z)*ONETHIRD
+						
+						'c_col_tree.tri_centres[triindex].x = c_col_tree.tri_centres[triindex].x*ONETHIRD
+						'c_col_tree.tri_centres[triindex].y = c_col_tree.tri_centres[triindex].y*ONETHIRD
+						'c_col_tree.tri_centres[triindex].z = c_col_tree.tri_centres[triindex].z*ONETHIRD
 						
 						c_col_tree.tris[triindex]=triindex 'i
 						c_col_tree.tri_surface[triindex] = s '& $0000ffff ''lo byte=surface
@@ -168,7 +188,7 @@ Class MeshCollider
 	
 	Public
 	
-	Const MAX_COLL_TRIS:Int =24 '8'16
+	Const MAX_COLL_TRIS:Int =8 '24 '8'16
 	
 	''main mesh info
 	Field tri_count:Int
@@ -234,8 +254,11 @@ Class MeshCollider
 
 
 	Method CreateNodeBox:Box( tris:Int[] )
-		Local ti:Int = tris[0]*3
+		If tris.Length<1 Then Return New Box()
 		
+		Local ti:Int = tris[0]*3
+
+'Print tri_verts[tri_vix[ti+0]]+" "+tri_verts[tri_vix[ti+1]]+" "+tri_verts[tri_vix[ti+2]]
 		Local box:Box = New Box( tri_verts[tri_vix[ti+0]], tri_verts[tri_vix[ti+1]], tri_verts[tri_vix[ti+2]] )
 		
 		For Local k:Int = 1 To tris.Length()-1
@@ -244,7 +267,7 @@ Class MeshCollider
 			box.Update( tri_verts[ tri_vix[ti+1] ])
 			box.Update( tri_verts[ tri_vix[ti+2] ])
 		Next
-		
+'Print box.a+"  "+box.b		
 		Return box
 	End
 	
@@ -291,6 +314,7 @@ Class MeshCollider
 			Local ap:AxisPair = New AxisPair
 			
 			tri = tris[k]
+
 			If axis = 0
 				ap.key= tri_centres[tri ].x; ap.value= tris[k]
 			Elseif axis = 1
@@ -378,7 +402,22 @@ Class MeshCollider
 
 	
 	
-
+	Method PrintNodeTree(nn:Node, lev:Int=0)
+		If nn=tree
+			Print "tree "+lev+" "+nn.triangles.Length()+" "+nn.box.a+" "+nn.box.b
+		Else
+			Local s$=""
+			For Local i:Int=0 To lev
+				s+="-"
+			Next
+			Print s+" "+lev+" "+nn.triangles.Length()+" "+nn.box.a+" "+nn.box.b
+		Endif
+		
+		If nn.left Then PrintNodeTree(nn.left,lev+1)
+		If nn.right Then PrintNodeTree(nn.right,lev+1)
+		
+		Return
+	End
 	
 
 
@@ -386,7 +425,7 @@ Class MeshCollider
 
 	'' -- iterative
 	'' -- box should be a sphere.
-	
+	'' -- local object space
 	Method CollideAABB:Int( line_box:Box, radius:Vector, curr_coll:CollisionObject, node:Node )
 		
 		If node = Null Then Return 0
@@ -394,7 +433,8 @@ Class MeshCollider
 		If node = tree
 			'' node = tree
 			ClearTriNodeStack() ''clear when checking base node (tree)
-
+			
+			'PrintNodeTree(tree)
 		Endif
 
 		
@@ -429,7 +469,7 @@ Class MeshCollider
 		Local tritest:Int=0
 		
 		For Local node:Node = Eachin tri_node_stack
-			
+
 			For Local k:Int = 0 To node.triangles.Length()-1
 			
 				Local tri:Int = node.triangles[k]*3
@@ -445,7 +485,7 @@ Class MeshCollider
 			
 				If (Not tri_box.Overlaps(line_box)) Then Continue ''check boxes
 				'If( Not curr_coll.TriangleCollide( line,radius,v0,v1,v2 ) ) Then Continue
-		
+'Print "TRIBOX "+k		
 				If radius.x > 0.001
 
 					If Not curr_coll.SphereTriangle( line, radius, v0.Multiply(scalef),v1.Multiply(scalef),v2.Multiply(scalef) ) Then Continue
