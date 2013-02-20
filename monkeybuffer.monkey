@@ -16,15 +16,12 @@ Import minib3d.math.vector
 	Function GetBufferLength:Int(buf:DataBuffer)
 		Return buf.Size()
 	End
-#rem	
-	Class DataBuffer Extends DataBuffer
-
-		Function Create:DataBuffer(i:Int)
-			Return DataBuffer(DataBuffer.Create(i))
-		End
-		Method Length:Int()
-			Return Size()
-		End
+#rem
+	Function CreateDataBuffer:DataBuffer(i:Int)
+		Return New DataBuffer(i)
+	End
+	Function GetBufferLength:Int(buf:DataBuffer)
+		Return buf.Length()
 	End
 #end
 
