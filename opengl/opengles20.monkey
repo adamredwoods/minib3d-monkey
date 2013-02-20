@@ -97,7 +97,11 @@ Class OpenglES20 Extends TRender
 		
 	End
 	
+	
+	Method ContextReady:Bool()
 
+		Return True
+	End
 	
 	'' returns negative value for WebGL version
 	Method GetVersion:Float()
@@ -1012,6 +1016,18 @@ Print s
 
 	End 
 	
+	Method EnableHardwareInfo:Int()
+		
+		''set MAX_TEXTURES
+		Local data:Int[2]
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS, data)
+		MAX_TEXTURES = data[0]-1
+		If DEBUG Then Print "..max textures:"+MAX_TEXTURES+1
+		
+		Return 1
+	End
+	
+	
 	Method EnableStates:Void()
 		
 		'glEnable(GL_LIGHTING)
@@ -1024,7 +1040,7 @@ Print s
 	
 	End 
 	
-	
+	''eats up a lot of time on html5
 	Function GetGLError:Int()
 		Local gle:Int = glGetError()
 		If gle<>GL_NO_ERROR
@@ -1036,12 +1052,15 @@ Print s
 		Return 0
 	End
 	
+	''eats up a lot of time on html5
 	Method ClearErrors()
-		Local e:Int=0
-		While glGetError()<>GL_NO_ERROR
-			e+=1
-			If e>255 Then Exit
-		Wend
+		If DEBUG
+			Local e:Int=0
+			While glGetError()<>GL_NO_ERROR
+				e+=1
+				If e>255 Then Exit
+			Wend
+		Endif
 	End	
 	
 	
@@ -1353,7 +1372,17 @@ Print s
 			Endif
 			
 		Else
-			glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+		
+			' viewport
+	        If cam.draw2D
+	            glViewport(0,0,DeviceWidth, DeviceHeight)
+	        Else
+	            glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+	        End 
+	
+	        '' must be turned on again somewhere 
+	        glEnable(GL_SCISSOR_TEST)
+			'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 			glScissor(cam.vx,cam.vy,cam.vwidth,cam.vheight)	
 	
 		Endif

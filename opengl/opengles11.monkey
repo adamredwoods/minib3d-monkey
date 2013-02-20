@@ -22,7 +22,6 @@ Const VBO_MIN_TRIS=1	' if USE_VBO=True and vbos are supported by hardware, then 
 'flags
 Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
-Const MAX_TEXTURES=8
 
 
 Extern
@@ -48,7 +47,7 @@ End
 
 
 Class OpenglES11 Extends TRender
-	
+
 	
 	''used for optimizing the fixed-pipeline render routine
 	
@@ -71,7 +70,10 @@ Class OpenglES11 Extends TRender
 		
 	End
 	
-	
+	Method ContextReady:Bool()
+
+		Return True
+	End
 	
 	Method GetVersion:Float()
 		Local st:String
@@ -324,8 +326,10 @@ Class OpenglES11 Extends TRender
 			' fx flag 16 - disable backface culling
 			If fx&16
 				glDisable(GL_CULL_FACE)
+				glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 1.0) ''enable two-sided lighting?
 			Else
 				glEnable(GL_CULL_FACE)
+				glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0) ''disable two-sided lighting?
 			Endif
 			
 			'' fx flag 32 - force alpha
@@ -439,7 +443,7 @@ Class OpenglES11 Extends TRender
 			
 			glColor4f(1.0,1.0,1.0, alpha)
 			
-				
+			
 			' textures
 			Local tex_count=0	
 			
@@ -454,7 +458,9 @@ Class OpenglES11 Extends TRender
 			If tex_count < last_tex_count 
 			
 				For Local ix:=0 To last_tex_count-1
-			
+					
+					If ix>MAX_TEXTURES Then Exit
+					
 					glActiveTexture(GL_TEXTURE0+ix)
 					glClientActiveTexture(GL_TEXTURE0+ix)
 					'glBindTexture(GL_TEXTURE_2D,0)
@@ -468,11 +474,11 @@ Class OpenglES11 Extends TRender
 					'glDisable(GL_TEXTURE_GEN_S)
 					'glDisable(GL_TEXTURE_GEN_T)
 					'glDisable(GL_TEXTURE_GEN_R)
-				
+			
 				Next
 				
 			Endif
-			
+				
 			
 			For Local ix=0 To tex_count-1			
 	
@@ -788,7 +794,7 @@ Class OpenglES11 Extends TRender
 			Endif
 
 		Next ''end non-alpha loop
-		
+			
 		
 		If cam.draw2D
 			glEnable(GL_DEPTH_TEST)
@@ -802,7 +808,7 @@ Class OpenglES11 Extends TRender
 		
 		temp_list = Null
 		
-		
+	
 		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
 		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
 	
@@ -868,12 +874,25 @@ Class OpenglES11 Extends TRender
 		
 		TEntity.global_mat.LoadIdentity()
 		
-		If glGetError()<>GL_NO_ERROR Then Return 0
+		EnableHardwareInfo()
+		
+		If glGetError()<>GL_NO_ERROR Then Print"Error: GL INIT"; Return 0
 		
 		Return 1
 		
 
 	End 
+	
+	Method EnableHardwareInfo:Int()
+		
+		''set MAX_TEXTURES
+		Local data:Int[2]
+		glGetIntegerv(GL_MAX_TEXTURE_UNITS, data)
+		MAX_TEXTURES = data[0]-1
+		If DEBUG Then Print "..max textures:"+MAX_TEXTURES+1
+		
+		Return 1
+	End
 	
 	Method EnableStates:Void()
 		
@@ -885,7 +904,7 @@ Class OpenglES11 Extends TRender
 		
 		glEnable(GL_RESCALE_NORMAL) '(GL_NORMALIZE) ' 'normal-lighting problems? this may be it
 		
-		glLightModelfv(GL_LIGHT_MODEL_TWO_SIDE, [0.0])
+		
 		
 		glEnableClientState(GL_VERTEX_ARRAY)
 		glEnableClientState(GL_COLOR_ARRAY)
@@ -894,15 +913,19 @@ Class OpenglES11 Extends TRender
 	End 
 	
 	Function GetGLError:Int()
-		Local gle:Int = glGetError()
-		If gle<>GL_NO_ERROR Then Print "**vbo glerror: "+gle; Return 1
-		Return 0
+		If Not DEBUG
+			Local gle:Int = glGetError()
+			If gle<>GL_NO_ERROR Then Print "**glerror: "+gle; Return 1
+			Return 0
+		Endif
 	End
 	
 	Method ClearErrors()
-		While glGetError()<>GL_NO_ERROR
-		 '
-		Wend
+		If Not DEBUG
+			While glGetError()<>GL_NO_ERROR
+			 '
+			Wend
+		Endif
 	End	
 	
 	
@@ -936,8 +959,9 @@ Class OpenglES11 Extends TRender
 					''update just anim data
 					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].buf )
 				Else
-					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
 					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].buf,GL_DYNAMIC_DRAW)
+					'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					'glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
 				Endif
 				
 			Else
@@ -958,7 +982,7 @@ Class OpenglES11 Extends TRender
 			
 		Endif
 		
-		If DEBUG And GetGLError() Then Print "*vbo update"
+		If DEBUG And GetGLError() Then Print "**glerror: vbo update"
 
 		
 		surf.reset_vbo=False
@@ -1012,6 +1036,12 @@ Class OpenglES11 Extends TRender
 		
 	End
 	
+	'Method DeleteTexture(tex:TTexture)
+		
+		'If tex.gltex[0] Then glDeleteTextures(1,tex.gltex[0])
+		'tex.gltex[0] =0
+		
+	'End
 
 	
 	Method BindTexture:TTexture(tex:TTexture,flags:Int)
@@ -1157,6 +1187,8 @@ Class OpenglES11 Extends TRender
 		
 		glPopMatrix()
 		
+		If DEBUG And glGetError() Then Print "**error: glLights"
+		
 	End
 	
 	
@@ -1175,7 +1207,16 @@ Class OpenglES11 Extends TRender
 	Method UpdateCamera(cam:TCamera)
 	
 		' viewport
-		glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+        If cam.draw2D
+            glViewport(0,0,DeviceWidth, DeviceHeight)
+        Else
+            glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+        End 
+
+        '' must be turned on again somewhere 
+        glEnable(GL_SCISSOR_TEST)
+
+		'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 		glScissor(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 		glClearColor(cam.cls_r,cam.cls_g,cam.cls_b,1.0)
 		
@@ -1220,7 +1261,7 @@ Class OpenglES11 Extends TRender
 			glDisable(GL_FOG)
 		Endif
 	
-	
+		If DEBUG And glGetError() Then Print "**error: glCamera"
 	End
 	
 	
