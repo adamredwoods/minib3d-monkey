@@ -786,7 +786,8 @@ Class CollisionInfo
 		'' multiple plane hits
 		
 		If( n_hit>0 )
-		
+
+#rem		
 			Local plane_norms# = planes[n_hit-1].n.Dot( coll_plane.n )
 'Print n_hit	
 			If( planes[n_hit-1].Distance(nv)> radius )
@@ -837,6 +838,7 @@ Class CollisionInfo
 
 			Endif
 
+#end
 			
 'test_dot.Overwrite(nv)
 'Print " cv "+cv.ToString()	
