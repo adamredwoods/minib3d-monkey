@@ -252,7 +252,7 @@ Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataB
 	Return dest
 End
 
-Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataBuffer, begin:Int=0, bend:Int=0 )
+Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataBuffer, begin:Int, bend:Int )
 	
 	If src.buf = Null Then Return dest
 	
@@ -368,7 +368,7 @@ End
 
 ''copies limited area of a buffer
 '' begin, end, are in byte offsets
-Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer, begin:Int=0, bend:Int=0 )
+Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer, begin:Int, bend:Int )
 	'Const SIZE:Int = 4
 	If src = Null Then Return dest
 	
