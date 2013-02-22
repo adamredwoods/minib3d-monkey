@@ -14,6 +14,8 @@ Import minib3d.tbone
 
 '' --pitch is flipped, z pos is flipped
 
+'' -- an EntityScale() will scale collision box/sphere
+
 Field anim_render:Int ' true to render as anim mesh, false = static ''**** DEPRECATE THIS SOON! use anim=0 to check for anim
 
 #end
@@ -44,8 +46,6 @@ Class TEntity
 	Field loc_mat:Matrix = New Matrix ''local matrix 'rot 'trans 'scale ''-- note: this isnt always kept up-to-date
 	'Field mat_sp:Matrix ''moved to TSprite
 	Field px#,py#,pz#,sx#=1.0,sy#=1.0,sz#=1.0,rx#,ry#,rz#,qw#,qx#,qy#,qz#
-	'Field gpx#=0.0,gpy#=0.0,gpz#=0.0 ''global position
-	'Field grx#=0.0,gry#=0.0,grz#=0.0 ''global rotation
 	Field gsx#=1.0,gsy#=1.0,gsz#=1.0 ''global scale
 	
 	Field name$
@@ -79,9 +79,8 @@ Class TEntity
 	Field pick_mode%,obscurer%
 	
 	' used by TCollisions
-	Field old_x#
-	Field old_y#
-	Field old_z#
+	Field old_x#, old_y#, old_z#
+	
 	
 	'' used by TCamera for camera layer
 	Field use_cam_layer:Bool = False
@@ -447,6 +446,8 @@ Class TEntity
 			'UpdateMat(True)
 			UpdateMatRot(True)
 		Endif
+		
+		If collision.radius_x Or collision.box_x Then collision.ScaleCollision(gsx,gsy,gsz)
 		
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
 
@@ -1559,9 +1560,8 @@ Class TEntity
 	
 		no_collisions=0
 		collision.impact=collision.impact[..0]
-		old_x=EntityX(True)
-		old_y=EntityY(True)
-		old_z=EntityZ(True)
+		collision.SetOldPosition(Self, EntityX(True),EntityY(True),EntityZ(True))
+
 	
 	End 
 	
@@ -1569,37 +1569,59 @@ Class TEntity
 	
 		no_collisions=0
 		collision.impact=collision.impact[..0]
-		old_x=EntityX(True)
-		old_y=EntityY(True)
-		old_z=EntityZ(True)
+		collision.SetOldPosition(Self, EntityX(True),EntityY(True),EntityZ(True))
 	
 	End 
 	
-	Method EntityRadius(rx#,ry#=0.0)
-	
+	Method EntityRadius(rx#=0.0,ry#=0.0)
+		
+		If Not rx
+			''pull from cull radius
+			If TMesh(Self)
+				If Not cull_radius Then TMesh(Self).GetBounds()
+				rx = cull_radius*Max(Max(gsx,gsy),gsz)
+			Else
+				rx=1.0
+			Endif
+		Endif
+		
 		collision.radius_x=rx
 		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
 	
 	End 
 	
-	Method EntityBox(x#,y#,z#,w#,h#,d#)
-	
+	Method EntityBox(x#=0,y#=0,z#=0,w#=0,h#=0,d#=0)
+		
+		If Not w And Not d
+			'' pull from GetBounds
+			
+			If TMesh(Self)
+				Local m:TMesh = TMesh(Self)
+				If Not cull_radius Then m.GetBounds()
+				x=m.min_x*gsx
+				y=m.min_y*gsy
+				z=m.min_z*gsz
+				w=(m.max_x-m.min_x)*gsx
+				h=(m.max_y-m.min_y)*gsy
+				d=(m.max_z-m.min_z)*gsz
+			Endif
+
+		Endif
+		
 		collision.box_x=x
 		collision.box_y=y
 		collision.box_z=z
 		collision.box_w=w
 		collision.box_h=h
 		collision.box_d=d
-	
+
 	End 
 
 	Method EntityType(type_no:Int ,recursive=False)
 
 		collision_pair.SetType(Self, type_no)
 
-		old_x=EntityX(True)
-		old_y=EntityY(True)
-		old_z=EntityZ(True)
+		collision.SetOldPosition(Self, EntityX(True),EntityY(True),EntityZ(True))
 	
 		If recursive=True
 		
@@ -1657,22 +1679,22 @@ Class TEntity
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
 		
-		If Not x And Not w
+		'If Not x And Not w
 			'' pull from cull radius
-			x=1.0
+			'x=1.0
 			
-			If TMesh(Self)
-				If Not cull_radius Then TMesh(Self).GetBounds()
-				x = cull_radius * Max(Max(gsx,gsy),gsz)
-			Endif
+			'If TMesh(Self)
+				'If Not cull_radius Then TMesh(Self).GetBounds()
+				'x = cull_radius * Max(Max(gsx,gsy),gsz)
+			'Endif
 			
-		Endif
+		'Endif
 		
-		If Not y Then y=x
+		'If Not y Then y=x
 		
-		If Not w Then EntityRadius(Abs(x),Abs(y))
+		If Not w Or pick_mode = COLLISION_METHOD_SPHERE Then EntityRadius(Abs(x),Abs(y))
 		
-		If w Then EntityBox(x,y,z,w,d,h)
+		If w Or pick_mode = COLLISION_METHOD_BOX Then EntityBox(x,y,z,w,d,h)
 		
 	End
 

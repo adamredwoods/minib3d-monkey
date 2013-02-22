@@ -916,8 +916,8 @@ Class OpenglES11 Extends TRender
 		If Not DEBUG
 			Local gle:Int = glGetError()
 			If gle<>GL_NO_ERROR Then Print "**glerror: "+gle; Return 1
-			Return 0
 		Endif
+		Return 0
 	End
 	
 	Method ClearErrors()

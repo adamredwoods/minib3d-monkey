@@ -188,7 +188,7 @@ Class MeshCollider
 	
 	Public
 	
-	Const MAX_COLL_TRIS:Int =8 '24 '8'16
+	Const MAX_COLL_TRIS:Int =16 '24 '8'16
 	
 	''main mesh info
 	Field tri_count:Int
