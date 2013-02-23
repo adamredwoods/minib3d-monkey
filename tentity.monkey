@@ -1674,7 +1674,7 @@ Class TEntity
 	End 
 
 	'' NEW -- a faster way to setup collisions
-	Method CollisionSetup:Void(type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, d:Float=0.0, h:Float=0.0)
+	Method CollisionSetup:Void(type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, h:Float=0.0, d:Float=0.0)
 		
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
@@ -1694,7 +1694,10 @@ Class TEntity
 		
 		If Not w Or pick_mode = COLLISION_METHOD_SPHERE Then EntityRadius(Abs(x),Abs(y))
 		
-		If w Or pick_mode = COLLISION_METHOD_BOX Then EntityBox(x,y,z,w,d,h)
+		If w Or pick_mode = COLLISION_METHOD_BOX
+			If Not w And x Then w=x; h=x; d=x ; y=-x*0.5; z=-x*0.5; x=-x*0.5
+			EntityBox(x,y,z,w,h,d)
+		Endif
 		
 	End
 
