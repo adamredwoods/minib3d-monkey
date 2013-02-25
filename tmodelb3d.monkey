@@ -808,6 +808,10 @@ Public
 					a_frames=file.ReadInt()
 					a_fps=file.ReadFloat()
 					
+					If a_frames<0 Then a_frames = -a_frames
+					
+					If DEBUGMODEL Then Print "anim flags:"+a_flags+" frames:"+a_frames+" fps:"+a_fps
+					
 					If mesh<>Null And file.Eof()<>True
 					
 						mesh.anim=1
@@ -1053,7 +1057,7 @@ Public
 							
 						Endif
 	
-						If bo_bone<>Null 'And k_frame < bo_bone.keys.frames ' check if bo_bone exists - it won't for non-boned, keyframe anims
+						If bo_bone<>Null And k_frame < bo_bone.keys.frames ' check if bo_bone exists - it won't for non-boned, keyframe anims
 						
 							bo_bone.keys.flags[k_frame]=bo_bone.keys.flags[k_frame]+k_flags
 							If(k_flags&1)
@@ -1131,11 +1135,7 @@ Public
 'If DEBUG Then Print "trim: "+vmin+" "+vmax
 		
 		surf.vert_data= CopyDataBuffer(surf.vert_data, VertexDataBuffer.Create(diff+1), vmin,vmax+1)
-		'surf.vert_coords=CopyFloatBuffer(surf.vert_coords, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
-		'surf.vert_col=CopyFloatBuffer(surf.vert_col, FloatBuffer.Create( diff*4+4 ), vmin*4,vmax*4+4)
-		'surf.vert_norm=CopyFloatBuffer(surf.vert_norm, FloatBuffer.Create( diff*3+3 ), vmin*3,vmax*3+3)
-		'surf.vert_tex_coords0= CopyFloatBuffer(surf.vert_tex_coords0, FloatBuffer.Create( diff*2+2 ), vmin*2,vmax*2+2)
-		'surf.vert_tex_coords1= CopyFloatBuffer(surf.vert_tex_coords1, FloatBuffer.Create( diff*2+2 ), vmin*2,vmax*2+2)
+
 		
 		'Local temp_tris:ShortBuffer = ShortBuffer.Create((surf.no_tris*3)+3)
 		
