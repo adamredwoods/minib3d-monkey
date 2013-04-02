@@ -1,4 +1,19 @@
 ****************************************
+minib3d v0.34 *IN PROGRESS*
+
+- bug fixes: b3d loader fixes by Landon
+- b3d binary loader
+
+- Flash11 target (in progress)
+
+
+
+****************************************
+minib3d v0.33.3 is a bug fix for tcamera. the frustum cache was removed (wasnt working).
+minib3d v0.33.4 is a bug fix for collisions. should be a large speed increase and hopefully stable enough for use.
+i still find occasional collision errors, if anyone finds problems and has a test case, please let me know. 
+
+****************************************
 minib3d v0.33.2
 bug fixes: xna, xna fog, xna vertex animation improved. opengl1.1 texture fix.
 

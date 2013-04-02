@@ -1009,6 +1009,7 @@ Class TMesh Extends TEntity
 	
 	End 
 	
+
 	
 	'' AddMesh()
 	'' -- add self mesh to mesh2
@@ -1017,27 +1018,30 @@ Class TMesh Extends TEntity
 		
 		If Not mesh2 Then Return
 		
+		''surf1 is source surface
 		For Local surf1:TSurface=Eachin surf_list
-			
-			'Local surf1:TSurface= Self.GetSurface(s1)
 
 			' if surface is empty, don't add it
 			If surf1.CountVertices()=0 And surf1.CountTriangles()=0 Then Continue
 				
 			Local new_surf:Bool=True
 			Local tri_offset:Int = 0
-			Local surf:TSurface = Null
+			Local surf2:TSurface = Null
 			Local stest:TSurface
 			
 			If combine_brush
 				For stest= Eachin mesh2.surf_list '1 To mesh2.CountSurfaces()	
-	
+					
+					'compare entity brushes first
+					'If (brush And mesh2.brush And (TBrush.CompareBrushes(brush,mesh2.brush)=True))
+						
+					
 					' if brushes properties are the same, add surf1 verts and tris to surf2
-					If (TBrush.CompareBrushes(surf1.brush,stest.brush)=True)
+					If (surf1.brush And stest.brush And TBrush.CompareBrushes(surf1.brush,stest.brush)=True)
 						
 						tri_offset = stest.CountVertices()
 						new_surf=False
-						surf = stest
+						surf2 = stest
 						
 						Exit
 				
@@ -1052,8 +1056,8 @@ Class TMesh Extends TEntity
 			If new_surf=True
 			
 				'surf = mesh2.CreateSurface()
-				surf = surf1.Copy()
-				mesh2.AddSurface(surf)
+				surf2 = surf1.Copy()
+				mesh2.AddSurface(surf2)
 				
 				
 				
@@ -1066,11 +1070,11 @@ Class TMesh Extends TEntity
 
 					Local vt:Vertex = surf1.GetVertex(v)
 						
-					Local v2:Int = surf.AddVertex(vt.x,vt.y,vt.z)
-					surf.VertexColor(v2,vt.r,vt.g,vt.b,vt.a)
-					surf.VertexNormal(v2,vt.nx,vt.ny,vt.nz)
-					surf.VertexTexCoords(v2,vt.u0,vt.v0,vt.w0,0)
-					surf.VertexTexCoords(v2,vt.u1,vt.v1,vt.w1,1)
+					Local v2:Int = surf2.AddVertex(vt.x,vt.y,-vt.z)
+					surf2.VertexColor(v2,vt.r,vt.g,vt.b,vt.a)
+					surf2.VertexNormal(v2,vt.nx,vt.ny,-vt.nz)
+					surf2.VertexTexCoords(v2,vt.u0,vt.v0,vt.w0,0)
+					surf2.VertexTexCoords(v2,vt.u1,vt.v1,vt.w1,1)
 	
 				Next
 		
@@ -1082,17 +1086,21 @@ Class TMesh Extends TEntity
 					Local v1=surf1.TriangleVertex(t,1) + tri_offset
 					Local v2=surf1.TriangleVertex(t,2) + tri_offset
 					
-					surf.AddTriangle(v0,v1,v2)
+					surf2.AddTriangle(v0,v1,v2)
 	
 				Next
 				
-				surf.CropSurfaceBuffers()
+				surf2.CropSurfaceBuffers()
 				
 				' copy brush
 			
-				If surf1.brush<>Null
+				If surf1.brush<>Null And brush = null
 				
-					surf.brush=surf1.brush.Copy()
+					surf2.brush=surf1.brush.Copy()
+					
+				Elseif brush<>null
+					
+					surf2.brush = brush.Copy()
 					
 				Endif
 			
@@ -1101,7 +1109,7 @@ Class TMesh Extends TEntity
 
 			
 			' mesh shape has changed - update reset flags
-			surf.reset_vbo=-1 ' (-1 = all)
+			surf2.reset_vbo=-1 ' (-1 = all)
 				
 			'Endif
 							
@@ -1159,21 +1167,7 @@ Class TMesh Extends TEntity
 
 		For Local surf:TSurface=Eachin surf_list
 
-			If surf.brush=Null Then surf.brush=New TBrush
-			
-			surf.brush.no_texs=bru.no_texs
-			surf.brush.name=bru.name
-			surf.brush.red=bru.red
-			surf.brush.green=bru.green
-			surf.brush.blue=bru.blue
-			surf.brush.alpha=bru.alpha
-			surf.brush.shine=bru.shine
-			surf.brush.blend=bru.blend
-			surf.brush.fx=bru.fx
-			surf.brush.tex_frame = bru.tex_frame
-			For Local i=0 To 7
-				surf.brush.tex[i]=bru.tex[i]
-			Next
+			surf.brush = bru.Copy()
 
 		Next
 
@@ -1693,20 +1687,21 @@ Class TMesh Extends TEntity
 	
 		' only get new bounds if we have to
 		' mesh.reset_bounds=True for all new meshes, plus set to True by various Mesh commands
+		' scaling is not done here (since it can change per frame)
 		If reset_bounds=True
 		
 			reset_bounds=False
 	
-			min_x=999999999
-			max_x=-999999999
-			min_y=999999999
-			max_y=-999999999
-			min_z=999999999
-			max_z=-999999999
+			min_x=999999999.0
+			max_x=-999999999.0
+			min_y=999999999.0
+			max_y=-999999999.0
+			min_z=999999999.0
+			max_z=-999999999.0
 			
 			For Local surf:TSurface=Eachin surf_list
 		
-				For Local v=0 Until surf.no_verts
+				For Local v:Int=0 Until surf.no_verts
 					
 					surf.vert_data.GetVertCoords(vec_temp,v)
 
@@ -1743,7 +1738,7 @@ Class TMesh Extends TEntity
 
 				cull_radius=cull_radius * 0.5
 				Local crs#=cull_radius*cull_radius
-				cull_radius= Sqrt(crs+crs) ''need the cube corners to be in the sphere
+				cull_radius= Sqrt(crs+crs+crs) ''need the cube corners to be in the sphere
 
 			Endif
 			
@@ -1910,6 +1905,87 @@ Class TMesh Extends TEntity
 		Next
 		
 		UpdateChildren(Self)
+	End
+	
+	
+	Method UnWeldTriangles:Int(inSurf:TSurface=Null, updatenorms:Bool=true)
+		
+		Local list:List<TSurface> = surf_list
+		If inSurf
+			list = New List<TSurface>
+			list.AddLast(inSurf)
+		Endif
+		
+		Local newlist:List<TSurface> = New List<TSurface>
+		
+		For Local surf:TSurface = Eachin list
+			
+			Local newSurf:TSurface = surf.Copy()
+			newSurf.ClearSurface(True,True)
+			
+			Local data0:Vertex, data1:Vertex, data2:Vertex, v0:Int,v1:Int,v2:Int, norm:Vector = New Vector
+		
+			For Local i:Int = 0 To surf.no_tris-1
+				Local a0%=surf.TriangleVertex(i,0)
+				Local a1%=surf.TriangleVertex(i,1)
+				Local a2%=surf.TriangleVertex(i,2)
+				v0 = newSurf.AddVertex(0.0,1.0,0.0)
+				v1 = newSurf.AddVertex(0.0,0.0,1.0)
+				v2 = newSurf.AddVertex(0.0,1.0,1.0)
+				
+				data0 = surf.GetVertex(a0)
+				data1 = surf.GetVertex(a1)
+				data2 = surf.GetVertex(a2)
+				
+				If updatenorms
+					Local ax#=data1.x-data0.x
+					Local ay#=data1.y-data0.y
+					Local az#=-data1.z+data0.z
+			
+					Local bx#=data2.x-data1.x
+					Local by#=data2.y-data1.y
+					Local bz#=-data2.z+data1.z
+		
+					Local nx#=(ay*bz)-(az*by)
+					Local ny#=(az*bx)-(ax*bz) 
+					Local nz#=-(ax*by)+(ay*bx)
+
+					norm.Update(nx,ny,nz)
+					norm = norm.Normalize()
+					data0.nx = norm.x
+					data0.ny = norm.y
+					data0.nz = norm.z
+					data1.nx = norm.x
+					data1.ny = norm.y
+					data1.nz = norm.z
+					data2.nx = norm.x
+					data2.ny = norm.y
+					data2.nz = norm.z
+
+				Endif
+				
+				newSurf.SetVertex(v0,data0)
+				newSurf.SetVertex(v1,data1)
+				newSurf.SetVertex(v2,data2)
+				
+				newSurf.AddTriangle(v0,v1,v2)
+				
+			Next
+			
+			newSurf.CropSurfaceBuffers()
+			newlist.AddLast(newSurf)
+			
+			surf.ClearSurface(True,True)
+
+
+		Next
+		
+		surf_list.Clear()
+		surf_list = newlist
+		
+		
+		Return 1
+		
 	End
 	
 	

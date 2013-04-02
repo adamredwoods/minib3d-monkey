@@ -5,41 +5,25 @@
 Import mojo.data
 Import minib3d.math.vector
 
-#If TARGET="html5" Or TARGET="glfw" Or TARGET="mingw" Or TARGET="ios" Or TARGET="android"
+#If TARGET="flash"
 
-	'Import brl.databuffer
-	Import opengl.databuffer
+Import minib3d.flash11.flash11_driver
 
-	Function CreateDataBuffer:DataBuffer(i:Int)
-		Return DataBuffer.Create(i)
-	End
-	Function GetBufferLength:Int(buf:DataBuffer)
-		Return buf.Size()
-	End
-#rem
-	Function CreateDataBuffer:DataBuffer(i:Int)
-		Return New DataBuffer(i)
-	End
-	Function GetBufferLength:Int(buf:DataBuffer)
-		Return buf.Length()
-	End
-#end
-
-#elseif TARGET="xna"
-	
-	'Import xna.xna_driver.databuffer	
-	Import brl.databuffer
-	
-	Function CreateDataBuffer:DataBuffer(i:Int)
-		Return New DataBuffer(i)
-	End
-	Function GetBufferLength:Int(buf:DataBuffer)
-		Return buf.Length()
-	End
-	
 #endif
 
+'#If TARGET="html5" Or TARGET="glfw" Or TARGET="mingw" Or TARGET="ios" Or TARGET="android" Or TARGET="xna" Or TARGET="flash"
 
+Import brl.databuffer
+
+Function CreateDataBuffer:DataBuffer(i:Int)
+	Return New DataBuffer(i)
+End
+Function GetBufferLength:Int(buf:DataBuffer)
+	Return buf.Length()
+End
+
+
+'#endif
 
 
 ''
@@ -63,6 +47,11 @@ Class Vertex
 		u0=data[12];v0=data[13];u1=data[14];v1=data[15]
 		
 	End
+	
+	Method SetVertex:Void(vid:Int, src:VertexDataBuffer)
+		Local data:Float[] = [x,y,z,0.0,nx,ny,nz,0.0,r,g,b,a,u0,v0,u1,v1]
+		src.PokeFloatArray(vid, data)
+	End
 
 End
 
@@ -78,6 +67,7 @@ Class VertexDataBuffer
 	
 	Const SIZE:Int			= 64
 	Const INVSIZE:Float		= 1.0/64.0
+	Const FLOATSIZE:Int = 4
 	
 	Const POS_OFFSET:Int 		= 0
 	Const NORMAL_OFFSET:Int 	= 16
@@ -98,6 +88,13 @@ Class VertexDataBuffer
 	Function Create:VertexDataBuffer(i:Int=0)
 		Local b:VertexDataBuffer = New VertexDataBuffer
 		b.buf = CreateDataBuffer((i+1)*SIZE)
+		
+''***************************************
+''monkey flash uses big endian, stage3d takes little endian
+#If TARGET="flash"
+		Driver.DataBufferLittleEndian(b.buf)
+#Endif
+		
 		Return b
 	End
 	
@@ -203,6 +200,12 @@ Class VertexDataBuffer
 		If coord_set=1 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT3 )
 	End 
 	
+	Method PokeFloatArray:Void(i:Int, arr:Float[])
+		For Local v:Int=0 To arr.Length()-1
+			buf.PokeFloat(i*SIZE+v*FLOATSIZE,arr[v])
+		Next
+	End
+	
 	Method GetFloatArray:Float[](vid:Int)
 	
 		Local data:Float[Int(SIZE/4)], j:Int=0
@@ -288,6 +291,13 @@ Class FloatBuffer
 	
 		Local b:FloatBuffer = New FloatBuffer
 		b.buf = CreateDataBuffer(i*SIZE+1)
+		
+''***************************************
+''monkey flash uses big endian, stage3d takes little endian
+#If TARGET="flash"
+		Driver.DataBufferLittleEndian(b.buf)
+#Endif
+		
 		Return b
 		
 	End
@@ -340,7 +350,20 @@ Class ShortBuffer
 	
 		Local b:ShortBuffer = New ShortBuffer
 		b.buf = CreateDataBuffer(i*SIZE+1)
+		
+''***************************************
+''monkey flash uses big endian, stage3d takes little endian
+#If TARGET="flash"
+		Driver.DataBufferLittleEndian(b.buf)
+#Endif
+		
 		Return b
+	End
+	
+	Method Poke:Void(i:Int, arr:Int[])
+		For Local v:Int=0 To arr.Length()-1
+			buf.PokeShort(i*SIZE+v*SIZE,arr[v])
+		Next
 	End
 	
 	Method Poke:Void(i:Int,v:Int)
@@ -368,7 +391,7 @@ End
 
 ''copies limited area of a buffer
 '' begin, end, are in byte offsets
-Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer, begin:Int, bend:Int )
+Function CopyFloatBuffer:FloatBuffer( src:FloatBuffer, dest:FloatBuffer, begin:Int=0, bend:Int=0 )
 	'Const SIZE:Int = 4
 	If src = Null Then Return dest
 	

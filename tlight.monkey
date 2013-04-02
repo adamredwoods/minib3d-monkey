@@ -1,7 +1,9 @@
 Import minib3d
 
 
-
+'' type = 1 direction
+'' 2 = point
+'' 3 = spot
 Class TLight Extends TEntity
 	
 	Const INV255:Float = 1.0/255.0
@@ -138,6 +140,12 @@ Class TLight Extends TEntity
 		ambient_blue=b *INV255
 	
 	End 
+	
+	Method LightAtten(val1#=0.0,val2#=1.0,val3#=0.0)
+		
+		LightAttenuation(val1,val2,val3)
+
+	End
 	
 	Method LightAttenuation(val1#=0.0,val2#=1.0,val3#=0.0)
 		

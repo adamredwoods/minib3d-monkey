@@ -26,18 +26,22 @@ Class TAnimation
 	
 	
 
-	#If TARGET="xna"
+	'#If TARGET="xna"
 	
-		Const DONT_USE_VERT_POINTER:Int = True
-	#Else
-		Const DONT_USE_VERT_POINTER:Int = False
+		'Const DONT_USE_VERT_POINTER:Int = True
+	'#Else
+		'Const DONT_USE_VERT_POINTER:Int = False
 	
-	#Endif
+	'#Endif
+	
+	Private
 	
 	Global quat:Quaternion
-	
 	Global new_mat:Matrix = New Matrix
-
+	
+	Public
+	
+	'' testing
 	Global testi:Int=0
 	
 	Function AnimateMesh(ent1:TEntity,framef:Float,start_frame:Int,end_frame:Int)
@@ -48,7 +52,7 @@ Class TAnimation
 		Local mesh:TMesh = TMesh(ent1)
 		
 		If mesh<>Null
-			
+		
 			If mesh.anim=0 Or mesh.Hidden() = True Then Return ' mesh contains no anim data
 	
 			mesh.anim_render=True
@@ -79,8 +83,7 @@ Class TAnimation
 				bent.kqw=quat.w
 				bent.kqx=quat.x
 				bent.kqy=quat.y
-				bent.kqz=quat.z
-		
+				bent.kqz=quat.z		
 				
 				TBone(bent).Transform( temp_vec, quat, False)
 								
@@ -350,7 +353,7 @@ Class TAnimation
 					bone=ent.bones[anim_surf.vert_bone1_no[vid]-1]
 					weight=anim_surf.vert_weight1[vid]
 					tweight += weight
-					
+	
 					If weight > 0.0
 						' get original vertex position					
 		

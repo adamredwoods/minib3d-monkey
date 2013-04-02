@@ -823,6 +823,7 @@ Class CollisionInfo
 		If hits>3 Or hits<1 Then Return
 		
 		'n_hit = hits-1
+		If n_hit>3 Then Return
 		
 		planes[n_hit] = New Plane( coords, norm)
 		col_points[n_hit] = coords.Copy()
@@ -1123,7 +1124,7 @@ Public
 		
 	End
 	
-	'' box
+	'' box, may need to be scaled to work properly
 	Function QuickBoundsTest2:Bool(col:CollisionInfo, ent2:TEntity)
 		Local ray:Line = col.coll_line
 		Local radius:Float = col.radius

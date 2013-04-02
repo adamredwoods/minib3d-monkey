@@ -11,10 +11,6 @@ Import minib3d.monkeyutility
 
 '' -- since we are not guaranteed a context outside of OnRender() we use a texture bind stack to bind textures during RenderWorld()
 
-Class TextureStack Extends Stack<TTexture>
-	
-End
-
 Const TEXFLAG_COLOR% = 1
 Const TEXFLAG_ALPHA% = 2
 Const TEXFLAG_MASKED% = 4
@@ -26,6 +22,15 @@ Const TEXFLAG_CUBEMAP% = 128
 Const TEXFLAG_PRESERVE_SIZE% = 256
 Const TEXFLAG_512% = 512  ' force high colors?
 Const TEXFLAG_NORMALMAP% = 1024
+
+
+'Interface TextureObjectBase
+'
+'End
+
+Class TextureStack Extends Stack<TTexture>
+	
+End
 	
 Class TTexture
 
@@ -35,6 +40,8 @@ Class TTexture
 	
 	Global tex_list:List<TTexture> = New List<TTexture>
 	Field tex_link:list.Node<TTexture>
+
+	'Field tex_obj:TextureObjectBase 'used by TRender Drivers
 	
 	Field width:Int,height:Int ' returned by Name/Width/Height commands
 	
@@ -86,6 +93,60 @@ Class TTexture
 		pixmap=Null
 		'cube_pixmap=New TPixmap[7]
 		gltex[0]=0
+	End
+	
+	Method Copy:TTexture()
+		
+		Local tex:TTexture = New TTexture
+		
+		tex.tex_link = tex_list.AddLast(tex)
+		
+		tex.width = width
+		tex.height = height
+	
+		tex.pixmap = pixmap ''pointer
+		
+		tex.file = file
+		tex.blend = blend
+		tex.coords = coords
+		tex.u_scale = u_scale
+		tex.v_scale = v_scale
+		tex.u_pos = u_pos
+		tex.v_pos = v_pos
+		tex.angle = angle
+		tex.flags = flags
+		tex.bind_flags = bind_flags
+
+		tex.tex_smooth = tex_smooth
+		tex.resize_smooth = resize_smooth
+		tex.orig_width = orig_width
+		tex.orig_height = orig_height
+			
+		tex.no_frames = no_frames
+		tex.frame_ustep = frame_ustep
+		tex.frame_vstep = frame_vstep
+		tex.frame_xstep = frame_xstep
+		tex.frame_ystep = frame_ystep
+		tex.tex_frame = tex_frame
+		tex.frame_startx = frame_startx
+		tex.frame_starty = frame_starty
+		
+		tex.gltex = New Int[1] ''unique
+		tex.tex_id = tex_id
+		tex.no_mipmaps = no_mipmaps
+		
+		tex.cube_pixmap = cube_pixmap 
+		tex.cube_face = cube_face
+		tex.cube_mode = cube_mode
+		
+		tex.is_font = is_font
+		
+		''needs binding?
+		If tex.bind_flags <> -1
+			PushBindTexture(tex,tex.bind_flags)
+		Endif
+		
+		Return tex
 	End
 	
 	''CreateTexture()
@@ -662,7 +723,7 @@ Class TTexture
 			''** only doing first frame for now until anim_frames get sorted out
 			'For local i:=0 To tex.no_frames-1
 
-				TRender.render.DeleteTexture(tex.gltex)				
+				TRender.render.DeleteTexture(tex)				
 				
 				If tex.is_font
 					'TTexture.ResizeNoSmooth()

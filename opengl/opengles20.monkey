@@ -60,9 +60,20 @@ Function SetRender(flags:Int=0)
 End
 
 
+
+''beware, no Mojo in opengl2.0
+Function RestoreMojo2D()
+
+	OpenglES20._useMojo=True
+	GetGraphicsDevice().BeginRender()
+
+End
+
+
 Class OpenglES20 Extends TRender
 	
 	Const DEBUG:Int = TRender.DEBUG
+	Const DEGREESTORAD:Float = PI/180.0
 	
 	'Global g_shader:TShaderGLSL ''default shader
 	
@@ -91,7 +102,11 @@ Class OpenglES20 Extends TRender
 	
 	Global total_errors:Int=0
 	
-	Const DEGREESTORAD:Float = PI/180.0
+	Private
+	
+	Global _useMojo:Bool = False
+	
+	Public
 	
 	Method New()
 		
@@ -598,7 +613,7 @@ Print s
 					glVertexAttribPointer( shader.u.vertcoords, 3, GL_FLOAT, False, 12,0 )
 				
 				'' mesh animation, using animsurf2
-				Elseif mesh.anim_render
+				Elseif mesh.anim_render And anim_surf2
 					glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[0])
 					glVertexAttribPointer( shader.u.vertcoords, 3, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.POS_OFFSET )
 				
@@ -1042,12 +1057,14 @@ Print s
 	
 	''eats up a lot of time on html5
 	Function GetGLError:Int()
-		Local gle:Int = glGetError()
-		If gle<>GL_NO_ERROR
-			total_errors +=1
-			If total_errors>50 Then Error "Max 50 Opengl Errors" ''kill errors for HTML5 console
-			Print "*glerror: "+gle
-			Return 1
+		If DEBUG
+			Local gle:Int = glGetError()
+			If gle<>GL_NO_ERROR
+				total_errors +=1
+				If total_errors>50 Then Error "Max 50 Opengl Errors" ''kill errors for HTML5 console
+				Print "*glerror: "+gle
+				Return 1
+			Endif
 		Endif
 		Return 0
 	End
@@ -1224,10 +1241,10 @@ Print s
 	
 	''-- TTexture specific --
 	
-	Method DeleteTexture(glid:Int[])
+	Method DeleteTexture(tex:TTexture)
 		
-		If glid[0] Then glDeleteTexture(glid[0])
-		glid[0] =0
+		If tex.gltex[0] Then glDeleteTexture(tex.gltex[0])
+		tex.gltex[0] =0
 		
 	End
 	

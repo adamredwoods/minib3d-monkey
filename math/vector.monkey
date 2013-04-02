@@ -14,26 +14,15 @@ Class Vector
 		
 	End 
 
-	Function Create:Vector(x#,y#,z#)
+	Function Create:Vector(xx#,yy#,zz#)
 	
-		Local new_vec:Vector=New Vector
-		vec.x=x
-		vec.y=y
-		vec.z=z
-		
-		Return vec
+		Return New Vector(xx,yy,zz)
 		
 	End 
 	
 	Method Copy:Vector()
 	
-		Local vec:Vector=New Vector
-	
-		vec.x=x
-		vec.y=y
-		vec.z=z
-	
-		Return vec
+		Return New Vector(x,y,z)
 	
 	End 
 	

@@ -21,7 +21,6 @@ Class TModelObj
 	Field length:Int
 	Field stack:StringStack = New StringStack	
 	
-	
 	Global override_texflags:Int = -1
 	
 	Private
@@ -112,6 +111,7 @@ Class TModelObj
 		Local curmtl:String = ""
 		Local Readface:Bool = True
 		Local vertsAdded:Bool = False
+		Local hasNorms:Int = 0
 	
 		Local VC:Int = 0
 		Local VN:Int = 0
@@ -161,6 +161,7 @@ Class TModelObj
 					vertexN[VN+1] = New TObjNormal
 					vertexN[VN+1].GetValues(Line[3..]) 
 					VN+=1
+					hasNorms = 1
 				Endif
 				
 				If tag[0..3] = "vt " Then
@@ -239,9 +240,9 @@ Class TModelObj
 					If surface = Null
 						''no mtl, assume only one surface, no material lib
 						surface = mesh.CreateSurface()
-						If Not currMtl Then currMtl = New TObjMtl
-						currMtl.meshSurface = surface
 					Endif
+					If Not currMtl Then currMtl = New TObjMtl
+					currMtl.meshSurface = surface
 					
 					If surface
 						
@@ -374,7 +375,9 @@ Class TModelObj
 			surfx.CropSurfaceBuffers()
 		Next
 		
-		'mesh.UpdateNormals() ''we can leave this for external needs
+		If Not hasNorms
+			mesh.UpdateNormals() ''create norms if none
+		Endif
 		
 		Return mesh
 		

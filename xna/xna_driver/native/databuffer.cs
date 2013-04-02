@@ -80,7 +80,7 @@ public class DataBufferHelper
 	
 	public static void LoadImageData(BBDataBuffer buffer, string path, int[] info)
 	{
-		var texture = MonkeyData.LoadTexture2D(path, gxtkApp.game.Content);
+		var texture = BBXnaGame.XnaGame().LoadTexture2D(path);
 		if (texture==null) {info[0]=0; return; } //new BBDataBuffer(0);}
 		
 		int bytes = 4;

@@ -1,4 +1,5 @@
 Import mojo
+Import mojo.graphicsdevice
 Import opengl.gles11
 Import minib3d.trender
 Import minib3d.opengl.tpixmapgl
@@ -24,17 +25,37 @@ Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use fo
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
 
 
-Extern
+
 
 ''this is highly experimental-- won't work in opengl2.0, only in opengl1.1
 
-#if TARGET = "glfw" Or TARGET = "mingw" Or TARGET = "ios"
-	Function RestoreMojo2D() = "app->GraphicsDevice()->BeginRender();//"
-#elseif TARGET = "android"
-	Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().Flush(); MonkeyGame.app.GraphicsDevice().BeginRender( (GL10) null );//"
+
+Global _mojographics:GraphicsDevice = New GraphicsDevice()
+
+#If TARGET = "glfw" Or TARGET = "mingw" Or TARGET = "ios" Or TARGET = "android"
+	Function RestoreMojo2D()
+
+		OpenglES11._useMojo=True
+		
+		glDisable(GL_DEPTH_TEST)
+		glDisable(GL_CULL_FACE)
+		glDisable(GL_LIGHTING)
+		
+		glEnableClientState(GL_VERTEX_ARRAY)
+		glBindBuffer(GL_ARRAY_BUFFER,0) ' reset - necessary for when non-vbo surf follows vbo surf
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY)
+		glBindBuffer(GL_ARRAY_BUFFER,0)
+		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
+
+		GetGraphicsDevice().BeginRender()
+
+	End
+
+'#elseif TARGET = "android"
+	'Function RestoreMojo2D() = "MonkeyGame.app.GraphicsDevice().Flush(); MonkeyGame.app.GraphicsDevice().BeginRender( (GL10) null );//"
 #end
 
-Public
+
 
 
 
@@ -64,7 +85,12 @@ Class OpenglES11 Extends TRender
 	Global gl_light:Int[] = [GL_LIGHT0,GL_LIGHT1,GL_LIGHT2,GL_LIGHT3,GL_LIGHT4,GL_LIGHT5,GL_LIGHT6,GL_LIGHT7] ''move const to trender
 	Global light_no:Int, old_no_lights:Int
 	
+	Private
+	
+	Global _useMojo:Bool = false
 	Field t_array:Float[16] ''temp array
+	
+	public
 	
 	Method New()
 		
@@ -108,7 +134,13 @@ Class OpenglES11 Extends TRender
 		last_sprite = Null ''used to preserve last surface states
 		last_tex_count = 8
 		TRender.alpha_pass = 0
-
+		
+		If _useMojo
+			glEnable(GL_DEPTH_TEST)
+			glEnable(GL_CULL_FACE)
+			glEnable(GL_LIGHTING)
+		Endif
+		
 	End
 	
 	
@@ -407,7 +439,7 @@ Class OpenglES11 Extends TRender
 					glVertexPointer(3,GL_FLOAT,0,0)
 				
 				'' mesh animation, using animsurf2	
-				Elseif mesh.anim_render
+				Elseif mesh.anim_render And anim_surf2
 					glEnableClientState(GL_VERTEX_ARRAY)
 					glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[0])
 					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.POS_OFFSET)
@@ -897,7 +929,7 @@ Class OpenglES11 Extends TRender
 	Method EnableStates:Void()
 		
 		glEnable(GL_LIGHTING)
-   		glEnable(GL_DEPTH_TEST)
+   	glEnable(GL_DEPTH_TEST)
 		glEnable(GL_FOG)
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_SCISSOR_TEST)
@@ -1029,11 +1061,11 @@ Class OpenglES11 Extends TRender
 	
 	'' --- TTexture specific---
 	
-	Method DeleteTexture(glid:Int[])
-		
-		If glid[0] Then glDeleteTextures(1,glid)
-		glid[0] =0
-		
+	Method DeleteTexture(tex:TTexture)
+		If tex.gltex[0]
+			If tex.gltex[0] Then glDeleteTextures(1,tex.gltex)
+			tex.gltex[0] =0
+		endif
 	End
 	
 	'Method DeleteTexture(tex:TTexture)

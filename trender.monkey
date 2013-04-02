@@ -45,7 +45,7 @@ Class TRender
 	
 	Public
 	
-	'Method ContextReady:Bool() Abstract ''must return true when ready to render
+	Method ContextReady:Bool() Abstract ''must return true when ready to render
 	Method GetVersion:Float() Abstract ''returns version of graphics platform being used
 	
 	Method Reset:Void() Abstract ''reset, called before render for each camera
@@ -54,14 +54,11 @@ Class TRender
 	Method GraphicsInit:Int(flags:Int=0) Abstract ''init during SetRender()
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null) Abstract ''render per mesh
-	
-	Method ClearErrors:Int() Abstract
 
-	
 	Method BindTexture:TTexture(tex:TTexture,flags:Int) Abstract
-	Method DeleteTexture(glid:Int[]) Abstract  '' **** DEPRECATE THIS ******
-	Method DeleteTexture(tex:TTexture)
-	End
+	'Method DeleteTexture(glid:Int[]) '' **** DEPRECATE THIS ******
+	Method DeleteTexture(tex:TTexture) Abstract
+
 	
 	Method UpdateLight(cam:TCamera, light:TLight) Abstract
 	Method DisableLight(light:TLight) Abstract
@@ -69,6 +66,8 @@ Class TRender
 	Method UpdateCamera(cam:TCamera) Abstract
 	
 	Method UpdateVBO(surface:TSurface)
+	
+	
 	End
 	
 	''-------------------------------------------------------
@@ -225,7 +224,7 @@ Class TRender
 	
 	Function  RenderWorld:Void()
 		
-		'If Not TRender.render.ContextReady() Then Return
+		If Not TRender.render.ContextReady() Then Return
 		
 		''process texture binds
 		TRender.render.BindTextureStack()		
@@ -266,8 +265,7 @@ Class TRender
 	
 	Function RenderDrawList:Void()
 
-		'If draw_list.IsEmpty Or Not TRender.render.ContextReady() Then Return
-		If draw_list.IsEmpty Then Return
+		If draw_list.IsEmpty Or Not TRender.render.ContextReady() Then Return
 		
 		TRender.render.SetDrawShader()
 		TRender.render.Reset()
@@ -476,7 +474,7 @@ Class TRender
 		For Local tex:TTexture = Eachin TTexture.tex_bind_stack
 			If tex.bind_flags = -255
 				''remove texture
-				TRender.render.DeleteTexture(tex.gltex)	
+				TRender.render.DeleteTexture(tex)	
 				tex.FreeTexture_()
 			Else
 				TRender.render.BindTexture(tex,tex.bind_flags)
@@ -493,6 +491,10 @@ Class TRender
 		
 		'' set a fast, bright shader, used with drawing 2D, text
 		
+	End
+	
+	Method ClearErrors:Int()
+		Return 1
 	End
 	
 End

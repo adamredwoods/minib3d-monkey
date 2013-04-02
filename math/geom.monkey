@@ -2,6 +2,8 @@ Import vector
 Import matrix
 
 Class Line
+
+	
 	Public
 	
 	Field o:Vector, d:Vector ''Line.d is relative to Line.o (not world space)
@@ -77,6 +79,7 @@ End
 
 
 Class Plane
+
 	Public
 	
 	Field n:Vector = New Vector
@@ -151,6 +154,10 @@ End
 
 
 Class Box
+	Private
+	Global ora:Float[] = [0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0, 0.0,0.0,0.0,0.0]
+	Public
+	
 	Const INFINITY:Float = 999999999.000
 	
 	Field a:Vector, b:Vector ''a = min corner, b= max corner
@@ -249,7 +256,7 @@ Class Box
 		
 	End
 	
-	Method Overlaps(q:Box)
+	Method Overlaps2(q:Box)
 		Local r1:Float, r2:Float, r3:Float, r4:Float, r5:Float, r6:Float
 		If b.x<q.b.x Then r1 = b.x Else r1 = q.b.x
 		If a.x>q.a.x Then r2 = a.x Else r2 = q.a.x
@@ -261,6 +268,14 @@ Class Box
 		If a.z>q.a.z Then r6 = a.z Else r6 = q.a.z
 		
 		Return ((r1>=r2) And (r3>=r4) And (r5>=r6))
+		
+	End
+	
+	Method Overlaps:Bool(q:Box)
+		
+		Return (((b.x<q.b.x) And (b.x>=a.x) And (b.x>=q.a.x)) Or ((b.x>q.b.x) And(q.b.x>=a.x) And (q.b.x>=q.a.x))) And 
+			(((b.y<q.b.y) And(b.y>=a.y) And (b.y>=q.a.y)) Or ((b.y>q.b.y) And(q.b.y>=a.y) And (q.b.y>=q.a.y))) And 
+			(((b.z<q.b.z) And(b.z>=a.z) And (b.z>=q.a.z)) Or ((b.z>q.b.z) And(q.b.z>=a.z) And (q.b.z>=q.a.z)))
 		
 	End
 	

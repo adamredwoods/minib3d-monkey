@@ -1,8 +1,15 @@
 Import minib3d
 Import ttexture
 
-Class TBrush
+#rem
+NOTES:
+-- why would tex_frames go into the texture? because ttexture is an instance of tpixmap
 
+#end
+
+Class TBrush
+	Const INV_255:Float = 1.0/255.0
+	
 	Field no_texs:Int
 	Field name$
 	Field red#=1.0,green#=1.0,blue#=1.0,alpha#=1.0
@@ -17,6 +24,15 @@ Class TBrush
 	
 	End 
 	
+	Method New(hexcolor:Int)
+		red=((hexcolor& $00ff0000) Shr 16)*INV_255
+		green= ((hexcolor& $00ff00) Shr 8)*INV_255 
+		blue= (hexcolor& $0000ff)*INV_255
+	End 
+	
+	Method New(texture:TTexture)
+		BrushTexture(texture)
+	End 
 	
 	Method Copy:TBrush()
 		
@@ -29,16 +45,17 @@ Class TBrush
 		brush.blue=blue
 		brush.alpha=alpha
 		brush.shine=shine
+		brush.shine_strength=shine_strength
 		brush.blend=blend
 		brush.fx=fx
-		brush.tex[0]=tex[0]
-		brush.tex[1]=tex[1]
-		brush.tex[2]=tex[2]
-		brush.tex[3]=tex[3]
-		brush.tex[4]=tex[4]
-		brush.tex[5]=tex[5]
-		brush.tex[6]=tex[6]
-		brush.tex[7]=tex[7]
+		If tex[0] brush.tex[0]=tex[0].Copy()
+		If tex[1] brush.tex[1]=tex[1].Copy()
+		If tex[2] brush.tex[2]=tex[2].Copy()
+		If tex[3] brush.tex[3]=tex[3].Copy()
+		If tex[4] brush.tex[4]=tex[4].Copy()
+		If tex[5] brush.tex[5]=tex[5].Copy()
+		If tex[6] brush.tex[6]=tex[6].Copy()
+		If tex[7] brush.tex[7]=tex[7].Copy()
 					
 		Return brush
 
@@ -64,7 +81,7 @@ Class TBrush
 	Function LoadBrush:TBrush(file$,flags:Int=1,u_scale#=1.0,v_scale#=1.0)
 	
 		Local brush:TBrush=New TBrush
-		brush.no_texs += 1
+		brush.no_texs = 1
 		Local i:Int = brush.no_texs-1
 		brush.tex[i]=TTexture.LoadTexture(file,flags)
 		
@@ -79,7 +96,7 @@ Class TBrush
 	
 		Local brush:TBrush=New TBrush
 		
-		brush.no_texs += 1
+		brush.no_texs = 1
 		Local i:Int = brush.no_texs-1
 		
 		brush.tex[i]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames)
@@ -147,13 +164,13 @@ Class TBrush
 	
 	End 
 	
-	Method BrushShininess(s#)
+	Method BrushShininess:Void(s#)
 	
 		shine=s
 	
 	End 
 	
-	Method BrushTexture(texture:TTexture,frame=0,index=0)
+	Method BrushTexture:void(texture:TTexture,frame=0,index=0)
 	
 		tex[index]=texture
 		If index+1>no_texs Then no_texs=index+1

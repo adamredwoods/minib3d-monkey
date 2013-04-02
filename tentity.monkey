@@ -935,6 +935,7 @@ Class TEntity
 		
 	End
 	
+	
 	Method EntityBlend(blend_no%)
 	
 		brush.blend=blend_no
@@ -977,6 +978,7 @@ Class TEntity
 	
 	End 
 	
+	''explain the difference between this and PaintMesh()
 	Method PaintEntity(bru:TBrush)
 
 		If TShader(bru) = bru
@@ -992,7 +994,6 @@ Class TEntity
 			
 		Endif
 
-		
 	End 
 	
 	'' does not paint with a copy
@@ -1014,12 +1015,12 @@ Class TEntity
 		
 	End
 	
-	'' why not?
+	'' paint texture on entity
 	Method PaintEntity(tex:TTexture, frame:Int=0, index:Int=0)
 		EntityTexture(tex,frame,index)
 	End
 	
-	''hex color
+	'' paint hex color
 	Method PaintEntity(color:Int)
 		EntityColor( color )
 	End
@@ -1808,7 +1809,7 @@ Class TEntity
 	
 	End 
 	
-	Method GetEntityType()
+	Method GetEntityType:int()
 
 		Return collision.type
 
@@ -2076,7 +2077,7 @@ Class TEntity
 					ent_c.UpdateMat()
 				Elseif type = 1
 					ent_c.UpdateMatTrans()
-				Elseif type = 2
+				Else
 					ent_c.mat.Overwrite(ent_p.mat)
 					ent_c.UpdateMat()
 					'ent_c.UpdateMatRot() ''wont update positions	

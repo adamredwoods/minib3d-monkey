@@ -7,66 +7,59 @@ Import minib3d.monkeyutility
 Import minib3d.monkeybuffer
 Import mojo.data
 
-#If TARGET="html5"
-	'' set pixels to int, 
-	'' need function to resize image to nearest power of 2
-	'' do i store pixels or create new variable
-	''hijack load texture and load pixmap functions to load async. halt on resize. ** OR add PreloadPixmap() function.
-	'' load texture + loadpixmap seems to be ok for async callback.
-	
-Import "tpixmap.html5.js"
+#If TARGET<>"flash"
+	#Error "Needs Flash Target."
+#Endif
+
+'' ********** FLASH BITMAPS TEXTURES ARE BGRA ?? ***********
+
+Import "tpixmap.flash11.as"
 
 Extern
 	
-	Class HTMLImage
+	Class FlashPixmap = "TPixmap"
 	End
-	
-	'Function PreLoadTextures:Int(file$[]) = "_preLoadTextures.Loader"
+
 		
-	Function LoadImageDataHTML:HTMLImage(file$, id:Int) = "LoadImageData"
+	Function _LoadImageData:FlashPixmap(file$) = "TPixmap.LoadImageData"
 	
-	Function CreateImageData:HTMLImage(w:Int, h:Int)
+	Function _CreateImageData:FlashPixmap(w:Int, h:Int) = "TPixmap.CreatePixmap"
 	
-	Function _ReadPixel:Int(image:HTMLImage, x:Int, y:Int) = "_pixelMod.ReadPixel"
-	Function _WritePixel:HTMLImage(image:HTMLImage, x:Int, y:Int, r:Int, g:Int, b:Int, a:Int) = "_pixelMod.WritePixel"
+	Function _ReadPixel:Int(p:FlashPixmap, x:Int, y:Int) = "TPixmap.ReadPixel"
+	Function _WritePixel:FlashPixmap(p:FlashPixmap, x:Int, y:Int, r:Int, g:Int, b:Int, a:Int) = "TPixmap.WritePixel"
 	
-	Function HTMLResizePixmap:HTMLImage(image:HTMLImage, w:Int, h:Int, smooth:Bool)
+	Function _ResizePixmap:FlashPixmap(p:FlashPixmap, w:Int, h:Int, smooth:Bool=True)= "TPixmap.ResizePixmap"
 	
-	Function HTMLMaskPixmap:HTMLImage(image:HTMLImage, r:Int, g:Int, b:Int)
+	Function _MaskPixmap:FlashPixmap(p:FlashPixmap, hexcolor:Int)= "TPixmap.MaskPixmap"
 	
-	Function GetHTMLImageInfo:Int[]( p:HTMLImage ) = "GetImageInfo"
+	Function _GetImageInfo:Int[]( p:FlashPixmap) = "TPixmap.GetInfo"
 	
-	Function CheckIsLoaded:Bool( p:HTMLImage ) = "CheckIsLoaded"
+	Function _CheckIsLoaded:Bool( p:FlashPixmap) = "TPixmap.CheckIsLoaded"
 	'Function ClearHTMLPreLoad:Void() = "Clear"
-	
-	''special
-	Function glTexImage2D3:Void( target, level, internalformat, format, type, pixels:HTMLImage )="gl.texImage2D"
-	Function glTexSubImage2D3:Void( target, level, xoffset, yoffset, format, type, pixels:HTMLImage )="gl.texSubImage2D"
-	
-	'' this does not work (arraybuffer->image.src) in html5 (yet)
-	'Function ConvertDataToPixmapHTML:HTMLImage( from_:DataBuffer, path$ ) = "DataToPixmap"
 	
 	
 	
 Public
 
 
-Class TPixmapGL Extends TPixmap Implements IPixmapManager
+Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 	
 	Const DEBUG:Int=TRender.DEBUG
 	
-	Field pixels:HTMLImage ''used to hold javascript object	
+	Field pixels:FlashPixmap ''used to hold flash object	
 	Field format:Int, pitch:Int
 	
 	Field tex_id:Int[1]
-		
+	
+	
 	
 	Function Init()
 	
-		If Not manager Then manager = New TPixmapGL
+		If Not manager Then manager = New TPixmapFlash
 		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
 	
 	End
+	
 	
 	
 	'' asynchronous only!
@@ -79,7 +72,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	Method LoadPixmap:TPixmap(f$)
 	
-		Local p:TPixmapGL = New TPixmapGL 
+		Local p:TPixmapFlash = New TPixmapFlash 
 		
 		Local info:Int[3]
 		
@@ -97,9 +90,9 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
 		
-		Local p:TPixmapGL = New TPixmapGL 
+		Local p:TPixmapFlash = New TPixmapFlash 
 		
-		p.pixels= CreateImageData(w,h)
+		p.pixels= _CreateImageData(w,h)
 		p.width = w
 		p.height = h
 		p.format = format
@@ -110,8 +103,8 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
 		
-		Local newpix:TPixmapGL = New TPixmapGL
-		newpix.pixels = HTMLResizePixmap(pixels, neww, newh, True)
+		Local newpix:TPixmapFlash = New TPixmapFlash 
+		newpix.pixels = _ResizePixmap(pixels, neww, newh)
 		newpix.width = neww
 		newpix.height = newh
 		
@@ -121,9 +114,9 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	Method ResizePixmapNoSmooth:TPixmap(neww:Int, newh:Int)
 		
-		Local newpix:TPixmapGL = New TPixmapGL
+		Local newpix:TPixmapFlash = New TPixmapFlash 
 
-		newpix.pixels = HTMLResizePixmap(pixels, neww, newh, False)
+		newpix.pixels = _ResizePixmap(pixels, neww, newh, False)
 		newpix.width = neww
 		newpix.height = newh
 		
@@ -140,7 +133,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 	Method SetPixel:Void(x:Int,y:Int,r:Int,g:Int,b:Int,a:Int=255)
 
-		pixels = _WritePixel(pixels,x,y,r,g,b,a)
+		pixels = _WritePixel(pixels,x,y, (a Shl 24)|(r Shl 16)|(b Shl 8)|g )
 
 	End
 	
@@ -148,7 +141,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 
 		'Local maskcolor:Int = (r|(g Shl 8)|(b Shl 16)) & $00ffffff
 		
-		pixels = HTMLMaskPixmap(pixels, r,g,b)
+		pixels = _MaskPixmap(pixels, $ff000000 |(r Shl 16)|(b Shl 8)|g )
 		
 	End
 	
@@ -181,7 +174,7 @@ End
 
 Class PreloadManager Implements IPreloadManager
 	
-	Field data:HTMLImage[]
+	Field data:FlashPixmap[]
 	Field load_complete:Bool[]
 	Field w:Int[], h:Int[]
 	Field total:Int
@@ -195,7 +188,7 @@ Class PreloadManager Implements IPreloadManager
 	End
 	
 	Method AllocatePreLoad:Void(size:Int)
-		data = New HTMLImage[size]
+		data = New FlashPixmap[size]
 		load_complete = New Bool[size]
 		w = New Int[size]
 		h = New Int[size]
@@ -210,20 +203,20 @@ Class PreloadManager Implements IPreloadManager
 		
 		f = FixDataPath(f)
 		f=f.Replace("monkey://","")
-		data[id-1] = LoadImageDataHTML(f, id)
+		data[id-1] = _LoadImageData(f) ', id)
 
 		
 	End
 	
 	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
 		
-		Local p:TPixmapGL = TPixmapGL(pixmap)
+		Local p:TPixmapFlash = TPixmapFlash(pixmap)
 		If p
 			
 			If id>0
 				p.pixels = data[id-1]
 				
-				Local info:Int[] = GetHTMLImageInfo(p.pixels)
+				Local info:Int[] = _GetImageInfo(p.pixels)
 				p.width = info[0]
 				p.height = info[1]
 
@@ -231,7 +224,7 @@ Class PreloadManager Implements IPreloadManager
 				''clear buffer if need be here
 			
 			
-			''NOT ALLOWED in HTML5, MUST PRELOAD	
+			''NOT ALLOWED in FLASH, MUST PRELOAD	
 			'Else
 				'Local info:Int[2]
 				'p.pixels = LoadImageData(f, info)
@@ -248,19 +241,15 @@ Class PreloadManager Implements IPreloadManager
 		For Local i:Int=0 To total-1
 			'If data[i] Then Print "i "+i+" :"+Int(CheckIsLoaded(data[i]))
 			If data[i]
-				If CheckIsLoaded(data[i])  And Not load_complete[i]
+				If _CheckIsLoaded(data[i])  And Not load_complete[i]
 					''callback
 					load_complete[i]=True
 					preloader.IncLoader()
 					
 				Endif
-
 			Endif
 		Next	
 	End
 	
 End
 
-
-
-#Endif

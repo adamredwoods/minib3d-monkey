@@ -382,24 +382,25 @@ Class Matrix
 	End
 	
 	Method FastRotateScale:Void(rx:Float,ry:Float,rz:Float,scx:Float,scy:Float,scz:Float)
+		CreateMatrix(rx,ry,rz,scx,scy,scz,grid[3][0],grid[3][1],grid[3][2])
+	end
+	
+	Method CreateMatrix:Void(rx:Float,ry:Float,rz:Float,scx:Float,scy:Float,scz:Float,px:Float,py:Float,pz:float)
 		''this function will overwrite current matrix
 		
 		Local sx:Float, sy:Float, sz:Float, cx:Float, cy:Float, cz:Float, theta:Float
 		
-		'' rotation angle about X-axis (pitch)
-		theta = rx 
-		sx = Sin(theta)
-		cx = Cos(theta)
+		'' rotation angle about X-axis (pitch) 
+		sx = Sin(rx)
+		cx = Cos(rx)
 		
-		'' rotation angle about Y-axis (yaw)
-		theta = ry 
-		sy = Sin(theta)
-		cy = Cos(theta)
+		'' rotation angle about Y-axis (yaw) 
+		sy = Sin(ry)
+		cy = Cos(ry)
 		
-		'' rotation angle about Z-axis (roll)
-		theta = rz 
-		sz = Sin(theta)
-		cz = Cos(theta)
+		'' rotation angle about Z-axis (roll) 
+		sz = Sin(rz)
+		cz = Cos(rz)
 		
 		Local sycz:Float = sy*cz
 		Local cysz:Float = cy*sz
@@ -410,17 +411,24 @@ Class Matrix
 		grid[0][0] = (cycz+sysz*sx) *scx
 		grid[0][1] = (cx*sz) *scx
 		grid[0][2] = (-sycz+cysz*sx) *scx
+		grid[0][3] = 0.0
 		
 		'' determine up axis
 		grid[1][0] = (-cysz+sycz*sx) *scy
 		grid[1][1] = (cx*cz) *scy
 		grid[1][2] = (sysz+cycz*sx) *scy
+		grid[1][3] = 0.0
 		
 		'' determine forward axis
 		grid[2][0] = (sy*cx) *scz
 		grid[2][1] = (-sx) *scz
 		grid[2][2] = (cx*cy) *scz
-
+		grid[2][3] = 0.0
+	
+		grid[3][0] = px
+		grid[3][1] = py
+		grid[3][2] = pz
+		grid[3][3] = 1.0
 		
 	End
 	

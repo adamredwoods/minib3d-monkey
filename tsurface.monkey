@@ -35,7 +35,7 @@ Class TSurface
 	Field vert_weight4:Float[]
 
 	' animated surf attached to this surface (edit 2012)
-	Field surf_id:Int ''used to link anim_surf and surface
+	Field surf_id:Int ''used to link anim_surf and surface ** not unique
 
 
 	' vertex animation coords per frame
@@ -248,7 +248,7 @@ Class TSurface
 		' default vertex colours
 		vert_data.PokeColor(vid,1.0,1.0,1.0,1.0)
 		
-		vert_data.PokeNormals(vid,0.0,0.0,1.0)		
+		vert_data.PokeNormals(vid,1.0,1.0,1.0)		
 		
 		Return vid
 	
@@ -281,7 +281,8 @@ Class TSurface
 		tris.Poke(v2i,v0)
 
 		' mesh shape has changed - update reset flag
-		reset_vbo = reset_vbo|1|2|16
+		'reset_vbo = reset_vbo|1|2|16
+		reset_vbo = -1 '' reset the whole vbo
 		
 		Return no_tris
 	
@@ -486,6 +487,7 @@ Class TSurface
 				Endif
 				
 				''don't disrupt the norm for other verts 
+
 				norm_map.Set(vx, norm.Add(vnorm) ) ' norm = (norm+vnorm)/2
 		
 			Next
@@ -815,14 +817,20 @@ Class TSurface
 			
 		Next
 		
-	End 
+	End
 	
+	''** make sure to flip posz and normalz
 	Method GetVertex:Vertex(vid:Int)
 	
 		Local v:Vertex = New Vertex
 		v.GetVertex(vid,vert_data)
 		Return v
 		
+	End
+	
+	''** make sure to flip posz and normalz
+	Method SetVertex:Void(vid:Int, v:Vertex)
+		v.SetVertex(vid, vert_data)
 	End
 	
 	Method ToString$()

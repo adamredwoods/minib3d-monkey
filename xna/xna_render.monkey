@@ -1,6 +1,7 @@
 ' XNA miniB3D target Author: Sascha Schmidt
 
 Import mojo
+Import mojo.graphicsdevice
 Import xna 
 Import xna_pixmap
 Import minib3d.trender
@@ -26,6 +27,16 @@ lights - no point or spotlight or multiple light without HLSL
 
 #XNA_PERPIXEL_LIGHNING=True
 
+
+Extern
+	Function MojoClear:Void() = "GraphicsDevice g = BBXnaGame.XnaGame().GetXNAGame().GraphicsDevice; g.Clear(new Color(0,0,0,0));//"
+	
+	Class MojoHack Extends GraphicsDevice = "gxtkGraphics"
+		Field _renderTarget:Object = "renderTarget"
+		Method Flush:Void() = "Flush"
+	End
+	
+Public
 
 Interface IRender
 	Method GetVersion:Float() 
@@ -70,6 +81,13 @@ End
 
 
 
+Function RestoreMojo2D()
+
+	XNARender(TRender.render).RestoreMojo()
+	
+End
+
+
 Class XNARender Extends TRender
 	
 Private
@@ -77,7 +95,7 @@ Private
 	Field _device				:XNAGraphicsDevice 
 	Field _xna					:XNAController
 	
-	Field UP_VECTOR				:= New Vector(0,-1,0) 
+	Field UP_VECTOR			:= New Vector(0,-1,0) 
 	Field LIGHT_QUAD			:= New Quaternion()
 	
 	Global _textures:= New IntMap<XNATexture> ' Todo Resourcemanager
@@ -88,9 +106,12 @@ Private
 	Field _last_texture:TTexture
 	
 	Field _alpha_list:= New List<TSurface> 
-	Field _mesh_id, _texture_id, _light_no
+	Field _mesh_id%, _texture_id%, _light_no%
+	
+	Global _mojoClear:Int=0
 
 Public 
+
 		
 	Method New()
 		_device 	= New XNAGraphicsDevice 
@@ -103,6 +124,13 @@ Public
 	''should return shader model
 	Method GetVersion:Float()
 		Return GetShaderVersion()
+	End
+
+	Method ContextReady:Bool()
+
+		If _device Then Return True
+		Return False
+		
 	End
 
 	Method GraphicsInit(flags:Int=0)
@@ -122,15 +150,40 @@ Public
 	Method Reset:Void()
 		
 		''clear mojo state
-		EndMojoRender()
+		_xna._device.SetRenderTarget(Null)
+		
+		_xna._device.DepthStencilState = _xna._depthStencilDepth
+		_xna._device.RasterizerState = _xna._rasterizerStates[0]
+		_xna._device.BlendState = _xna._blendStates[0]
 		
 		TRender.alpha_pass = 0
 		_xna.Reset()
+
+	
+	End
+	
+	Method RestoreMojo:Void()
+
+		MojoHack(GetGraphicsDevice()).Flush()
+		
+		GetGraphicsDevice().BeginRender()
+		'If XNARender._mojoClear=0 Then XNARender._mojoClear=1; MojoClear()
+		MojoClear()
+		
+		'_xna._device.SetRenderTarget(Null)
+		_xna._device.DepthStencilState = _xna._depthStencilNoDepth
+		_xna._device.RasterizerState = _xna._rasterizerStates[0]
+		_xna._device.BlendState = _xna._blendStates[0]
+		
+		'MojoHack(GetGraphicsDevice())._renderTarget=Null
 		
 	End
 	
-	Method Render:Void(ent:TEntity, cam:TCamera = Null)
 	
+	Method Render:Void(ent:TEntity, cam:TCamera = Null)
+
+'Return '''*****************************************************************************
+
 		Local mesh:TMesh = TMesh(ent)
 		If Not mesh Then Return
 		
@@ -228,7 +281,7 @@ Public
 	End 
 
 	Method UpdateVBO:Int(surf:TSurface)
-	
+
 		Local m:XNAMesh = Null
 		
 		If surf.vbo_id[0]=0
@@ -273,9 +326,9 @@ Public
 		Endif
 	End 
 
-	Method DeleteTexture(glid:Int[])
-		If _textures.Contains (glid[0]) Then 
-			_textures.Remove(glid[0])
+	Method DeleteTexture(tex:TTexture)
+		If _textures.Contains (tex.gltex[0]) Then 
+			_textures.Remove(tex.gltex[0])
 		End 
 	End
 	
@@ -381,13 +434,15 @@ Public
 	End
 
 	Method UpdateCamera(cam:TCamera)
-		
+	
 		'If (_device)
 			' viewport
 			_device.Viewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 		
 			' clear buffers
+		If cam.cls_color=True or cam.cls_zbuffer=True
 			_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, cam.cls_color, cam.cls_zbuffer, False )
+		Endif
 		
 		'Endif
 		
@@ -491,6 +546,7 @@ Private
 	Field _depthStencilNone		:XNADepthStencilState
 	Field _depthStencilNoWrite	:XNADepthStencilState
 	Field _depthStencilNoDepth	:XNADepthStencilState
+	Field _depthStencilDepth	:XNADepthStencilState
 	
 	Field _blendStates			:XNABlendState[] 
 	Field _lastSamplerState		:XNASamplerState 	
@@ -498,7 +554,7 @@ Private
 	Field _st_uvSmooth			:UVSamplerState
 	
 	' effects
-	Field _lastEffect			:EffectContainer
+	Field _lastEffect				:EffectContainer
 	Field _basicEffect			:BasicEffect
 	Field _enviromentEffect		:BasicEffect
 	Field _draw2DEffect			:Draw2DEffect
@@ -540,6 +596,10 @@ Public
 		_depthStencilNoDepth.DepthBufferEnable = False
 		_depthStencilNoDepth.DepthBufferWriteEnable = False
 		
+		_depthStencilDepth	= XNADepthStencilState.Create
+		_depthStencilDepth.DepthBufferEnable = True
+		_depthStencilDepth.DepthBufferWriteEnable = True
+		
 		_blendStates 		= [XNABlendState.AlphaBlend, XNABlendState.AlphaBlend, XNABlendState.Premultiplied, XNABlendState.Additive, XNABlendState.Opaque]
 		_st_uvNormal 		= UVSamplerState.Create( TextureFilter_Point )
 		_st_uvSmooth 		= UVSamplerState.Create( TextureFilter_LinearMipPoint  )
@@ -554,6 +614,7 @@ Public
 		_basicEffect.Reset()
 		tex_count=0
 		_lastTexture = Null
+		
 	End
 	
 	Method SetLightEnable(id, enable?)
@@ -657,17 +718,24 @@ Public
 		
 		'----------------
 		
-		' fx flag 16 - disable backface culling
-		If _fx&16 Then 
-			_device.RasterizerState = _rasterizerStates[0] 
-		Else 
-			_device.RasterizerState = _rasterizerStates[2]
-		End 
-		
-		''global wireframe rendering
-		If TRender.render.wireframe
-			_device.RasterizerState = _rasterizerWire
-		Endif
+		If cam.draw2D
+
+            '_device.RasterizerState = _rasterizerScissor
+            '_device.ScissorRectangle(cam.vx,TRender.height-cam.vheight-cam.vy,cam.vwidth,cam.vheight)
+
+      Else
+            ''global wireframe rendering
+            If TRender.render.wireframe
+                _device.RasterizerState = _rasterizerWire
+            Else
+                ' fx flag 16 - disable backface culling
+                If _fx&16 Then 
+                    _device.RasterizerState = _rasterizerStates[0] 
+                Else 
+                    _device.RasterizerState = _rasterizerStates[2]
+                End 
+            Endif
+      End 
 
 		'' fx flag 32 - force alpha
 		If _fx&32
@@ -702,14 +770,14 @@ Public
 		_device.DepthStencilState = _depthStencilNoDepth
 	End
 	
-	''if we decide to return to monkey.mojo
+
 	Method ClearStates()
-		
-		 _device.SamplerState(0, _st_uvNormal._cU_cV )
+
+		_device.SamplerState(0, _st_uvNormal._cU_cV )
 		_lastSamplerState = _st_uvNormal._cU_cV
 		_device.DepthStencilState = _depthStencilDefault
 		_device.BlendState = _blendStates[0]
-		
+
 	End
 	
 	
@@ -1111,7 +1179,7 @@ Class BasicEffect Extends EffectContainer
 		Else
 			effect.VertexColorEnabled = False 
 			effect.DiffuseColor(_red,_green,_blue)
-	        effect.Alpha = _alpha
+	      effect.Alpha = _alpha
 			effect.SpecularPower(_shine)
 		Endif
 		
@@ -1166,7 +1234,6 @@ End
 '' *** does not work
 Class Draw2DEffect Extends BasicEffect
 
-	
 	Method Reset()
 
 		Super.Reset()
@@ -1179,8 +1246,6 @@ Class Draw2DEffect Extends BasicEffect
 		_effect = effect
 		_name = "draw2d"
 
-	
-		
 		Reset()
 	End 
 	

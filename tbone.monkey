@@ -116,6 +116,7 @@ Public
 
 	Method AddBone()
 		'' adds bone to end of another bone
+		'' auto - create vertex weight
 		
 	End
 

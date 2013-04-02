@@ -35,6 +35,8 @@ Import mojo
 		Import minib3d.opengl.opengles20
 	#Elseif TARGET="xna"
 		Import minib3d.xna
+	#Elseif TARGET="flash"
+		Import minib3d.flash11
 	#endif
 #endif
 

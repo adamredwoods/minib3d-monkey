@@ -26,8 +26,8 @@ Class Minib3dApp Extends App
 	End
 	
 	Method OnCreate()
-		SetRender()
 		SetUpdateRate 30
+		SetRender()
 		PreLoad("mojo_font.png")
 		Create()
 		Minib3dInit()	

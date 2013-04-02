@@ -63,7 +63,8 @@ public class XNAGraphicsDevice
     public XNAGraphicsDevice()
     {
         //_device = gxtkApp.game.app.graphics.device;
-		_device = gxtkApp.game.app.GraphicsDevice().device;
+		//_device = gxtkApp.game.app.GraphicsDevice().device;
+		_device=BBXnaGame.XnaGame().GetXNAGame().GraphicsDevice;
         _effect = new BasicEffect(_device);
         _effect.VertexColorEnabled = false;
         _effect.PreferPerPixelLighting = false;
@@ -73,7 +74,7 @@ public class XNAGraphicsDevice
 
     public XNATexture LoadTexture(string fileName)
     {
-        var texture = MonkeyData.LoadTexture2D(fileName, gxtkApp.game.Content);
+        var texture = BBXnaGame.XnaGame().LoadTexture2D(fileName);
         if (texture != null) return new XNATexture(texture,fileName);
         return null;
     }
@@ -126,7 +127,7 @@ public class XNAGraphicsDevice
         if (back) mode |= (int)ClearOptions.Target;
         if (depth) mode |= (int)ClearOptions.DepthBuffer;
         if (stencil) mode |= (int)ClearOptions.Stencil;
-        _device.Clear((ClearOptions)mode, new Color(r, g, b), 1.0f, 0);
+        _device.Clear((ClearOptions)mode, new Vector4(r, g, b, 0), 1.0f, 0);
     }
 	
 	public void Viewport(int x,int y,int width, int height) 
@@ -150,6 +151,10 @@ public class XNAGraphicsDevice
 		//return Convert.ToInt32(_device.IsDisposed);
 	}
 	
+	public void SetRenderTarget(RenderTarget2D rt) 
+	{
+		_device.SetRenderTarget(rt);
+	}
 };
 
 public class XNABlendState
