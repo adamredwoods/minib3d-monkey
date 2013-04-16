@@ -133,7 +133,7 @@ Class TModelObj
 		
 			Local Line:String = stream.ReadLine().Trim()
 			
-			If Line.Length() <0 Then Continue
+			If Line.Length() <1 Then Continue
 				
 			If Line[0] = "#" Then
 			
