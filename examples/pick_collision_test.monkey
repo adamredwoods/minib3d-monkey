@@ -91,7 +91,10 @@ Class Game Extends App
 		Print "main: intit done"
 	End
 	
-	Method OnUpdate()	
+	Method OnUpdate()
+	
+		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
+	
 		Init()
 		
 		If KeyDown(187)
@@ -188,7 +191,7 @@ Class Game Extends App
 		Endif
 		
 		
-		If KeyDown(KEY_ESCAPE)
+		If KeyDown(KEY_C)
 			Print "clear"
           	ClearWorld()
 		End

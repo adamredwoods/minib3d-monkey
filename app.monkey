@@ -1,7 +1,10 @@
 
 Import minib3d
 
-Class Minib3dApp Extends App
+Class Minib3dApp Extends MiniB3DApp
+end
+
+Class MiniB3DApp Extends App
 
 	Global Resumed:Bool = False
 	
@@ -28,7 +31,7 @@ Class Minib3dApp Extends App
 	Method OnCreate()
 		SetUpdateRate 30
 		SetRender()
-		PreLoad("mojo_font.png")
+		PreLoad(["mojo_font.png"])
 		Create()
 		Minib3dInit()	
 	End
@@ -38,6 +41,7 @@ Class Minib3dApp Extends App
 	
 	Method Minib3dInit:Void()
 		If init Then Return
+		
 		If Not TPixmap.PreLoadPixmap(preload_list.ToArray()) Then Return
 		init=1
 		Init()
@@ -77,9 +81,19 @@ Class Minib3dApp Extends App
 	End
 	
 	Method OnRender()
+		If Not init
+			PreLoadRender()
+			Return
+		Endif
+		
 		Render()
+		
 		RenderWorld	
 		renders=renders+1
+	End
+	
+	
+	Method PreLoadRender()
 	End
 	
 	Method Render()

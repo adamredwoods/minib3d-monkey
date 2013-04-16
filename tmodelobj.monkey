@@ -400,9 +400,9 @@ Class TModelObj
 			
 			'If DEBUG Then Dprint " "+D2[0] +"/ "+D2[1]+"/ "+D2[2]
 			
-			fdata[s].vi = Int(D2[0])
-			fdata[s].ti = Int(D2[1])
-			fdata[s].ni = Int(D2[2])
+			If D2[0]<>"" Then fdata[s].vi = Int(D2[0])
+			If D2[1]<>"" Then fdata[s].ti = Int(D2[1])
+			If D2[2]<>"" Then fdata[s].ni = Int(D2[2])
 	
 			If fdata[s].vi <0 Then  fdata[s].vi=0
 			If fdata[s].ti <0 Then  fdata[s].ti=0

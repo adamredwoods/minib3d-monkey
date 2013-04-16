@@ -4,7 +4,7 @@ Import minib3d.monkeyutility
 ''-----------------------------------------------------------------------
 ''
 
-Function DumpB3D:Void( f_name$, outf$ )
+Function DumpB3D:Void( f_name$, outf$ ="")
 	
 	Local outp$ = ""
 	
@@ -40,7 +40,7 @@ Function DumpB3D:Void( f_name$, outf$ )
 
 		Local file:BufferReader = BufferReader.Create(data)
 
-		
+		Local outdata:String = ""
 			
 		' Header info
 		
@@ -64,6 +64,7 @@ Function DumpB3D:Void( f_name$, outf$ )
 		' Locals
 		
 		Local size:Int
+		Local curSize:Int=0
 		Local node_level:Int=-1
 		Local old_node_level:Int=-1
 		Local node_pos:Int[100]
@@ -187,7 +188,8 @@ Function DumpB3D:Void( f_name$, outf$ )
 				
 				file.ReadInt() 'tag
 				size=file.ReadInt() 'size
-	
+				curSize = 0
+				
 				' deal with nested nodes
 				
 				old_node_level=node_level
@@ -232,7 +234,7 @@ Function DumpB3D:Void( f_name$, outf$ )
 					tent=root_ent
 					
 					' get parent entity of last entity of new node level
-					If node_level>1
+					If tent And node_level>1
 					
 						Local cc
 						For Local levs=1 To node_level-2
@@ -274,13 +276,16 @@ Function DumpB3D:Void( f_name$, outf$ )
 				Case TEXS '"TEXS"
 				
 					'Local tex_no=0 ' moved to top
-					outp+="TEXS~n"
+					outp+="TEXS sz:"+size+"~n"
 					
 					new_tag=file.ReadTag()
 					
-					While TModelB3D.NewTag(new_tag)<>True And file.Eof()<>True
+					While file.Eof()<>True And curSize<size And TModelB3D.NewTag(new_tag)<>True 
 					
 						te_file=TModelB3D.B3DReadString(file)
+						curSize+=te_file.Length()+1
+						
+						If te_file = "" Then Continue
 						te_flags=file.ReadInt()
 			
 						' hidden tex coords 1 flag
@@ -296,7 +301,8 @@ Function DumpB3D:Void( f_name$, outf$ )
 						tex_no=tex_no+1
 	
 						new_tag=file.ReadTag()
-
+						
+						curSize+=28
 				
 					Wend
 			
@@ -307,10 +313,11 @@ Function DumpB3D:Void( f_name$, outf$ )
 					outp+="BRUS~n"
 					
 					Local b_no_texs%=file.ReadInt()
+					curSize+=4
 					
 					new_tag=file.ReadTag()
 					
-					While TModelB3D.NewTag(new_tag)<>True And file.Eof()<>True
+					While TModelB3D.NewTag(new_tag)<>True And file.Eof()<>True And curSize < size
 	
 						Local b_name$=TModelB3D.B3DReadString(file)
 						Local b_red#=file.ReadFloat()
@@ -320,12 +327,12 @@ Function DumpB3D:Void( f_name$, outf$ )
 						Local b_shine#=file.ReadFloat()
 						Local b_blend%=file.ReadInt()
 						Local b_fx%=file.ReadInt()
-						
+						curSize+=b_name.Length+28
 				
 						For Local ix=0 To b_no_texs-1
 						
 							Local b_tex_id%=file.ReadInt()
-
+							curSize+=4
 			
 						Next
 		
@@ -385,17 +392,20 @@ Function DumpB3D:Void( f_name$, outf$ )
 					
 					new_tag=file.ReadTag()
 	
-					While TModelB3D.NewTag(new_tag)<>True And file.Eof()<>True
-				
+					While file.Eof()<>True And curSize<size 'And TModelB3D.NewTag(new_tag)<>True
+						
+						no_verts+=1
+						
 						v_x=file.ReadFloat()
 						v_y=file.ReadFloat()
 						v_z=file.ReadFloat()
+						curSize+=12
 						
 						If v_flags&1
 							v_nx=file.ReadFloat()
 							v_ny=file.ReadFloat()
 							v_nz=file.ReadFloat()
-	
+							curSize+=8
 						Endif
 						
 						If v_flags&2
@@ -403,15 +413,16 @@ Function DumpB3D:Void( f_name$, outf$ )
 							v_g=file.ReadFloat()*255.0
 							v_b=file.ReadFloat()*255.0
 							v_a=file.ReadFloat()
+							curSize+=16
 						Endif
 						
 						
 						'read tex coords...
 						For Local j=0 To v_tc_sets-1 ' texture coords per vertex - 1 for simple uv, 8 max
 							For Local k=1 To v_tc_size ' components per set - 2 for simple uv, 4 max
-								If k=1 v_u=file.ReadFloat()
-								If k=2 v_v=file.ReadFloat()
-								If k=3 v_w=file.ReadFloat()
+								If k=1 v_u=file.ReadFloat(); curSize+=4
+								If k=2 v_v=file.ReadFloat(); curSize+=4
+								If k=3 v_w=file.ReadFloat(); curSize+=4
 							Next
 						Next
 						
@@ -474,11 +485,11 @@ Function DumpB3D:Void( f_name$, outf$ )
 					a_frames=file.ReadInt()
 					a_fps=file.ReadFloat()
 					
-					outp+="data "+a_flags+" "+a_frames+" "+a_fps
+					outp+="data flags:"+a_flags+" frames:"+a_frames+" fps:"+a_fps
 	
 				Case BONE
 					
-					outp+="BONE~n"
+					outp+="BONE sz:"+size+"~n"
 					
 					Local ix:Int=0
 					
@@ -487,13 +498,13 @@ Function DumpB3D:Void( f_name$, outf$ )
 					bo_bone = New TBone
 					bo_no_bones=bo_no_bones+1
 					
-					While TModelB3D.NewTag(new_tag)<>True And file.Eof()<>True
+					While file.Eof()<>True And curSize < size 'And TModelB3D.NewTag(new_tag)<>True
 				
 						bo_vert_id=file.ReadInt()
 						bo_vert_w=file.ReadFloat()
+						curSize+=8
 						
 						outp+="id:"+bo_vert_id+" weight:"+bo_vert_w+"~n"
-						
 						new_tag=file.ReadTag()
 							
 					Wend
@@ -507,27 +518,32 @@ Function DumpB3D:Void( f_name$, outf$ )
 					k_flags=file.ReadInt()
 				
 					new_tag=file.ReadTag()
+					
+					curSize +=4
 	
-					While TModelB3D.NewTag(new_tag)<>True And file.Eof()<>True
+					While file.Eof()<>True And curSize < size ' and TModelB3D.NewTag(new_tag)<>True 
 				
 						k_frame=file.ReadInt()
+						curSize +=4
 						
 						If(k_flags&1) 'pos
 							k_px=file.ReadFloat()
 							k_py=file.ReadFloat()
 							k_pz=-file.ReadFloat()
+							curSize+=12
 						Endif
 						If(k_flags&2) 'sca
 							k_sx=file.ReadFloat()
 							k_sy=file.ReadFloat()
 							k_sz=file.ReadFloat()
+							curSize+=12
 						Endif
 						If(k_flags&4) 'rot
 							k_qw=-file.ReadFloat()
 							k_qx=file.ReadFloat()
 							k_qy=file.ReadFloat()
 							k_qz=-file.ReadFloat()
-							
+							curSize+=16
 						Endif
 	
 						outp+="frame:"+k_frame+" xyz:"+k_px+" "+k_py+" "+k_pz+" scxyz:"+k_sx+" "+k_sy+" "+k_sz+" qxyzw:"+k_qx+" "+k_qy+" "+k_qz+" "+k_qw+"~n"
@@ -543,11 +559,15 @@ Function DumpB3D:Void( f_name$, outf$ )
 					file.ReadByte()
 	
 			End Select
-		
+			
+			outdata+=outp
+			If outp<>"" Then Print outp
+			outp=""
+			
 		Until file.Eof()
 
 	
-		os.SaveString(outp, outf)
+		If outf<>"" Then os.SaveString(outdata, outf)
 	
 End
 

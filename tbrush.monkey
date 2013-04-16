@@ -3,7 +3,7 @@ Import ttexture
 
 #rem
 NOTES:
--- why would tex_frames go into the texture? because ttexture is an instance of tpixmap
+-- why would tex_frames go into the texture? because different textures, different anim frames
 
 #end
 
@@ -15,7 +15,10 @@ Class TBrush
 	Field red#=1.0,green#=1.0,blue#=1.0,alpha#=1.0
 	Field shine#=0.05, shine_strength#=100.0
 	Field blend:Int,fx:Int
-
+	
+	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
+	Field tex_frame:Int=0
+	
 	Field tex:TTexture[8]
 	
 	Const MAX_TEXS:Int = 8
@@ -48,14 +51,24 @@ Class TBrush
 		brush.shine_strength=shine_strength
 		brush.blend=blend
 		brush.fx=fx
-		If tex[0] brush.tex[0]=tex[0].Copy()
-		If tex[1] brush.tex[1]=tex[1].Copy()
-		If tex[2] brush.tex[2]=tex[2].Copy()
-		If tex[3] brush.tex[3]=tex[3].Copy()
-		If tex[4] brush.tex[4]=tex[4].Copy()
-		If tex[5] brush.tex[5]=tex[5].Copy()
-		If tex[6] brush.tex[6]=tex[6].Copy()
-		If tex[7] brush.tex[7]=tex[7].Copy()
+		
+		#rem
+		brush.u_scale=u_scale
+		brush.v_scale=v_scale
+		brush.u_pos=u_pos
+		brush.v_pos=v_pos
+		brush.angle=angle
+		brush.tex_frame=tex_frame
+		#end
+		
+		If tex[0] brush.tex[0]=tex[0]
+		If tex[1] brush.tex[1]=tex[1]
+		If tex[2] brush.tex[2]=tex[2]
+		If tex[3] brush.tex[3]=tex[3]
+		If tex[4] brush.tex[4]=tex[4]
+		If tex[5] brush.tex[5]=tex[5]
+		If tex[6] brush.tex[6]=tex[6]
+		If tex[7] brush.tex[7]=tex[7]
 					
 		Return brush
 
@@ -68,9 +81,9 @@ Class TBrush
 	Function CreateBrush:TBrush(r#=255.0,g#=255.0,b#=255.0)
 	
 		Local brush:TBrush=New TBrush
-		brush.red=r/255.0
-		brush.green=g/255.0
-		brush.blue=b/255.0
+		brush.red=r*INV_255
+		brush.green=g*INV_255
+		brush.blue=b*INV_255
 		
 		brush.tex[0] = New TTexture
 		
@@ -136,7 +149,7 @@ Class TBrush
 		Local i:Int = no_texs-1
 		
 		tex[i]=TTexture.LoadAnimTexture(file,flags,w,h,first_frame,no_frames) 
-		tex[i].tex_frame=0
+		tex_frame=0
 		
 		Return brush
 		
@@ -144,9 +157,9 @@ Class TBrush
 	
 	Method BrushColor(r#,g#,b#)
 	
-		red=r/255.0
-		green=g/255.0
-		blue=b/255.0
+		red=r*INV_255
+		green=g*INV_255
+		blue=b*INV_255
 	
 	End 
 	

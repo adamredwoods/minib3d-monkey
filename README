@@ -1,5 +1,6 @@
 minib3d+monkey
-v0.34 - In Progress... B3D loader fixes
+v0.35 - mojo emulation, camera scissor
+v0.34 - B3D loader fixes
 v0.33 - MMD/PC2 file load, TPixmap read/write, collisions, bug fixes
 v0.32 - programmable bones, Draw(x,y) for screen, loads of bugs and stability fixes
 v0.31 - update to work with monkey v66, bug fixes.

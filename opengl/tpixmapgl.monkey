@@ -308,6 +308,10 @@ Class PreloadManager Implements IPreloadManager
 	Field total:Int
 	Field preloader:TPixmapPreloader
 	
+	Method IsLoaded:Bool(file_id:Int)
+		Return (data[file_id-1] <> Null)
+	End
+	
 	Method AllocatePreLoad:Void(size:Int)
 		data = New DataBuffer[size]
 		w = New Int[size]

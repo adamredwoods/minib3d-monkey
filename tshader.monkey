@@ -5,6 +5,14 @@
 Import tbrush
 Import minib3d
 
+Interface IShader2D
+	Method SetShader2D:Void()
+End
+
+Class BlankShader Implements IShader2D
+	Method SetShader2D:Void()
+	end
+End
 
 Class TShader Extends TBrush
 	

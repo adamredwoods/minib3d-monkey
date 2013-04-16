@@ -183,6 +183,8 @@ Class TMesh Extends TEntity
 		
 	End 
 	
+	
+	
 	Function CreateMesh:TMesh(parent_ent:TEntity=Null)
 
 		Local mesh:TMesh=New TMesh
@@ -1994,11 +1996,11 @@ Class TMesh Extends TEntity
 		''immediate mode draw to screen
 		TRender.draw_list.AddLast(Self)
 		''position
-		Local w# = TRender.width*0.5
-		Local h# = TRender.height*0.5
+		Local w# '= TRender.width*0.5
+		Local h# '= TRender.height*0.5
 		If parent<>Null Then EntityParent(Null)
-		PositionEntity((x-w), (h-y), 1.99999)
-
+		'PositionEntity((x-w), (h-y), 1.99999)
+		PositionEntity(x, y, 1.99999)
 					
 		''auto-scaling for sprites and ttext
 		Local spr:TSprite = TSprite(Self)
@@ -2010,7 +2012,8 @@ Class TMesh Extends TEntity
 				''mojo_font scx=12
 				Local scx# = Int((TText(Self).char_pixels* TText(Self).pixel_ratio)+1.5) '0.5 rounds up
 				spr.pixel_scale[0] = scx
-				spr.pixel_scale[1] = scx			
+				spr.pixel_scale[1] = scx		
+'Print scx	
 			Else
 				Local scx# = Self.brush.GetTexture(0).width * 0.5 '' a sprite is 2 units wide (-1,1)
 				Local scy# = Self.brush.GetTexture(0).height * 0.5
@@ -2029,6 +2032,16 @@ Class TMesh Extends TEntity
 	Method Wireframe:Void(w:Bool = True)
 		
 		wireframe = w
+		
+	End
+	
+	Method ClearMesh:Void()
+		
+		For Local s:TSurface = Eachin surf_list
+			s.FreeSurface()
+		Next
+		no_surfs=0
+		surf_list.Clear()
 		
 	End
 	

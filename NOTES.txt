@@ -1,11 +1,22 @@
 ****************************************
-minib3d v0.34 *IN PROGRESS*
+minib3d v0.35
+
+- Added: CameraScissor(x,y,w,h) -- allows clipping region for cameras
+- Added: SetMojoEmulation() -- Allows mojo 2D commands in OnRender
+  notes: -xna Cls() function clears whole screen (may need better way?)
+   - mojo readpixel/writepixel won't work (but minib3d read/write pixels for tpixmap works ok)
+   - not all blend modes work
+   - see bunnies demo for use (must preload images as tpixmap for html5)
+   
+- bug fixes: objloader, fog, entityorder depth, more
+
+
+****************************************
+minib3d v0.34
 
 - bug fixes: b3d loader fixes by Landon
 - b3d binary loader
-
 - Flash11 target (in progress)
-
 
 
 ****************************************

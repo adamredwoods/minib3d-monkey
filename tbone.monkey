@@ -114,9 +114,18 @@ Public
 	End 
 
 
-	Method AddBone()
+	Method AddBone:TBone()
 		'' adds bone to end of another bone
 		'' auto - create vertex weight
+		
+	End
+	
+	Function CreateBone:TBone(parent:TEntity)
+		If Not parent Return Null
+		
+		If TBone(parent) Then Return TBone(parent).AddBone()
+		
+		Local bn:TBone = New TBone
 		
 	End
 

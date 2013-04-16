@@ -41,7 +41,6 @@ Class TText Extends TSprite Final
 		Local tt:TText = CreateText(camx,str,font,num_chars,c_pixels,pad, True)
 		Return tt
 	End
-	
 
 	
 	Function CreateText:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0, mode:Bool = True )

@@ -2,6 +2,8 @@
 //
 // for minib3d html5
 
+function EmptyNullClass(){}; //a hack to support mojo graphicsdevice
+
 
 function LoadImageData(file, idx) {
 	
@@ -18,6 +20,7 @@ function LoadImageData(file, idx) {
 	};
 	image.onerror = function() {
 		image.id=0;
+		//print ("image load error function");
 	};
 
 //print (idx+" "+file);		
@@ -42,6 +45,7 @@ function CreateImageData(w, h) {
 	image.src = "data:image/gif;base64,R0lGODlhAQABAIAAAP7//wAAACH5BAAAAAAALAAAAAABAAEAAAICRAEAOw==";
 
 	image= HTMLResizePixmap(image,w,h,false);
+
 	return image;
 }
 
@@ -63,6 +67,7 @@ function HTMLResizePixmap(image,w,h, smooth) {
 	
 	//return ctx.getImageData(0,0,w,h);
 	image = canvas;
+
 	return image;
 
 }

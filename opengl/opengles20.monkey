@@ -56,6 +56,7 @@ Function SetRender(flags:Int=0)
 
 	TRender.render = New OpenglES20
 	TRender.render.GraphicsInit(flags)
+	SetMojoEmulation()
 	
 End
 
@@ -66,11 +67,11 @@ Function RestoreMojo2D()
 
 	OpenglES20._useMojo=True
 	GetGraphicsDevice().BeginRender()
-
+	
 End
 
 
-Class OpenglES20 Extends TRender
+Class OpenglES20 Extends TRender Implements IShader2D
 	
 	Const DEBUG:Int = TRender.DEBUG
 	Const DEGREESTORAD:Float = PI/180.0
@@ -109,6 +110,8 @@ Class OpenglES20 Extends TRender
 	Public
 	
 	Method New()
+		
+		shader2D = self
 		
 	End
 	
@@ -163,6 +166,8 @@ Print s
 		cam_matrix_upload=0
 		
 		ResetLights()
+		
+		TShader.DefaultShader()
 
 		'Print "....begin render...."
 		
@@ -326,10 +331,10 @@ Print s
 'Print "   mesh.anim:"+mesh.anim
 'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
 		
-
+'Print " shader:"+shader.name
 			''enable shader and check for last_state
 			
-'Print " shader:"+shader.name				
+				
 			
 			''SHADER ACTIVATION---------------------------------
 			If shader.shader_id<>last_shader
@@ -486,6 +491,7 @@ Print s
 				'glEnable(GL_COLOR_MATERIAL)
 				red=1.0; green=1.0; blue=1.0; alpha=1.0
 			Else
+				''use base color
 				'glDisable(GL_COLOR_MATERIAL)
 			Endif
 			
@@ -500,6 +506,10 @@ Print s
 			If fx&8
 				'glDisable(GL_FOG)
 				If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, 0 )
+			Else If cam.fog_mode >0
+			
+				If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, cam.fog_mode )
+				
 			Endif
 
 			
@@ -870,6 +880,8 @@ Print s
 				If shader.u.texcoords0 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords0)
 				If shader.u.texcoords1 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords1)
 				
+				'fx = fx|2 ''turn on vertex colors if no texture ''--no, users need to select this
+				
 			Endif
 
 			last_tex_count = tex_count
@@ -979,9 +991,7 @@ Print s
 		''negative values are webgl 1.0, which are == opengles2.0
 		If version <1.999 And version >0.0 Then Error("Requires OpenGL 2.0 or higher")
 		
-		Local res:Int[1]
-		glGetIntegerv(GL_SHADER_COMPILER, res)
-		If res[0]=GL_FALSE Then Print "**No GLSL Compiler "+Int(res[0])
+		
 		
 		''get the TPixmapManager set
 		TPixmapGL.Init()
@@ -1038,6 +1048,10 @@ Print s
 		glGetIntegerv(GL_MAX_TEXTURE_UNITS, data)
 		MAX_TEXTURES = data[0]-1
 		If DEBUG Then Print "..max textures:"+MAX_TEXTURES+1
+		
+		Local res:Int[1]
+		glGetIntegerv(GL_SHADER_COMPILER, res)
+		If res[0]=GL_FALSE Then Print "**No GLSL Compiler "+Int(res[0])
 		
 		Return 1
 	End
@@ -1198,15 +1212,15 @@ Print s
 	End
 	
 	
-	Method FreeVBO(surf:TSurface)
+	Method DeleteVBO(surf:TSurface)
 	
 		If surf.vbo_id[0]<>0 
-			glDeleteBuffers(surf.vbo_id[0])
-			glDeleteBuffers(surf.vbo_id[1])
-			glDeleteBuffers(surf.vbo_id[2])
-			glDeleteBuffers(surf.vbo_id[3])
-			glDeleteBuffers(surf.vbo_id[4])
-			glDeleteBuffers(surf.vbo_id[5])
+			glDeleteBuffer(surf.vbo_id[0])
+			glDeleteBuffer(surf.vbo_id[1])
+			glDeleteBuffer(surf.vbo_id[2])
+			glDeleteBuffer(surf.vbo_id[3])
+			glDeleteBuffer(surf.vbo_id[4])
+			glDeleteBuffer(surf.vbo_id[5])
 		Endif
 	
 	End 
@@ -1268,6 +1282,8 @@ Print s
 	
 		If Not tex.gltex[0]
 			tex.gltex[0] = glCreateTexture()
+		Elseif tex.pixmap.bind
+			Return tex
 		Endif
 	
 		glBindTexture GL_TEXTURE_2D,tex.gltex[0]
@@ -1300,7 +1316,7 @@ Print s
 		
 		Local mipmap:Int= 0, mip_level:Int=0
 		If flags&8 Then mipmap=True
-		
+	
 		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
 		
 			Repeat
@@ -1332,6 +1348,7 @@ Print s
 			Forever
 			
 		tex.no_mipmaps=mip_level
+		tex.pixmap.SetBind()
 		
 		Return tex
 		
@@ -1400,7 +1417,7 @@ Print s
 	        '' must be turned on again somewhere 
 	        glEnable(GL_SCISSOR_TEST)
 			'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
-			glScissor(cam.vx,cam.vy,cam.vwidth,cam.vheight)	
+			glScissor(cam.viewport[0],cam.viewport[1],cam.viewport[2],cam.viewport[3])	
 	
 		Endif
 		
@@ -1466,10 +1483,10 @@ Print s
 	End 
 	
 
-	''Overloading
-	Function SetDrawShader:Void()
-		
-		SetShader(New FastBrightShader)
+	''Interface
+	Method SetShader2D:Void()
+
+		TShader.SetShader(New FastBrightShader)
 		
 	End
 

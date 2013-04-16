@@ -12,6 +12,8 @@ Import minib3d
 ''Method DeleteTexture(glid:Int[]) Abstract  '' **** DEPRECATE THIS ****** (use DeleteTexture(tx:Texture))
 '' and update BindTextureStack()
 
+
+
 Class TRender
 
 #If CONFIG="debug"
@@ -33,6 +35,7 @@ Class TRender
 	
 	Global alpha_pass:Int = 0 ''for optimizing the TMesh render routine
 	
+	Global shader2D:IShader2D = New BlankShader
 	Global camera2D:TCamera = New TCamera '' do not add to cam_list
 	Global draw_list:List<TMesh> = New List<TMesh> ''immediate mode drawing for overlay, text
 	
@@ -66,8 +69,8 @@ Class TRender
 	Method UpdateCamera(cam:TCamera) Abstract
 	
 	Method UpdateVBO(surface:TSurface)
-	
-	
+	End
+	Method DeleteVBO(surface:TSurface)
 	End
 	
 	''-------------------------------------------------------
@@ -224,12 +227,12 @@ Class TRender
 	
 	Function  RenderWorld:Void()
 		
-		If Not TRender.render.ContextReady() Then Return
+		''confirm rendering context
+		If TRender.render = Null Or Not TRender.render.ContextReady() Then Return
 		
-		''process texture binds
-		TRender.render.BindTextureStack()		
-		
-		If Not TCamera.cam_list Or render = Null Then Return
+		''process texture binds & framebuffer binds
+		If TTexture.tex_bind_stack.Length >0 Then TRender.render.BindTextureStack()		
+
 		
 		For Local cam:TCamera=Eachin TCamera.cam_list
 
@@ -262,30 +265,27 @@ Class TRender
 		
 	End 
 	
-	
-	Function RenderDrawList:Void()
 
+	Function RenderDrawList:Void()
+	
 		If draw_list.IsEmpty Or Not TRender.render.ContextReady() Then Return
 		
-		TRender.render.SetDrawShader()
+		shader2D.SetShader2D()
 		TRender.render.Reset()
 		
-		camera2D.CameraViewport(0,0,TRender.width,TRender.height)
-		camera2D.SetPixelCamera
-		camera2D.CameraClsMode(False,True)
-		camera2D.draw2D = 1
+		
+		'camera2D.CameraClsMode(False,False) ''moved this to the end of method to allow mojo CLS
+		
 		
 		alpha_pass=1
-		Local wireFrameIsEnabled:= wireframe
+		Local wireframeIsEnabled:= wireframe
 		wireframe = False
 		'camera2D.ExtractFrustum()
 		'camera2D.CameraProjMode(3)
 		
 		TRender.render.UpdateCamera(camera2D)
-		
-		'cam = TCamera.cam_list.First()
-		'cam.draw2D=1
-		
+
+	
 		For Local mesh:TMesh = Eachin draw_list
 			
 			If Not mesh Then Continue
@@ -298,18 +298,28 @@ Class TRender
 			
 			''auto-scaling for sprites and ttext
 			Local sp:TSprite = TSprite(mesh)
-			If mesh.is_sprite Then sp.mat_sp.Scale( (sp.pixel_scale[0]) , (sp.pixel_scale[1]), 1.0)
-
-			
+			If mesh.is_sprite
+				sp.mat_sp.Scale( (sp.pixel_scale[0]) , (sp.pixel_scale[1]), 1.0)
+				mesh.EntityFX 64 ''is this needed?
+			Endif
+		
+		
 			If mesh.Alpha() Then mesh.alpha_order=1.0 ' test for alpha in surface
-			
+'If mesh Then Print mesh.no_surfs
+'If mesh.GetSurface(3) And mesh.GetSurface(3).brush.tex[0] Then Print "trender "+mesh.GetSurface(3).brush.tex[0].width
+		
 			TRender.render.Render(mesh,camera2D)
 		Next
 		
-		wireframe = wireFrameIsEnabled
+		wireframe = wireframeIsEnabled
 		
 		TRender.render.Finish()
 		draw_list.Clear()
+		
+		''update at end to allow mojo commands
+		camera2D.CameraClsMode(False,False)
+		camera2D.CameraViewport(0,0,TRender.width,TRender.height)
+		camera2D.SetPixelCamera
 		
 	End
 	
@@ -487,11 +497,6 @@ Class TRender
 	End
 	
 	
-	Function SetDrawShader:Void()
-		
-		'' set a fast, bright shader, used with drawing 2D, text
-		
-	End
 	
 	Method ClearErrors:Int()
 		Return 1

@@ -1,0 +1,170 @@
+Import minib3d.app
+'Import minib3d.opengl.opengles20
+Import mojo
+
+
+
+ 
+Function Main:Int()
+	New MyGame()
+    Return 0
+End
+ 
+Class MyGame Extends MiniB3DApp
+	Field numBunnies:Int = 30
+	Field gravity:Float = 3
+	Field bunnies:List<Bunny>
+	Field maxX:Int = 640
+	Field minX:Int = 0
+	Field maxY:Int = 480
+	Field minY:Int = 0
+	Field bitmap:Image
+	Field fpsRate:Int = 30
+	
+	Field mesh:TMesh
+	Field cam:TCamera
+	Field light:TLight
+
+	Method Create:Int()
+		SetUpdateRate(fpsRate)
+		SetRender()
+
+		PreLoad("wabbit_alpha.png")
+		
+		
+		
+		Return 0
+	End
+	
+	Method Init:Int()
+		''must add this to use mojo fonts
+		SetFont(LoadImage("mojo_font.png",96,Image.XPadding))
+		
+		mesh = CreateMiniB3DMonkey()
+		'mesh.EntityFX 1
+		mesh.EntityColor (90,90,90)
+		mesh.ScaleEntity( 2,2,2)
+				
+		cam = CreateCamera
+		cam.PositionEntity(0,0,-10)
+		
+		light = CreateLight
+		
+		bitmap = LoadImage("wabbit_alpha.png")
+		bunnies = New List<Bunny>
+		Local bunny:Bunny
+		
+		For Local i:Int = 0 Until numBunnies
+			bunny = New Bunny
+			bunny.image = bitmap
+			bunny.speedX = Rnd() * 10
+			bunny.speedY = (Rnd() * 10) - 5
+				
+			bunnies.AddLast(bunny)
+		Next
+	End
+	
+    
+	Method Update:Int()
+		
+		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error""
+		
+		For Local bunny:Bunny = Eachin bunnies
+			bunny.x += bunny.speedX
+			bunny.y += bunny.speedY
+			bunny.speedY += gravity
+			
+			If bunny.x > maxX
+				bunny.speedX *= -1
+				bunny.x = maxX
+			Else If (bunny.x < minX)
+				bunny.speedX *= -1
+				bunny.x = minX
+			End
+		
+			If bunny.y > maxY
+				bunny.speedY *= -0.8
+				bunny.y = maxY
+				If Rnd() > 0.5
+					bunny.speedY -= Rnd() * 12
+				End
+			Else If (bunny.y < minY)
+				bunny.speedY = 0
+				bunny.y = minY
+			End
+			
+			bunny.posX = bunny.x
+			bunny.posY = bunny.y + bunny.z
+		Next
+		
+		If KeyHit(KEY_LEFT)
+			fpsRate-=5
+			SetUpdateRate(fpsRate)
+		End
+		If KeyHit(KEY_RIGHT)
+			fpsRate+=5
+			SetUpdateRate(fpsRate)
+		End		
+		
+		mesh.TurnEntity(0,2,0)
+		
+		Return 0
+	End
+
+	Method Render:Int()
+	
+		SetMojoEmulation()
+		
+		
+		FPSCounter.Update()
+		'Cls
+
+		For Local b:Bunny = Eachin bunnies
+			DrawImage(b.image, b.posX, b.posY)
+			'DrawRect(b.posX, b.posY, 10,10)
+		Next
+		DrawImage(GetFont(), 100,200)
+		FPSCounter.Draw(0,0)
+		SetColor(255,255,255)
+		DrawText("FPS Rate: "+fpsRate,100, 100)
+		
+		DrawRect(1,0,1,5)
+		'RenderWorld()
+		
+		Return 0
+	End
+End
+
+Class Bunny
+	Field speedX:Float = 0
+	Field speedY:Float = 0
+	Field speedZ:Float = 0
+	Field image:Image
+	Field x:Float = 0
+	Field y:Float = 0
+	Field z:Float = 0
+	Field posX:Float = 0
+	Field posY:Float = 0
+	Field angle:Float = 0
+	Field speed:Float = 0
+End
+
+Class FPSCounter Abstract
+	Global fpsCount:Int
+	Global startTime:Int
+	Global totalFPS:Int
+
+	Function Update:Void()
+		If Millisecs() - startTime >= 1000
+			totalFPS = fpsCount
+			fpsCount = 0
+			startTime = Millisecs()
+		Else
+			fpsCount+=1
+		End
+	End
+
+	Function Draw:Void(x% = 0, y% = 0, ax# = 0, ay# = 0)
+		DrawText("FPS: " + totalFPS, x, y, ax, ay)
+	End
+End

@@ -22,6 +22,8 @@ lights - no point or spotlight or multiple light without HLSL
 
 -- make sure to clear states before returning to mojo
 
+-- per dx11 and xna 4.0, scissor has no effect on clearscreen
+
 #end 
 
 
@@ -32,7 +34,7 @@ Extern
 	Function MojoClear:Void() = "GraphicsDevice g = BBXnaGame.XnaGame().GetXNAGame().GraphicsDevice; g.Clear(new Color(0,0,0,0));//"
 	
 	Class MojoHack Extends GraphicsDevice = "gxtkGraphics"
-		Field _renderTarget:Object = "renderTarget"
+		'Field _renderTarget:Object = "renderTarget"
 		Method Flush:Void() = "Flush"
 	End
 	
@@ -76,6 +78,7 @@ Function SetRender(flags:Int=0)
 	
 	TRender.render = New XNARender
 	TRender.render.GraphicsInit(flags)
+	SetMojoEmulation()
 	
 End
 
@@ -153,7 +156,7 @@ Public
 		_xna._device.SetRenderTarget(Null)
 		
 		_xna._device.DepthStencilState = _xna._depthStencilDepth
-		_xna._device.RasterizerState = _xna._rasterizerStates[0]
+		_xna._device.RasterizerState = _xna._rasterizerStates[2] ''culling
 		_xna._device.BlendState = _xna._blendStates[0]
 		
 		TRender.alpha_pass = 0
@@ -162,12 +165,14 @@ Public
 	
 	End
 	
+	'' experimental
+	''
 	Method RestoreMojo:Void()
 
 		MojoHack(GetGraphicsDevice()).Flush()
 		
 		GetGraphicsDevice().BeginRender()
-		'If XNARender._mojoClear=0 Then XNARender._mojoClear=1; MojoClear()
+
 		MojoClear()
 		
 		'_xna._device.SetRenderTarget(Null)
@@ -180,6 +185,7 @@ Public
 	End
 	
 	
+	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
 
 'Return '''*****************************************************************************
@@ -187,7 +193,7 @@ Public
 		Local mesh:TMesh = TMesh(ent)
 		If Not mesh Then Return
 		
-		''If _device.GraphicsDeviceStatus() Then Print "<<<<<<<"
+		'If _device.GraphicsDeviceStatus() Then Print "<<<<<<<"
 
 		'' draw surfaces with alpha last
 		Local temp_list:List<TSurface> = mesh.surf_list
@@ -365,6 +371,8 @@ Public
 			tex.flags |= (16|32) 'clamp u,v
 		End 
 		
+		If tex.gltex[0] And tex.pixmap.bind Then Return tex
+		
 		If tex.gltex[0] = 0 Then 
 			_texture_id+=1
 			tex.gltex[0] = _texture_id
@@ -400,6 +408,7 @@ Public
 		Forever
 			
 		tex.no_mipmaps=mip_level
+		tex.pixmap.SetBind()
 		
 		Return tex		
 		
@@ -438,8 +447,16 @@ Public
 		'If (_device)
 			' viewport
 			_device.Viewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
-		
+
+			If cam.vheight
+				'' y is opposite corner from opengl
+				_device.ScissorRectangle(cam.viewport[0],TRender.height-cam.viewport[3]-cam.viewport[1],cam.viewport[2],cam.viewport[3])
+				'_device.RasterizerState = _xna._rasterizerScissor
+				'_xna._rasterizerScissor.ScissorTestEnable = True
+			endif
+			
 			' clear buffers
+			' per dx11 and xna 4.0, scissor has no effect on clearscreen
 		If cam.cls_color=True or cam.cls_zbuffer=True
 			_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, cam.cls_color, cam.cls_zbuffer, False )
 		Endif
@@ -539,8 +556,9 @@ Private
 	Field _device:XNAGraphicsDevice 
 	
 	' states
-	Field _rasterizerStates		:XNARasterizerState[]
+	Field _rasterizerStates		:XNARasterizerState[3]
 	Field _rasterizerWire		:XNARasterizerState
+	Field _rasterizerScissor		:XNARasterizerState
 	Field _depthStencil			:XNADepthStencilState
 	Field _depthStencilDefault	:XNADepthStencilState
 	Field _depthStencilNone		:XNADepthStencilState
@@ -579,12 +597,25 @@ Public
 		_lastEffect = _basicEffect
 		
 		' states
-		_rasterizerStates 	= [XNARasterizerState.CullNone, XNARasterizerState.CullCounterClockwise,XNARasterizerState.CullClockwise ]
+		'_rasterizerStates 	= [XNARasterizerState.CullNone, XNARasterizerState.CullCounterClockwise,XNARasterizerState.CullClockwise ]
 		
 		_rasterizerWire 	= XNARasterizerState.Create()
 		_rasterizerWire.CullMode = CullMode_None
 		_rasterizerWire.FillMode = FillMode_WireFrame
+		_rasterizerWire.ScissorTestEnable = True
 		
+		'_rasterizerScissor = XNARasterizerState.Create()
+		'_rasterizerScissor.ScissorTestEnable = True
+		_rasterizerStates[0] = XNARasterizerState.Create()
+		_rasterizerStates[0].CullMode = CullMode_None
+		_rasterizerStates[0].ScissorTestEnable = True
+		_rasterizerStates[1] = XNARasterizerState.Create()
+		_rasterizerStates[1].CullMode = CullMode_CullCounterClockwiseFace
+		_rasterizerStates[1].ScissorTestEnable = True
+		_rasterizerStates[2] = XNARasterizerState.Create()
+		_rasterizerStates[2].CullMode = CullMode_CullClockwiseFace
+		_rasterizerStates[2].ScissorTestEnable = True
+
 		_depthStencilDefault = XNADepthStencilState._Default
 		_depthStencilNone 	= XNADepthStencilState.None
 		
@@ -735,7 +766,11 @@ Public
                     _device.RasterizerState = _rasterizerStates[2]
                 End 
             Endif
-      End 
+      End
+      
+      '' y is opposite corner from opengl
+		'_device.ScissorRectangle(cam.viewport[0],TRender.height-cam.viewport[3]-cam.viewport[1],cam.viewport[2],cam.viewport[3])
+		'_device.RasterizerState = _xna._rasterizerScissor
 
 		'' fx flag 32 - force alpha
 		If _fx&32
@@ -1180,7 +1215,7 @@ Class BasicEffect Extends EffectContainer
 			effect.VertexColorEnabled = False 
 			effect.DiffuseColor(_red,_green,_blue)
 	      effect.Alpha = _alpha
-			effect.SpecularPower(_shine)
+			'effect.SpecularPower(_shine)
 		Endif
 		
 		' fx flag 4 - flatshaded

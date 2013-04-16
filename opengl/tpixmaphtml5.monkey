@@ -45,8 +45,7 @@ Extern
 	
 	'' this does not work (arraybuffer->image.src) in html5 (yet)
 	'Function ConvertDataToPixmapHTML:HTMLImage( from_:DataBuffer, path$ ) = "DataToPixmap"
-	
-	
+
 	
 Public
 
@@ -187,6 +186,10 @@ Class PreloadManager Implements IPreloadManager
 	Field total:Int
 	Field preloader:TPixmapPreloader
 	
+	Method IsLoaded:Bool(file_id:Int)
+		If file_id-1>data.Length-1 Then Return False
+		Return (data[file_id-1] <> Null)
+	End
 		
 	Method SetPreloader:Void(m:TPixmapPreloader)
 	
@@ -209,10 +212,9 @@ Class PreloadManager Implements IPreloadManager
 		If id<1 Then Return
 		
 		f = FixDataPath(f)
-		f=f.Replace("monkey://","")
+		f=f.Replace("monkey://","") 'for the html5 '' why am i doing this?
 		data[id-1] = LoadImageDataHTML(f, id)
-
-		
+	
 	End
 	
 	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
@@ -227,14 +229,13 @@ Class PreloadManager Implements IPreloadManager
 				p.width = info[0]
 				p.height = info[1]
 
-
 				''clear buffer if need be here
 			
 			
 			''NOT ALLOWED in HTML5, MUST PRELOAD	
-			'Else
+			'
 				'Local info:Int[2]
-				'p.pixels = LoadImageData(f, info)
+				'p.pixels = LoadImageDataHTML(f, id)
 				'p.width = info[0]
 				'p.height = info[1]
 			Endif
@@ -251,8 +252,7 @@ Class PreloadManager Implements IPreloadManager
 				If CheckIsLoaded(data[i])  And Not load_complete[i]
 					''callback
 					load_complete[i]=True
-					preloader.IncLoader()
-					
+					preloader.IncLoader()	
 				Endif
 
 			Endif

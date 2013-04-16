@@ -45,6 +45,11 @@ Class TCamera Extends TEntity
 	
 	Field frustum:Float[][] '[6][4]
 	
+Private
+	
+	Field oldw:Int, oldh:Int ''for pixel camera, to detect if viewport changed
+	
+Public
 
 
 	'Field testdata:Float[10]
@@ -145,6 +150,27 @@ Class TCamera Extends TEntity
 		
 		viewport[0] = vx
 		viewport[1] = vy
+		viewport[2] = w
+		viewport[3] = h
+		
+	End
+	
+	Method CameraScissor(x,y,w,h)
+		
+		If x<0 Then x=0
+		If x>TRender.width Then x=TRender.width
+		If y<0 Then y=0
+		If y>TRender.height Then y=TRender.height
+		
+		If w<0 Then w=0
+		If w>TRender.width Then w=TRender.width
+		If h<0 Then h=0
+		If h>TRender.height Then h=TRender.height
+		
+		y=TRender.height-h-y
+		
+		viewport[0] = x
+		viewport[1] = y
 		viewport[2] = w
 		viewport[3] = h
 		
@@ -615,12 +641,17 @@ Class TCamera Extends TEntity
 	
 	Method SetPixelCamera()
 		
+		If draw2D And oldw = vwidth And oldh=vheight Then Return
+		oldw = vwidth; oldh=vheight
+		draw2D = 1
+		
 		If name="" Then name = "pixel"
-
-		Local left# = -TRender.width / 2.0
-		Local right# = TRender.width +left
-		Local bottom#= -TRender.height / 2.0
-		Local top# = TRender.height +bottom
+		
+		'' **** this may be wrong for pixelcamera ******
+		Local left# = vx-vwidth*0.5 'vx'-TRender.width / 2.0
+		Local right# = vwidth+left 'vx+vwidth'TRender.width +left
+		Local bottom#= vy-vheight / 2.0
+		Local top# = vheight +bottom
 		
 		Local near#=1.0
 		Local far#=2.0
@@ -644,9 +675,9 @@ Class TCamera Extends TEntity
 		proj_mat.grid[2][1] = 0.0
 		proj_mat.grid[2][2] = -2.0 / (far - near)
 		proj_mat.grid[2][3] = 0.0
-		
-		proj_mat.grid[3][0] = tx
-		proj_mat.grid[3][1] = ty
+	
+		proj_mat.grid[3][0] = tx-1.0 ''offset to top left
+		proj_mat.grid[3][1] = ty+1.0
 		proj_mat.grid[3][2] = tz
 		proj_mat.grid[3][3] = 1.0
 

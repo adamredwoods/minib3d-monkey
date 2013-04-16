@@ -112,6 +112,8 @@ Class Game Extends App
 	End
 
 	Method OnUpdate()
+	
+		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
 		
 		If Not Init() Then Return
 		

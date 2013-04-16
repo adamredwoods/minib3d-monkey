@@ -1025,7 +1025,7 @@ Class TEntity
 		EntityColor( color )
 	End
 	
-	Method EntityOrder(order_no)
+	Method EntityOrder(order_no:int)
 	
 		order=order_no
 
@@ -1040,6 +1040,10 @@ Class TEntity
 					
 			entity_list.Sort()
 			
+		Endif
+		
+		If order<>0
+			EntityFX 64
 		Endif
 
 		

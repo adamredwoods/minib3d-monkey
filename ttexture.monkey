@@ -11,6 +11,10 @@ Import minib3d.monkeyutility
 
 '' -- since we are not guaranteed a context outside of OnRender() we use a texture bind stack to bind textures during RenderWorld()
 
+'' -- pushBindTExture: if you Load another texure into an existing texture, will it bind properly?????
+'' -- MAJOR CHANGE v34.1: move binding to TPixmap to prevent 1.excessive binds for tex copies, 2.allow loss of original tex object 3. allows entity copies with different texs
+
+
 Const TEXFLAG_COLOR% = 1
 Const TEXFLAG_ALPHA% = 2
 Const TEXFLAG_MASKED% = 4
@@ -46,8 +50,10 @@ Class TTexture
 	Field width:Int,height:Int ' returned by Name/Width/Height commands
 	
 	Field pixmap:TPixmap
+	Field file$
 	
-	Field file$,blend:Int=2,coords:Int
+	Field coords:Int ''0 or 1 coord set
+	Field blend:Int=2
 	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
 	Field flags:Int, bind_flags:Int = -1
 	Global default_texflags:Int=9
@@ -95,11 +101,13 @@ Class TTexture
 		gltex[0]=0
 	End
 	
+	'' Copy:TTexture()
+	'' will keep the same pixmap in video memory
 	Method Copy:TTexture()
 		
 		Local tex:TTexture = New TTexture
 		
-		tex.tex_link = tex_list.AddLast(tex)
+		tex.tex_link = tex_list.AddLast(tex) ''why add again? how to handle instances?
 		
 		tex.width = width
 		tex.height = height
@@ -131,7 +139,7 @@ Class TTexture
 		tex.frame_startx = frame_startx
 		tex.frame_starty = frame_starty
 		
-		tex.gltex = New Int[1] ''unique
+		tex.gltex = gltex ''pointer for texture
 		tex.tex_id = tex_id
 		tex.no_mipmaps = no_mipmaps
 		
@@ -141,7 +149,7 @@ Class TTexture
 		
 		tex.is_font = is_font
 		
-		''needs binding?
+		'' does not need binding, since the original already does
 		If tex.bind_flags <> -1
 			PushBindTexture(tex,tex.bind_flags)
 		Endif
@@ -170,7 +178,6 @@ Class TTexture
 		tex.no_frames=frames
 		tex.gltex=tex.gltex[..tex.no_frames]
 			
-		Local x=0
 	
 		Local pixmap:TPixmap = tex.pixmap
 		
@@ -179,6 +186,8 @@ Class TTexture
 		End
 		tex.width=pixmap.width
 		tex.height=pixmap.height
+		tex.orig_width=tex.width
+		tex.orig_height=tex.height
 		
 		PushBindTexture(tex,flags)
 		
@@ -248,6 +257,7 @@ Class TTexture
 		If Not force_new Then old_tex=tex.TexInList()
 		
 		If old_tex<>Null And old_tex<>tex
+			'Dprint "TTexture: return old_tex"
 			Return old_tex
 		Else
 			If old_tex<>tex
@@ -261,12 +271,13 @@ Class TTexture
 		tex.pixmap=TPixmap.LoadPixmap(file)
 		If tex.pixmap.height = 0 Then Return tex
 	
-		oldw = tex.pixmap.width; oldh=tex.pixmap.width
-		
+		oldw = tex.pixmap.width; oldh=tex.pixmap.height
+		tex.orig_width = oldw; tex.orig_height = oldh
 		
 		If tex.flags & TEXFLAG_PRESERVE_SIZE = 0 Then 
 			tex.pixmap=AdjustPixmap(tex.pixmap, tex.resize_smooth, tex)
 		End 
+		
 		tex.width=tex.pixmap.width
 		tex.height=tex.pixmap.height
 	
@@ -285,31 +296,8 @@ Class TTexture
 			frame_height = frame_height*new_scy
 		Endif
 
+		tex.SetAnimationFrames(first_frame, frame_count, frame_width, frame_height)
 		
-		tex.frame_xstep = tex.pixmap.width/frame_width
-		tex.frame_ystep = tex.pixmap.height/frame_height
-			
-		tex.frame_startx=first_frame Mod tex.frame_xstep
-		tex.frame_starty=( first_frame/tex.frame_ystep) Mod tex.frame_ystep
-		
-		If frame_count <0
-			frame_count = Int(tex.frame_xstep) * Int(tex.frame_ystep)
-		Endif
-	
-		tex.no_frames=frame_count
-		If tex.no_frames > 1
-			'tex.gltex=tex.gltex.Resize(tex.no_frames+1)
-			'tex.frame_u = tex.frame_u.Resize(tex.no_frames+1)
-			'tex.frame_v = tex.frame_v.Resize(tex.no_frames+1)
-			tex.frame_ustep = 1.0/tex.frame_xstep
-			tex.frame_vstep = 1.0/tex.frame_ystep
-			
-			'' move texture
-			tex.u_scale = tex.frame_ustep
-			tex.v_scale = tex.frame_vstep
-			tex.u_pos = tex.frame_startx*tex.frame_ustep
-			tex.v_pos = tex.frame_starty*tex.frame_vstep
-		Endif
 	
 		PushBindTexture(tex, flags)
 		
@@ -317,6 +305,35 @@ Class TTexture
 	
 	End
 	
+	
+	Method SetAnimationFrames:Void(first_frame:Int, frame_count:Int, frame_width:Int, frame_height:Int)
+	
+		frame_xstep = pixmap.width/frame_width
+		frame_ystep = pixmap.height/frame_height
+			
+		frame_startx=first_frame Mod frame_xstep
+		frame_starty=( first_frame/frame_ystep) Mod frame_ystep
+		
+		If frame_count <0
+			frame_count = Int(frame_xstep) * Int(frame_ystep)
+		Endif
+	
+		no_frames=frame_count
+		If no_frames > 1
+			'tex.gltex=tex.gltex.Resize(tex.no_frames+1)
+			'tex.frame_u = tex.frame_u.Resize(tex.no_frames+1)
+			'tex.frame_v = tex.frame_v.Resize(tex.no_frames+1)
+			frame_ustep = 1.0/frame_xstep
+			frame_vstep = 1.0/frame_ystep
+			
+			'' move texture
+			u_scale = frame_ustep
+			v_scale = frame_vstep
+			u_pos = frame_startx*frame_ustep
+			v_pos = frame_starty*frame_vstep
+		Endif
+		
+	End
 	
 	
 	''due to openGL context begin available only guaranteed in OnRender(), use this to queue texture binds
@@ -634,10 +651,10 @@ Class TTexture
 		' check if tex already exists in list and if so return it
 
 		For Local tex:TTexture=Eachin tex_list
-			If file=tex.file And flags=tex.flags And blend=tex.blend
-				If u_scale=tex.u_scale And v_scale=tex.v_scale And u_pos=tex.u_pos And v_pos=tex.v_pos And angle=tex.angle
+			If file=tex.file And flags=tex.flags 'And blend=tex.blend
+				'If u_scale=tex.u_scale And v_scale=tex.v_scale And u_pos=tex.u_pos And v_pos=tex.v_pos And angle=tex.angle
 					Return tex
-				Endif
+				'Endif
 			Endif
 		Next
 	
@@ -667,10 +684,11 @@ Class TTexture
 		' if width or height have changed then resize pixmap
 		If width<>pixmap.width Or height<>pixmap.height
 			
+			''----- MOVED: ok to delete
 			'' save original width/height
-			If tex
-				tex.orig_width = pixmap.width; tex.orig_height = pixmap.height
-			Endif
+			'If tex
+				'tex.orig_width = pixmap.width; tex.orig_height = pixmap.height
+			'Endif
 			
 			If resize_smooth Then pixmap=pixmap.ResizePixmap(width,height) Else pixmap=pixmap.ResizePixmapNoSmooth(width,height)
 			

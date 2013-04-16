@@ -981,6 +981,8 @@ Print ".. "+surf.no_tris*3
 		Local height=tex.pixmap.height
 		Local ftex:FlashTexture
 		
+		If tex.pixmap.bind And tex.tex_id Then Return tex
+		
 		If Not tex.tex_id
 			tex_map_id += 1
 			tex.tex_id = tex_map_id
@@ -1019,6 +1021,7 @@ Print ".. "+surf.no_tris*3
 			Forever
 			
 		tex.no_mipmaps=mip_level
+		tex.pixmap.SetBind()
 		
 		Return tex
 		

@@ -99,6 +99,8 @@ Class Game Extends App
 	End
 	
 	Method OnUpdate()
+	
+		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
 		
 		If Not init_gl Then Init(); Return
 		

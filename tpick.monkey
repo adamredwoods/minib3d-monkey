@@ -72,7 +72,7 @@ Class TPick
 		Local pnz:Float=picked_nz
 		Local ptime:Float=picked_time
 		Local pent:TEntity=picked_ent
-		Local psurf:TSurface=picked_surface
+		Local psurf:int=picked_surface
 		Local ptri=picked_triangle
 
 		' perform line pick

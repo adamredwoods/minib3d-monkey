@@ -427,6 +427,7 @@ Class XNAGraphicsDevice  = "XNAGraphicsDevice"
 	Method GetShaderVersion:Float()
 	Method GraphicsDeviceStatus:Int()
 	Method SetRenderTarget:Void(target:Object = Null) = "SetRenderTarget"
+	Method ScissorRectangle:Void(x:Int, y:Int, w:Int, h:Int)
 End
 
 '----------------------------------------------------------------------------------------------------------

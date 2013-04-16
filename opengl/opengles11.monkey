@@ -6,6 +6,12 @@ Import minib3d.opengl.tpixmapgl
 Import minib3d
 
 
+#Rem
+
+'' -- BindTexture: if you Load another texure into an existing texture, will it bind properly?????
+
+#End
+
 #If TARGET="xna"
 	#Error "Need glfw, ios, android, or mingw target"
 #Endif
@@ -63,6 +69,7 @@ Function SetRender(flags:Int=0)
 
 	TRender.render = New OpenglES11
 	TRender.render.GraphicsInit(flags)
+	SetMojoEmulation()
 	
 End	
 
@@ -182,7 +189,7 @@ Class OpenglES11 Extends TRender
 				Continue
 				
 			Endif
-			
+		
 			''batch optimizations (sprites/meshes)
 			Local skip_sprite_state:Bool = False
 			If last_sprite = surf
@@ -533,7 +540,8 @@ Class OpenglES11 Extends TRender
 						tex_ang=ent.brush.tex[ix].angle
 						tex_cube_mode=ent.brush.tex[ix].cube_mode
 						frame=ent.brush.tex[ix].tex_frame
-						tex_smooth = ent.brush.tex[ix].tex_smooth		
+						tex_smooth = ent.brush.tex[ix].tex_smooth
+						
 					Else
 						texture=surf.brush.tex[ix]
 						tex_flags=surf.brush.tex[ix].flags
@@ -546,7 +554,8 @@ Class OpenglES11 Extends TRender
 						tex_ang=surf.brush.tex[ix].angle
 						tex_cube_mode=surf.brush.tex[ix].cube_mode
 						frame=surf.brush.tex[ix].tex_frame
-						tex_smooth = surf.brush.tex[ix].tex_smooth		
+						tex_smooth = surf.brush.tex[ix].tex_smooth
+
 					Endif
 	
 	
@@ -794,7 +803,7 @@ Class OpenglES11 Extends TRender
 			Endif
 			
 			If cam.draw2D
-				glDisable(GL_DEPTH_TEST)
+				'glDisable(GL_DEPTH_TEST) ''use entityfx 64
 				glDisable(GL_FOG)
 				glDisable(GL_LIGHTING)
 			Endif
@@ -826,10 +835,10 @@ Class OpenglES11 Extends TRender
 			Endif
 
 		Next ''end non-alpha loop
-			
+		
 		
 		If cam.draw2D
-			glEnable(GL_DEPTH_TEST)
+			'glEnable(GL_DEPTH_TEST)
 			glEnable(GL_LIGHTING)
 		Endif
 
@@ -929,7 +938,7 @@ Class OpenglES11 Extends TRender
 	Method EnableStates:Void()
 		
 		glEnable(GL_LIGHTING)
-   	glEnable(GL_DEPTH_TEST)
+		glEnable(GL_DEPTH_TEST)
 		glEnable(GL_FOG)
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_SCISSOR_TEST)
@@ -1022,7 +1031,7 @@ Class OpenglES11 Extends TRender
 	End
 	
 	
-	Method FreeVBO(surf:TSurface)
+	Method DeleteVBO(surf:TSurface)
 	
 		If surf.vbo_id[0]<>0 
 			glDeleteBuffers(6,surf.vbo_id)
@@ -1099,6 +1108,9 @@ Class OpenglES11 Extends TRender
 
 		If Not tex.gltex[0]
 			glGenTextures 1,tex.gltex
+		Elseif tex.pixmap.bind
+			'' lets not bind duplicates
+			Return tex
 		Endif
 		
 		glBindTexture GL_TEXTURE_2D,tex.gltex[0]
@@ -1141,6 +1153,7 @@ Class OpenglES11 Extends TRender
 			Forever
 			
 		tex.no_mipmaps=mip_level
+		tex.pixmap.SetBind()
 		
 		Return tex
 		
@@ -1249,7 +1262,7 @@ Class OpenglES11 Extends TRender
         glEnable(GL_SCISSOR_TEST)
 
 		'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
-		glScissor(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+		glScissor(cam.viewport[0],cam.viewport[1],cam.viewport[2],cam.viewport[3])
 		glClearColor(cam.cls_r,cam.cls_g,cam.cls_b,1.0)
 		
 		''load MVP matrix

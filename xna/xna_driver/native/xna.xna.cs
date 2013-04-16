@@ -155,6 +155,10 @@ public class XNAGraphicsDevice
 	{
 		_device.SetRenderTarget(rt);
 	}
+	
+	public void ScissorRectangle(int x, int y, int w, int h) {
+		_device.ScissorRectangle = (new Rectangle(x,y,w,h));
+	}
 };
 
 public class XNABlendState

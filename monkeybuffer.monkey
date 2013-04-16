@@ -26,9 +26,6 @@ End
 '#endif
 
 
-''
-'' helper databuffer classes
-''
 
 Class Vertex
 	
@@ -37,6 +34,14 @@ Class Vertex
 	Field nx#,ny#,nz#
 	Field u0#,v0#,u1#,v1#
 	Field w0#=0.0, w1#=0.0
+	
+	Method Clear:Void()
+		x=0.0; y=0.0; z=0.0
+		r=1.0;g=1.0;b=1.0;a=1.0
+		nx=1.0;ny=1.0;nz=1.0
+		u0=0.0;v0=0.0;u1=0.0;v1=0.0
+		w0=0.0;w1=0.0
+	End
 	
 	Method GetVertex:Void(vid:Int, src:VertexDataBuffer)
 
@@ -362,7 +367,7 @@ Class ShortBuffer
 	
 	Method Poke:Void(i:Int, arr:Int[])
 		For Local v:Int=0 To arr.Length()-1
-			buf.PokeShort(i*SIZE+v*SIZE,arr[v])
+			buf.PokeShort((i+v)*SIZE,arr[v])
 		Next
 	End
 	
@@ -460,6 +465,20 @@ Class BufferReader
 		br.pos = 0
 		Return br
 		
+	End
+	
+	Method ReadChunk:BufferReader( wsize:Int)
+		If pos+wsize>size Then wsize = (size-pos) +1
+		
+		Local br:BufferReader = New BufferReader
+		br.data = data
+		br.size = pos+wsize-1
+		br.pos = pos
+		
+		''move the original bufferread position
+		pos +=wsize
+		
+		Return br
 	End
 	
 	Method Size:Int()

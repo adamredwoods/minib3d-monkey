@@ -65,6 +65,11 @@ Class TSurface
 	' used by Compare to sort array, and TMesh.Update to enable/disable alpha blending
 	Field alpha_enable:Bool =False
 	
+Private
+	
+	Global temp_vert:Vertex = New Vertex
+	
+Public
 	
 	''properties
 	Method Brush:TBrush() Property
@@ -89,7 +94,7 @@ Class TSurface
 	
 	Method FreeSurface()
 	
-		TRender.render.FreeVBO(Self)
+		TRender.render.DeleteVBO(Self)
 		no_verts=0; no_tris=0
 		tris=Null; vert_data=Null
 			
@@ -170,7 +175,14 @@ Class TSurface
 			brush.tex[i]=bru.tex[i]
 		Next
 	
-	End 
+	End
+	
+	Method PaintSurface(tex:TTexture)
+		If brush=Null Then brush=New TBrush
+		brush.no_texs=1
+		brush.tex[0] = tex
+		
+	End
 	
 	Method ClearSurface(clear_verts:Bool=True,clear_tris:Bool=True)
 	
@@ -241,14 +253,15 @@ Class TSurface
 		Local vid:Int = no_verts-1
 		
 		'vert_coords
-		vert_data.PokeVertCoords(vid,x,y,-z)
-		
-		vert_data.PokeTexCoords(vid,u,v,u,v)		
+		'vert_data.PokeVertCoords(vid,x,y,-z)
+		'vert_data.PokeTexCoords(vid,u,v,u,v)		
 		
 		' default vertex colours
-		vert_data.PokeColor(vid,1.0,1.0,1.0,1.0)
+		'vert_data.PokeColor(vid,1.0,1.0,1.0,1.0)
+		'vert_data.PokeNormals(vid,1.0,1.0,1.0)	
 		
-		vert_data.PokeNormals(vid,1.0,1.0,1.0)		
+		Local data:Float[] = [x,y,-z,0.0, 1.0,1.0,1.0,0.0, 1.0,1.0,1.0,1.0, u,v,u,v]
+		vert_data.PokeFloatArray(vid, data)	
 		
 		Return vid
 	
@@ -276,9 +289,10 @@ Class TSurface
 		Local v1i=(no_tris*3)-2
 		Local v2i=(no_tris*3)-1	
 	
-		tris.Poke(v0i,v2)
-		tris.Poke(v1i,v1)
-		tris.Poke(v2i,v0)
+		'tris.Poke(v0i,v2)
+		'tris.Poke(v1i,v1)
+		'tris.Poke(v2i,v0)
+		tris.Poke(v0i,[v2,v1,v0])
 
 		' mesh shape has changed - update reset flag
 		'reset_vbo = reset_vbo|1|2|16

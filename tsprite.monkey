@@ -23,12 +23,9 @@ Class TSprite Extends TMesh
 	Method New()
 		
 		is_sprite = True '' used for sprite batching
-		
+
 	End 
-	
-	Method Delete()
-	
-	End 
+ 
 
 	Method CopyEntity:TEntity(parent_ent:TEntity=Null)
 	
@@ -155,6 +152,13 @@ Class TSprite Extends TMesh
 		scale_x=s_x
 		scale_y=s_y
 	
+	End
+	
+	'' PositionSprite:void(float,float)
+	'' use 0.0 to 1.0, its the uv controls
+	Method PositionSprite:Void(x#, y#)
+		brush.tex[0].u_pos=x
+		brush.tex[0].v_pos=y
 	End
 	
 	Method ScaleEntity(x#, y#, z#, glob:Int=0)
@@ -602,7 +606,7 @@ Class TBatchSprite Extends TSprite
 			'p3 = mat_sp.TransformPoint(1.0,-1.0,0.0)
 			p3 = [m00 - m10 + o[0] , m01 - m11 + o[1], -m02 + m12 - o[2]]
 			
-			'3 triangle sprite trick (does not work for all conditions, animated sprites)
+			'3 point sprite trick (does not work for all conditions, animated sprites)
 			'p0 = [-m00 + -(m10+m10+m10) + o[0] , -m01 + -(m11+m11+m11) + o[1], m02 + m12+m12+m12 - o[2]]				
 			'p1 = [-m00 + m10 + o[0] , -m01 + m11 + o[1], m02 - m12 - o[2]]	
 			'p2 = [m00+m00+m00 + m10 + o[0] , m01+m01+m01 + m11 + o[1], -(m02+m02+m02) - m12 - o[2]]			
