@@ -1043,7 +1043,7 @@ Class TEntity
 		Endif
 		
 		If order<>0
-			EntityFX 64
+			brush.fx |= 64
 		Endif
 
 		
