@@ -223,7 +223,7 @@ Public
 			
 			''run through surfaces twice, sort alpha surfaces for second pass
 			For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs
-				
+								
 				For Local surf:TSurface =Eachin temp_list
 	
 					''draw alpha surfaces last in second loop
@@ -631,7 +631,7 @@ Public
 		_depthStencilDepth.DepthBufferEnable = True
 		_depthStencilDepth.DepthBufferWriteEnable = True
 		
-		_blendStates 		= [XNABlendState.AlphaBlend, XNABlendState.AlphaBlend, XNABlendState.Premultiplied, XNABlendState.Additive, XNABlendState.Opaque]
+		_blendStates 		= [XNABlendState.NonPremultiplied, XNABlendState.NonPremultiplied, MultiplyBlend(), XNABlendState.Additive, XNABlendState.Opaque]
 		_st_uvNormal 		= UVSamplerState.Create( TextureFilter_Point )
 		_st_uvSmooth 		= UVSamplerState.Create( TextureFilter_LinearMipPoint  )
 
@@ -1044,6 +1044,15 @@ Class UVSamplerState
 		
 	End
 	
+End
+
+Function MultiplyBlend:XNABlendState()
+	Local b:XNABlendState = XNABlendState.Create()
+	b.ColorSourceBlend = BLEND_SourceAlpha
+	b.ColorDestinationBlend = BLEND_Zero
+	b.AlphaSourceBlend = BLEND_SourceAlpha
+	b.AlphaDestinationBlend = BLEND_Zero
+	Return b
 End
 
 

@@ -281,7 +281,7 @@ Class XNABlendState = "XNABlendState"
 	Function Create:XNABlendState() = "Create"
 	Function Additive:XNABlendState()= "Additive"
 	Function AlphaBlend:XNABlendState()= "AlphaBlend"
-	Function Premultiplied:XNABlendState()= "NonPremultiplied"
+	Function NonPremultiplied:XNABlendState()= "NonPremultiplied"
 	Function Opaque:XNABlendState()= "Opaque"
 End
 
