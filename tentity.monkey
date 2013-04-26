@@ -325,38 +325,10 @@ Class TEntity
 		
 	Method MoveEntity(mx#,my#,mz#)
 		
-		mz=-mz ' opengl -z
-		
-		Local pos:Float[]		
-
-		If gsx<>1.0 Then mx = mx/gsx
-		If gsy<>1.0 Then my = my/gsy
-		If gsz<>1.0 Then mz = mz/gsz
-		
-		''rotate the direction
-		pos = mat.TransformPoint(mx,my,mz,0.0) ''0 creates an offset, not a point	
-		
-		px=px+pos[0]
-		py=py+pos[1]
-		pz=pz+pos[2]
-		
-		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz); Return
-		
-		If parent<>Null
-			''global	
-			'mat.Overwrite(parent.mat)
-			'UpdateMat() 
-			UpdateMatTrans()
-
-		Else
-			''Local
-			'UpdateMat(True) 
-			UpdateMatTrans(True)
-		
-		Endif
-		
-		If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
+		'temp_mat.Overwrite(mat)
+		'temp_mat.grid[3][0]=0.0; temp_mat.grid[3][1]=0.0;temp_mat.grid[3][2]=0.0
+		Local n:Float[] = mat.TransformPoint(mx,my,-mz)
+		PositionEntity(n[0], n[1], -n[2], True) ''-pz because we change it before storing it
 
 	End 
 
