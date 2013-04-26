@@ -113,7 +113,7 @@ function GetImageInfo( image ) {
 var _pixelMod= new pixelMod();
 
 function pixelMod() {
-	this.image_cache;
+	//this.image_cache;
 	this.image_cacheread;
 	this.imagedata_cache_minib3d;
 	
@@ -124,14 +124,14 @@ function pixelMod() {
 pixelMod.prototype.ReadPixel = function( image, x, y) {
 
 	
-	if (!(image === this.image_cache)) {
+	if (!(image === this.image_cache_canvas)) {
 	
 		this.image_cache_canvas = document.createElement("canvas");
 		this.image_cache_cxt = this.image_cache_canvas.getContext("2d");
 		this.image_cache_canvas.width = image.width; this.image_cache_canvas.height = image.height;
 		this.image_cache_cxt.drawImage(image, 0, 0);
 		//this.imagedata_cache_minib3d = this.image_cache_cxt.getImageData(0, 0, image.width, image.height);
-		this.image_cache = image;
+		//this.image_cache = image;
 		
 	}
 	//var i = (x+y*image.width)*4;
@@ -143,14 +143,14 @@ pixelMod.prototype.ReadPixel = function( image, x, y) {
 
 pixelMod.prototype.WritePixel = function( image, x, y, r,g,b,a) {
 	
-	if (!(image === this.image_cache)) {
+	if (!(image === this.image_cache_canvas)) {
 
 		this.image_cache_canvas = document.createElement("canvas");
 		this.image_cache_cxt = this.image_cache_canvas.getContext("2d");
 		this.image_cache_canvas.width = image.width; this.image_cache_canvas.height = image.height;
 		this.image_cache_cxt.drawImage(image, 0, 0);
 		//this.imagedata_cache_minib3d = this.image_cache_cxt.getImageData(0, 0, image.width, image.height);
-		this.image_cache = image;
+		//this.image_cache = image;
 
 	}
 	
