@@ -648,7 +648,7 @@ Public
 					
 			
 					' don't create new surface if tris chunk has same brush as chunk immediately before it
-					If (prev_tag<>TRIS)' Or tr_brush_id<>old_tr_brush_id)
+					If (prev_tag<>TRIS Or tr_brush_id<>old_tr_brush_id) ''??? Does switching brushes cause problems ???
 					
 						' no further tri data for this surf - trim verts
 						'If prev_tag=TRIS Then TrimVerts(surf)
