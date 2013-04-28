@@ -11,9 +11,17 @@ Class TText Extends TSprite Final
 	Const ALIGN_LEFT:Int = 0
 	Const ALIGN_CENTER:Int = 1
 
-	
+#If TARGET="xna"
+	Const MINUV:Float = 0.0
+	Const MAXUV:Float = 1.0
+#Else	
+	Const MINUV:Float = 0.0001
+	Const MAXUV:Float = 0.9999
+#endif
+
 	Field cam:TCamera
 	Field mode:Bool = True ''true = 2d, false = 3d
+	Field use3D:Bool '' is this text 2d or 3d
 	Field text$="" , old_text$=""
 	Field length:Int
 	Field font_file:String
@@ -30,7 +38,7 @@ Class TText Extends TSprite Final
 	
 	Global mask_color:Int = $000000
 	
-	Field use3D:Bool '' is this text 2d or 3d
+	
 	
 	Function CreateText3D:TText(str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
 		Local tt:TText = CreateText(Null,str,font,num_chars,c_pixels,pad, False)
@@ -39,11 +47,12 @@ Class TText Extends TSprite Final
 	
 	Function CreateText2D:TText(camx:TCamera=Null, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0 )
 		Local tt:TText = CreateText(camx,str,font,num_chars,c_pixels,pad, True)
+		tt.HideEntity()
 		Return tt
 	End
 
 	
-	Function CreateText:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Int = 0, mode:Bool = True )
+	Function CreateText:TText(camx:TCamera, str$ = "", font$="", num_chars:Int = 96, c_pixels:Int=9, pad:Float = 0.0, mode:Bool = True )
 		
 		Local tt:TText = New TText
 		
@@ -75,22 +84,23 @@ Class TText Extends TSprite Final
 		
 		
 		pixmap.MaskPixmap(tt.mask_color & $0000ff, (tt.mask_color & $00ff00) Shr 8 , (tt.mask_color & $ff0000) Shr 16) 
-		Local tex:TTexture = TTexture.LoadTexture(pixmap,4)
+		Local tex:TTexture = TTexture.LoadTexture(pixmap,TEXFLAG_ALPHA|TEXFLAG_COLOR)
 
 		'TTexture.RestoreTextureFilters()
 		TTexture.useGlobalResizeSmooth = True
 		
 		tex.is_font = True
-		tex.flags=4 |16|32
+		tex.flags= TEXFLAG_CLAMPU|TEXFLAG_CLAMPV|TEXFLAG_ALPHA
 		tex.TextureBlend(2)
 		tex.NoSmooth() ''can be set by user
+		tt.EntityShininess(0.0)
 		
 		tt.surf = tt.CreateSurface()
 		tt.EntityTexture(tex)
-		tt.char_rows = Ceil( (c_pixels*num_chars+(num_chars*(pad*2) )) / tt.orig_width )
+		tt.char_rows = Ceil( (c_pixels*num_chars+(num_chars*(pad*2.0) )) / tt.orig_width )
 
 		tt.pixel_ratio = Float(tex.width)/tt.orig_width
-		
+	
 		Local temp_chars_per_row:Int = Floor( num_chars/tt.char_rows)
 		tt.char_uvwidth = (tt.char_pixels * tt.pixel_ratio) / Float(tex.width)	
 		tt.padding = tt.pixel_ratio*pad
@@ -121,6 +131,7 @@ Class TText Extends TSprite Final
 		
 		txt.cam = cam
 		txt.mode = mode
+		txt.use3D = use3D
 		txt.text = text
 		txt.length = length
 		txt.font_file = font_file
@@ -144,18 +155,18 @@ Class TText Extends TSprite Final
 	Method AddChar(char:Int, num:Int, x:Float=0.0, y:Float=0.0, offset:Float=0.0)
 		
 		Local uv:Float = (char - 32.0) * char_uvwidth + (char - 32.0) * padding
-		Local uv2:Float = 0.999
+		Local uv2:Float = MAXUV '0.99999
 		
-		If char = 32 Then uv =0; uv2 = 0.001
-		If uv < 0 Then uv = 0; uv2 = 0.001
+		If char = 32 Then uv =0; uv2 = MINUV '0.00001
+		If uv < 0 Then uv = 0; uv2 = MINUV '0.00001
 		
 		
 		'Local kern:Float = 0.3 * x + offset
 		Local kern:Float = 0.3 * x + offset
 		
 		surf.AddVertex( 0.0+x-kern, 0.0+y,0, uv, uv2)
-		surf.AddVertex( 0.0+x-kern, 1.0+y,0, uv, 0.0)
-		surf.AddVertex( 1.0+x-kern, 1.0+y,0, uv+char_uvwidth, 0.0)
+		surf.AddVertex( 0.0+x-kern, 1.0+y,0, uv, MINUV)
+		surf.AddVertex( 1.0+x-kern, 1.0+y,0, uv+char_uvwidth, MINUV)
 		surf.AddVertex( 1.0+x-kern, 0.0+y,0, uv+char_uvwidth, uv2)
 		Local v:Int = num*4
 		surf.AddTriangle(0+v,1+v,2+v)
@@ -166,29 +177,31 @@ Class TText Extends TSprite Final
 	Method AdjustChar(char:Int, num:Int, x:Float=0.0, y:Float=0.0)
 		
 		Local uv:Float = (char - 32.0) * char_uvwidth + (char - 32.0) * padding
-		Local uv2:Float = 0.999
+		Local uv2:Float = MAXUV
 		
-		If char = 32 Then uv =0; uv2 = 0.001
-		If uv < 0 Then uv = 0; uv2 = 0.001
+		If char = 32 Then uv =0; uv2 = MINUV
+		If uv < 0 Then uv = 0; uv2 = MINUV
 		
 		
 		Local kern:Float = 0.3 * x 
 
 		Local v:Int = num*4
 		surf.VertexTexCoords(v+0,uv,uv2)
-		surf.VertexTexCoords(v+1,uv,0.0)
-		surf.VertexTexCoords(v+2,uv+char_uvwidth,0.0)
+		surf.VertexTexCoords(v+1,uv,MINUV)
+		surf.VertexTexCoords(v+2,uv+char_uvwidth,MINUV)
 		surf.VertexTexCoords(v+3,uv+char_uvwidth,uv2)
 		
 	End
 	
 	Method SetMode2D()
 		mode = True
+		HideEntity()
 		brush.fx = brush.fx |64|8 ''disable depth testing, fog
 	End
 	
 	Method SetMode3D()
 		mode = False
+		ShowEntity()
 		brush.fx = brush.fx &(~64) &(~8) ''enable depth testing, fog
 	End
 	
@@ -199,7 +212,7 @@ Class TText Extends TSprite Final
 		If mode=False
 		
 			PositionEntity(x,y,z)
-			
+#rem			
 		Else If cam<>Null
 			
 			''old cam projection way
@@ -211,7 +224,7 @@ Class TText Extends TSprite Final
 			Local vec:Vector = cam.CameraUnProject(x-char_pixels-4,y+char_pixels+char_pixels-4, zz )'0.95 )
 			PositionEntity(vec.x,vec.y,vec.z)
 			'ScaleEntity(1/cam.zoom,1/cam.zoom,1.0)
-			
+	#end		
 		Endif
 		
 		If str = old_text Or str = "" Then Return
