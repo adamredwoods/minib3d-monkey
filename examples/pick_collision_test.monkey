@@ -38,9 +38,12 @@ Class Game Extends App
 		
 	End
 
-	Method Init()
+	Method Init:int()
 		
-		If init_gl Then Return
+		If init_gl Then Return 1
+		
+		If Not TPixmap.PreLoadPixmap(["mojo_font.png"]) Then Return 0
+		
 		init_gl = True
 		
 		
@@ -89,13 +92,15 @@ Class Game Extends App
 
 		
 		Print "main: intit done"
+		
+		Return 1
 	End
 	
 	Method OnUpdate()
 	
 		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
 	
-		Init()
+		If Not Init() Then return
 		
 		If KeyDown(187)
 			'anim_time += 1
@@ -202,6 +207,7 @@ Class Game Extends App
 	
 	Method OnRender()
 		
+		If Not Init() Then return
 		
 		RenderWorld()
 		renders=renders+1				
