@@ -80,6 +80,7 @@ Public
 	'End
 	Method Texture:TTexture() Property
 		If brush.tex Then Return brush.tex[0]
+		Return null
 	End
 	'Method Texture:Void(tx:TTexture) Property
 		'' read-only for now

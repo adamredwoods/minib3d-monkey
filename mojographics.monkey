@@ -207,7 +207,7 @@ Public
 		mat.grid[1][0] = jx
 		mat.grid[1][1] = jy
 		mat.grid[3][0] = tx
-		mat.grid[3][1] = ty
+		mat.grid[3][1] = -ty
 	End
 	
 	Method SetScissor( x,y,width,height )

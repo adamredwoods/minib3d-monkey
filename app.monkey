@@ -1,8 +1,7 @@
 
 Import minib3d
 
-Class Minib3dApp Extends MiniB3DApp
-end
+
 
 Class MiniB3DApp Extends App
 
@@ -115,6 +114,7 @@ Class MiniB3DApp Extends App
 	End
 	
 End
+
 
 
 '' TO USE

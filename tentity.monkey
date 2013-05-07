@@ -824,19 +824,23 @@ Class TEntity
 		
 	' Entity control
 	
-	Method EntityColor(r#,g#,b#)
+	Method EntityColor(r#,g#,b#,a#=-1.0)
 	
 		brush.red  =r * inverse_255
 		brush.green=g * inverse_255
 		brush.blue =b * inverse_255
+		
+		If a>-1.0 Then brush.alpha = a
 	
 	End 
 	
-	Method EntityColorFloat(r#,g#,b#)
+	Method EntityColorFloat(r#,g#,b#, a#=-1.0)
 	
 		brush.red  =r
 		brush.green=g
 		brush.blue =b
+		
+		If a>-1.0 Then brush.alpha = a
 	
 	End
 	
@@ -1552,24 +1556,32 @@ Class TEntity
 	
 	Method EntityRadius(rx#=0.0,ry#=0.0)
 		
-		If Not rx
-			''pull from cull radius
-			If TMesh(Self)
-				If Not cull_radius Then TMesh(Self).GetBounds()
-				rx = cull_radius*Max(Max(gsx,gsy),gsz)
+		If rx=0.0
+			''don't pull from cull radius, that makes a cube, instead sphere around the whole thing
+			Local m:TMesh = TMesh(Self)
+			If m
+				If Not cull_radius Then m.GetBounds()
+				Local c:Float
+				'c = Max(Max((m.max_x-m.min_x),(m.max_y-m.min_y)),(m.max_z-m.min_z))
+				c = Max(Max(Abs(m.max_x), Abs(m.max_y)),Abs(m.max_z))
+				c = Max(Max(Max(c,Abs(m.min_x)),Abs(m.min_y)),Abs(m.min_z))
+				rx = c*Max(Max(gsx,gsy),gsz)
+				
+				If rx<0.0 Then rx=-rx
+
 			Else
 				rx=1.0
 			Endif
 		Endif
-		
+	
 		collision.radius_x=rx
 		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
 	
 	End 
 	
-	Method EntityBox(x#=0,y#=0,z#=0,w#=0,h#=0,d#=0)
+	Method EntityBox(x#=0.0,y#=0.0,z#=0.0,w#=0.0,h#=0.0,d#=0.0)
 		
-		If Not w And Not d
+		If x=0.0 And w=0.0 And d=0.0
 			'' pull from GetBounds
 			
 			If TMesh(Self)
@@ -1578,9 +1590,9 @@ Class TEntity
 				x=m.min_x*gsx
 				y=m.min_y*gsy
 				z=m.min_z*gsz
-				w=(m.max_x-m.min_x)*gsx
-				h=(m.max_y-m.min_y)*gsy
-				d=(m.max_z-m.min_z)*gsz
+				w=Abs((m.max_x-m.min_x)*gsx)
+				h=Abs((m.max_y-m.min_y)*gsy)
+				d=Abs((m.max_z-m.min_z)*gsz)
 			Endif
 
 		Endif
@@ -1650,30 +1662,23 @@ Class TEntity
 
 	End 
 
-	'' NEW -- a faster way to setup collisions
+	'' NEW -- an easier way to setup collisions
 	Method CollisionSetup:Void(type_no:Int, pick_mode:Int, x:Float=0.0, y:Float=0.0, z:Float=0.0, w:Float=0.0, h:Float=0.0, d:Float=0.0)
 		
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
-		
-		'If Not x And Not w
-			'' pull from cull radius
-			'x=1.0
 			
-			'If TMesh(Self)
-				'If Not cull_radius Then TMesh(Self).GetBounds()
-				'x = cull_radius * Max(Max(gsx,gsy),gsz)
-			'Endif
+		If pick_mode = COLLISION_METHOD_SPHERE Or pick_mode = COLLISION_METHOD_POLYGON
+		
+			EntityRadius(Abs(x),Abs(y))
 			
-		'Endif
+		Elseif pick_mode = COLLISION_METHOD_BOX
 		
-		'If Not y Then y=x
-		
-		If Not w Or pick_mode = COLLISION_METHOD_SPHERE Then EntityRadius(Abs(x),Abs(y))
-		
-		If w Or pick_mode = COLLISION_METHOD_BOX
-			If Not w And x Then w=x; h=x; d=x ; y=-x*0.5; z=-x*0.5; x=-x*0.5
+			If w=0.0 And x<>0.0
+				w=x; h=x; d=x ; y=-x*0.5; z=-x*0.5; x=-x*0.5
+			endif
 			EntityBox(x,y,z,w,h,d)
+			
 		Endif
 		
 	End
@@ -1908,7 +1913,7 @@ Class TEntity
 		
 	End 
 
-
+#rem
 	' Returns an entity's bounding sphere
 	Method BoundingSphereNew( bsphere:TBoundingSphere )
 
@@ -1955,7 +1960,7 @@ Class TEntity
 		bsphere.r=radius
 
 	End 
-	
+#end	
  
 	
 	' Internal - not recommended for general use
@@ -2211,6 +2216,3 @@ Class EntityList<T> Extends List<T>
 End
 
 
-Class TBoundingSphere
-	Field x:Float, y:Float, z:Float, r:Float
-End

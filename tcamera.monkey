@@ -641,6 +641,7 @@ Public
 	
 	Method SetPixelCamera()
 		
+		''only update on changes
 		If draw2D And oldw = vwidth And oldh=vheight Then Return
 		oldw = vwidth; oldh=vheight
 		draw2D = 1

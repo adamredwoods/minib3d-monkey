@@ -31,7 +31,13 @@ Class TBrush
 		red=((hexcolor& $00ff0000) Shr 16)*INV_255
 		green= ((hexcolor& $00ff00) Shr 8)*INV_255 
 		blue= (hexcolor& $0000ff)*INV_255
-	End 
+	End
+	
+	Method New(r%,g%,b%)
+		red= r*INV_255
+		green= g*INV_255
+		blue= b*INV_255
+	End
 	
 	Method New(texture:TTexture)
 		BrushTexture(texture)

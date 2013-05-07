@@ -66,16 +66,17 @@ Class ShaderUniforms
 	
 	Method Link:Int(shader_id:Int)
 		
-		vertcoords = glGetAttribLocation(shader_id, "aVertcoords")	
-		texcoords0 = glGetAttribLocation(shader_id, "aTexcoords0")
-		texcoords1 = glGetAttribLocation(shader_id, "aTexcoords1")
-		normals = glGetAttribLocation(shader_id, "aNormals")
-		colors = glGetAttribLocation(shader_id, "aColors")
+		vertcoords = 0	
+		texcoords0 = -1
+		texcoords1 = -1
+		normals = -1
+		colors = 1
 		
-		p_matrix = glGetUniformLocation(shader_id, "pMatrix")
-		m_matrix = glGetUniformLocation(shader_id, "mMatrix")
-		v_matrix = glGetUniformLocation(shader_id, "vMatrix")
-		
+		p_matrix = 0
+		m_matrix = -1
+		'v_matrix = glGetUniformLocation(shader_id, "vMatrix")
+
+#rem		
 		For Local i:Int = 0 To 7
 			light_type[i] = glGetUniformLocation(shader_id, "lightType["+i+"]")
 			light_matrix[i] = glGetUniformLocation(shader_id, "lightMatrix["+i+"]")
@@ -120,7 +121,7 @@ Class ShaderUniforms
 			Dprint "**uniform assignment error: vertcoords does not exist"
 			Return 0
 		Endif
-		
+#end		
 		Return 1
 		
 	End
@@ -145,7 +146,7 @@ Class TShaderFlash Extends TShader
 	
 	Field use_base_variables:Int=1  ''turn off if default uniforms are not needed
 	
-	Field program_set:Program3D
+	Field program_set:Program3D ''main pointer to use
 	Field vertex_assembly:AGALMiniAssembler
 	Field fragment_assembly:AGALMiniAssembler
 	Field vertex_code:AGALPointer
@@ -283,7 +284,7 @@ Class TShaderFlash Extends TShader
 		Local verbose:Bool = False
 		
 #if CONFIG="debug"
-		'verbose = True
+		verbose = True
 #endif
 
 		Local result:AGALPointer
@@ -292,7 +293,7 @@ Class TShaderFlash Extends TShader
 		
 			vertex_id = g_id
 			vertex_assembly = New AGALMiniAssemblerDebug() ''add true for debugging
-			vertex_code = vertex_assembly.Assemble( DRIVER_VERTEX_PROGRAM, source, verbose  )
+			vertex_code = vertex_assembly.Assemble( DRIVER_VERTEX_PROGRAM, source, false)'verbose  )
 			result = vertex_code
 			
 		Endif
@@ -301,7 +302,7 @@ Class TShaderFlash Extends TShader
 		
 			fragment_id = g_id
 			fragment_assembly = New AGALMiniAssemblerDebug()
-			fragment_code = fragment_assembly.Assemble( DRIVER_FRAGMENT_PROGRAM, source, verbose )
+			fragment_code = fragment_assembly.Assemble( DRIVER_FRAGMENT_PROGRAM, source, false)'verbose )
 			result = fragment_code
 			
 		Endif
@@ -324,14 +325,19 @@ Class TShaderFlash Extends TShader
 		
 	End
 	
-
+	
+	Method LinkVariables()
+	End
+	
+#rem
 	Method LinkVariables()
 	
 		If active
 		
 			''use LinkVariables to specifically use default shader variables
 			use_base_variables =1
-							
+			'u.Link(shader_id)
+			Link(shader_id)
 			active = 1 'u.Link(shader_id) ''return 0 if link error
 			
 			'If GetGLError() Then Dprint "** error: uniform assignment"
@@ -339,11 +345,14 @@ Class TShaderFlash Extends TShader
 		Endif
 		
 	End
+#end
 	
-	Function LoadShaderString:TShaderFlash(vp:String, fp:String)
+	Function LoadShaderString:TShaderFlash(vp:String, fp:String, shader:TShaderFlash=null)
 		
 		Local fail%=1
-		Local shader:TShaderFlash = New TShaderFlash
+		'Local shader:TShaderFlash
+		
+		If Not shader Then shader = New TShaderFlash
 		
 		Local vs:Int = shader.CompileShader(vp,VERTEX_SHADER)
 		Local fs:Int = shader.CompileShader(fp,FRAGMENT_SHADER)
@@ -382,7 +391,7 @@ Class TShaderFlash Extends TShader
 		'Return 0
 	End
 	
-	
+	#rem
 	'Global TestVP:String = "m44 op, va0, vc0~nmov v0, va1"
 	'va0 = pos.xyz
 	'va1,v0 = norm.xyz
@@ -392,29 +401,80 @@ Class TShaderFlash Extends TShader
 			'"mov vt0, vc0~nmov vt1, vc1~nmov vt2, vc2~nmov vt3, vc3~n"+
 			'"mul vt0, vt0, vc4~nmul vt1, vt1, vc5~nmul vt2, vt2, vc6~nmul vt3, vt3, vc7~n"+
 			'''"mul vt0, vc4, vt0~nmul vt1, vc5, vt1~nmul vt2, vc6, vt2~nmul vt3, vc7, vt3~n"+
-			"m44 op, va0, vc0~nmov v0, va1~nmov v1, va2~nmov v2, va3~n"
+			"m44 vt0, va0, vc1~nm44 op, vt0, vc0~nmov v0, va1~nmov v1, va2~nmov v2, va3~n"
 	
 	'Global TestFP:String = "tex ft1, v2, fs0 <2d, nearest, mipnearest>~nmov oc, ft1"
+	
 	Global TestFP:String =
 			"tex ft1, v2, fs0 <2d,clamp,linear>~n"+
 			'"mul oc, ft1, v1~n"+
-			"mov oc, ft1~n"+
-			"mov ft2, v0~n"
-			
-	'Global TestFP$ = "mov oc, v1" 
+			"mov oc, v1~n"+
+			"mov ft2, ft1~n"
+	#end
+	
+	
 	
 End
 
 
 
 Class DefaultShader Extends TShaderFlash
+	#rem
+	Global TestVP$ ="m44 op, va0, vc0~n" + '' pos to clipspace
+				"mov v0, va1" '' copy color
+	
+	Global TestFP$ = "mov oc, v0" 
+	#end
+	
+	Global TestVP:String =
+			'"mov vt0, vc0~nmov vt1, vc1~nmov vt2, vc2~nmov vt3, vc3~n"+
+			'"mul vt0, vt0, vc4~nmul vt1, vt1, vc5~nmul vt2, vt2, vc6~nmul vt3, vt3, vc7~n"+
+			'''"mul vt0, vc4, vt0~nmul vt1, vc5, vt1~nmul vt2, vc6, vt2~nmul vt3, vc7, vt3~n"+
+			"m44 vt1, va0, vc0~nmov v0, va1~nmov v1, va2~nmul v0, va1, vc4~n"+
+			
+			''pointlight1
+			'"mov vt0, va3~n"+
+			"mov vt0.x, vc5.w~nmov vt0.y, vc6.w~nmov vt0.z, vc7.w~nsub vt0, vt0.xyz, vt1~ndp3 vt0.xyz, vt0.xyz, va3.xyz~nsat vt0.xyz, vt0.xyz~nmov v2, vt0.xyz~n"+
+			"mov op, vt1~n"+
+			"~n"
+			
+	'Global TestFP:String = "tex ft1, v2, fs0 <2d, nearest, mipnearest>~nmov oc, ft1"
+	
+	Global TestFP:String =
+			"tex ft1, v1, fs0 <2d,clamp,linear>~n"+ ''texture
+			"mul ft2, v2, v0~n"+ ''light*color vt
+			"mov ft2.w, v0.x~n"+'preserve alpha
+			"mul oc, ft1, ft2~n"
 
+			'"mov oc, v1~n"
+			'"mov ft2, ft1~n"
+	
+	
+	Method LinkVariables:Int()
+		
+		active=1
+		
+		u.vertcoords = 0	
+		u.texcoords0 = 2
+		u.texcoords1 = -1
+		u.normals = 3
+		u.colors = 1
+		
+		u.p_matrix = 0 '0,1,2,3
+		u.m_matrix = -1
+		u.base_color = 4
+		u.light_matrix[0] = 5 '5,6,7,8
+		
+	end
+	
 	Method New()
 		
-		shader_id = default_shader.shader_id
+		TShaderFlash.LoadShaderString(TestVP, TestFP, self)
+		
+		'shader_id = default_shader.shader_id
 		If shader_id
 			active = 1
-			LinkVariables()
+			'LinkVariables()
 		Endif
 		
 	End

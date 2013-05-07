@@ -10,7 +10,7 @@ Import minib3d
 
 Class TMesh Extends TEntity
 	
-	''mesh bounds
+	''mesh bounding box
 	Field min_x#,min_y#,min_z#,max_x#,max_y#,max_z#
 
 	Field no_surfs:Int=0
@@ -1165,6 +1165,7 @@ Class TMesh Extends TEntity
 		
 	End
 	
+	'' Paints each surface, versus PaintEntity() which sets master brush
 	Method PaintMesh(bru:TBrush)
 
 		For Local surf:TSurface=Eachin surf_list
@@ -1545,7 +1546,16 @@ Class TMesh Extends TEntity
 		Return Null
 	
 	End 
+	
+	'' starts at 0 to be consistent with Brush.GetTexture()
+	Method GetTexture:TTexture(i:Int=0)
 		
+		If brush And brush.tex[0] Then Return brush.tex[0]
+		If GetSurface(1).brush And GetSurface(1).brush.tex[0] Then Return GetSurface(1).brush.tex[0]
+		Return Null
+		
+	End
+	
 	' returns total no. of vertices in mesh
 	Method CountVertices()
 	
@@ -1690,6 +1700,7 @@ Class TMesh Extends TEntity
 		' only get new bounds if we have to
 		' mesh.reset_bounds=True for all new meshes, plus set to True by various Mesh commands
 		' scaling is not done here (since it can change per frame)
+		' more accurately a CullBox than CullRadius
 		If reset_bounds=True
 		
 			reset_bounds=False
@@ -1728,6 +1739,7 @@ Class TMesh Extends TEntity
 			' get bounding sphere (cull_radius#) from AABB
 			' only get cull radius (auto cull), if cull radius hasn't been set to a negative no. by TEntity.MeshCullRadius (manual cull)
 			If cull_radius>=0
+			
 				If width>=height And width>=depth
 					cull_radius=width
 				Else
@@ -1745,9 +1757,9 @@ Class TMesh Extends TEntity
 			Endif
 			
 			' mesh centre
-			center_x=min_x+(max_x-min_x)*0.5
-			center_y=min_y+(max_y-min_y)*0.5
-			center_z=min_z+(max_z-min_z)*0.5
+			center_x=min_x+(width)*0.5
+			center_y=min_y+(height)*0.5
+			center_z=min_z+(depth)*0.5
 		
 		Endif
 
@@ -2012,7 +2024,7 @@ Class TMesh Extends TEntity
 				''mojo_font scx=12
 				Local scx# = Int((TText(Self).char_pixels* TText(Self).pixel_ratio)+1.5) '0.5 rounds up
 				spr.pixel_scale[0] = scx
-				spr.pixel_scale[1] = scx		
+				spr.pixel_scale[1] = scx	
 'Print scx	
 			Else
 				Local scx# = Self.brush.GetTexture(0).width * 0.5 '' a sprite is 2 units wide (-1,1)

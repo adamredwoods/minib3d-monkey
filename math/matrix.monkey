@@ -16,7 +16,13 @@ Import minib3d.math.geom
 Class Matrix
 
 	Field grid:Float[4][]''4x4
+
+Private
 	
+	Global temp:Matrix =New Matrix
+	
+Public
+
 	Method New()
 		
 		'grid = AllocateFloatArray(4,4)
@@ -313,27 +319,28 @@ Class Matrix
 	
 	Method Transpose:Matrix()
 	
-		Local mat:Matrix = Self.Copy()
+		'Local mat:Matrix = Self.Copy()
+		temp.Overwrite(Self)
 		
-		grid[0][0]=mat.grid[0][0]
-		grid[1][0]=mat.grid[0][1]
-		grid[2][0]=mat.grid[0][2]
-		grid[3][0]=mat.grid[0][3]
+		grid[0][0]=temp.grid[0][0]
+		grid[1][0]=temp.grid[0][1]
+		grid[2][0]=temp.grid[0][2]
+		grid[3][0]=temp.grid[0][3]
 		
-		grid[0][1]=mat.grid[1][0]
-		grid[1][1]=mat.grid[1][1]
-		grid[2][1]=mat.grid[1][2]
-		grid[3][1]=mat.grid[1][3]
+		grid[0][1]=temp.grid[1][0]
+		grid[1][1]=temp.grid[1][1]
+		grid[2][1]=temp.grid[1][2]
+		grid[3][1]=temp.grid[1][3]
 		
-		grid[0][2]=mat.grid[2][0]
-		grid[1][2]=mat.grid[2][1]
-		grid[2][2]=mat.grid[2][2]
-		grid[3][2]=mat.grid[2][3]
+		grid[0][2]=temp.grid[2][0]
+		grid[1][2]=temp.grid[2][1]
+		grid[2][2]=temp.grid[2][2]
+		grid[3][2]=temp.grid[2][3]
 		
-		grid[0][3]=mat.grid[3][0]
-		grid[1][3]=mat.grid[3][1]
-		grid[2][3]=mat.grid[3][2]
-		grid[3][3]=mat.grid[3][3]
+		grid[0][3]=temp.grid[3][0]
+		grid[1][3]=temp.grid[3][1]
+		grid[2][3]=temp.grid[3][2]
+		grid[3][3]=temp.grid[3][3]
 		
 		Return Self
 	End

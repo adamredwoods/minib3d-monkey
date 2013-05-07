@@ -23,6 +23,9 @@ class Driver3D
 	public function SetContext__(c:Context3D):void {
 		context3d = c;
 	}
+	public function GetContext__():Context3D {
+		return context3d;
+	}
 	
 	public function CheckVersion():String
 	{
@@ -76,12 +79,11 @@ class Driver3D
 
 	public  function UploadConstantsFromArray( programType:String, firstRegister:int, data:Array, byteArrayOffset:uint):void {
 			
-		var num_regs:int = data.length >> 3; //why 8?
-		var byteArray:ByteArray = new ByteArray();
-		byteArray.endian = Endian.LITTLE_ENDIAN;
-        byteArray.writeObject(data);
-		context3d.setProgramConstantsFromByteArray(programType, firstRegister, num_regs, byteArray, byteArrayOffset);
-			
+		//var num_regs:int = data.length /4; //why 8? each register = 4 float values
+
+		var mvec:Vector.<Number> = Vector.<Number>(data);
+//for (var i:int=0; i< (data.length); i++) { print (mvec[i].toString()); };
+		context3d.setProgramConstantsFromVector(programType, firstRegister, mvec, data.length >> 2);
 	}
 	
 	public  function UploadIndexFromDataBuffer(ib:IndexBuffer3D, data:BBDataBuffer, byteArrayOffset:int, startVertex:int, numVertices:int):void {
@@ -89,7 +91,8 @@ print("indexlen");
 	print(String(data._data.length));
 print(data.Length().toString());	
 		var d:ByteArray = data.GetByteArray();
-		//d.endian = Endian.LITTLE_ENDIAN;
+		d.endian = Endian.LITTLE_ENDIAN;
+		d.position=0;
 		ib.uploadFromByteArray(d , byteArrayOffset, startVertex, numVertices);
 		
 	}
@@ -99,7 +102,8 @@ print("vblen");
 	print(String(data._data.length));
 print(data.Length().toString());
 		var d:ByteArray = data.GetByteArray();
-		//d.endian = Endian.LITTLE_ENDIAN;	
+		d.endian = Endian.LITTLE_ENDIAN;
+		d.position=0;
 		vb.uploadFromByteArray(d , byteArrayOffset, startVertex, numVertices);
 		
 	}

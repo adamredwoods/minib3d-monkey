@@ -93,6 +93,9 @@ Class FlashMiniB3D Extends TRender
 	Field effect:ShaderEffect = New ShaderEffect
 	
 	Global null_tex:TTexture
+	Global lastCam:Bool = False
+	
+	Global temp_mat:Matrix = New Matrix
 	
 	Public
 	
@@ -137,6 +140,7 @@ Class FlashMiniB3D Extends TRender
 	
 	Method Reset:Void()
 		
+		''need to wait until the context is ready
 		If Not render_init Then EnableStates()
 		
 		''reset globals used for state caching
@@ -144,11 +148,13 @@ Class FlashMiniB3D Extends TRender
 		last_sprite = Null ''used to preserve last surface states
 		TRender.alpha_pass = 0
 		
-		driver.Clear(0,0,0)
 	End
 	
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
+		
+		''for stage3d, limits the number of present calls
+		If cam = TCamera.cam_list.Last() Then lastCam = True Else lastCam = False
 		
 		Local mesh:TMesh = TMesh(ent)
 		
@@ -205,8 +211,8 @@ Class FlashMiniB3D Extends TRender
 			Local vbo:Int=True
 			
 			''get vbuffer and ibuffer, OK if null
-			Local vbuffer:VertexBuffer3D = vbuf_map.Get(surf.vbo_id[0])
-			Local ibuffer:IndexBuffer3D = ibuf_map.Get(surf.vbo_id[0])
+			Local vbuffer:VertexBuffer3D '= vbuf_map.Get(surf.vbo_id[0])
+			Local ibuffer:IndexBuffer3D '= ibuf_map.Get(surf.vbo_id[0])
 			Local abuffer:VertexBuffer3D = Null
 				
 			' update surf vbo if necessary
@@ -216,7 +222,7 @@ Class FlashMiniB3D Extends TRender
 				UpdateBuffers(surf, vbuffer, ibuffer)
 				vbuffer = vbuf_map.Get(surf.vbo_id[0])
 				ibuffer = ibuf_map.Get(surf.vbo_id[0])
-				
+
 			Endif
 
 			If mesh.anim
@@ -239,6 +245,9 @@ Class FlashMiniB3D Extends TRender
 				
 			Endif
 	
+			
+			Local shader:TShaderFlash = TShaderFlash(TShader.g_shader)
+			
 			
 			Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
 			Local ambient_red#,ambient_green#,ambient_blue#
@@ -392,37 +401,37 @@ Class FlashMiniB3D Extends TRender
 		
 			
 			
-			If vbo
+			'If vbo
 				
 				''static mesh
 				If Not (mesh.anim Or surf.vbo_dyn)
-					driver.SetVertexBufferAt (0, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
+					driver.SetVertexBufferAt (shader.u.vertcoords, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
 				Endif
-				
-				driver.SetVertexBufferAt (1, vbuffer, VertexDataBuffer.NORMAL_OFFSET Shr 2, DRIVER_FLOAT_3) ''normal 1
-				driver.SetVertexBufferAt (2, vbuffer, VertexDataBuffer.COLOR_OFFSET Shr 2, DRIVER_FLOAT_4) ''color 2
+	
+				If (shader.u.normals >-1) Then driver.SetVertexBufferAt (shader.u.normals, vbuffer, VertexDataBuffer.NORMAL_OFFSET Shr 2, DRIVER_FLOAT_3) ''normal 1
+				If (shader.u.colors >-1) Then driver.SetVertexBufferAt (shader.u.colors , vbuffer, VertexDataBuffer.COLOR_OFFSET Shr 2, DRIVER_FLOAT_4) ''color 2
 				
 			'Else
 		
 				'Print "*** Non-VBO disabled"
-'' interleaved offset doesn't work with DataBuffers, possible TODO for legacy targets
 			
-			Endif
+			'Endif
 			
 			
 			Endif ''end sprite_skip_state--------------------------------------
 			
 		
 			''mesh animation/batch animation
-			If vbo And (mesh.anim Or surf.vbo_dyn Or anim_surf2)
+			'If vbo And (mesh.anim Or surf.vbo_dyn Or anim_surf2)
+			If (mesh.anim Or surf.vbo_dyn Or anim_surf2)
 			
 				''vertex animation
 				If anim_surf2.vert_anim
-					driver.SetVertexBufferAt (0, abuffer, 0, DRIVER_FLOAT_3) ''position 0
-				
+					'driver.SetVertexBufferAt (shader.u.vertcoords, abuffer, 0, DRIVER_FLOAT_3) ''position 0
+					'driver.SetVertexBufferAt (shader.u.vertcoords, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
 				'' mesh animation, using animsurf2	
 				Elseif surf.vbo_dyn
-					driver.SetVertexBufferAt (0, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
+					'driver.SetVertexBufferAt (shader.u.vertcoords, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
 					
 				Endif
 			Endif
@@ -439,6 +448,7 @@ Class FlashMiniB3D Extends TRender
 			effect.mat_shininess=[100.0] ' upto 128
 			
 			
+			If shader.u.base_color>-1 Then driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.base_color, effect.mat_diffuse )
 				
 			' textures
 			Local tex_count=0	
@@ -466,9 +476,10 @@ Class FlashMiniB3D Extends TRender
 					Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#,tex_v_scale#
 					Local tex_u_pos#,tex_v_pos#,tex_ang#,tex_cube_mode,frame, tex_smooth
 
-
 					' Main brush texture takes precedent over surface brush texture
 					If ent.brush.tex[ix]<>Null
+						If ent.brush.tex[ix].width=0 Then tex_count=0; Exit
+						
 						texture=ent.brush.tex[ix]
 						tex_flags=ent.brush.tex[ix].flags
 						tex_blend=ent.brush.tex[ix].blend
@@ -482,6 +493,8 @@ Class FlashMiniB3D Extends TRender
 						frame=ent.brush.tex[ix].tex_frame
 						tex_smooth = ent.brush.tex[ix].tex_smooth		
 					Else
+						If surf.brush.tex[ix].width=0 Then tex_count=0; Exit
+						
 						texture=surf.brush.tex[ix]
 						tex_flags=surf.brush.tex[ix].flags
 						tex_blend=surf.brush.tex[ix].blend
@@ -509,7 +522,7 @@ Class FlashMiniB3D Extends TRender
 						
 						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
 						
-						driver.SetTextureAt(ix, tex_map.Get(last_texture.tex_id) )
+						If (shader.u.texcoords0 >-1) Then driver.SetTextureAt(ix, tex_map.Get(last_texture.tex_id) )
 	
 					
 					Endif ''end preserve texture states---------------------------------
@@ -597,13 +610,13 @@ Class FlashMiniB3D Extends TRender
 
 
 					If vbo
-						If tex_coords=0
+						If tex_coords=0 And (shader.u.texcoords0 >-1)
 						
-							driver.SetVertexBufferAt (3, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2) ''uv 3
-
-						Else
+							driver.SetVertexBufferAt (shader.u.texcoords0, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2) ''uv 3
+						Endif
+						If (shader.u.texcoords1 >-1)
 					
-							driver.SetVertexBufferAt (3, vbuffer, (VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2) Shr 2, DRIVER_FLOAT_2) ''uv 3
+							driver.SetVertexBufferAt (shader.u.texcoords1, vbuffer, (VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2) Shr 2, DRIVER_FLOAT_2) ''uv 3
 						Endif
 					Else
 					
@@ -648,18 +661,21 @@ Class FlashMiniB3D Extends TRender
 			
 			
 			'' turn off textures if no textures
-			If tex_count = 0
+			If tex_count = 0 And (shader.u.texcoords0>-1 or shader.u.texcoords1>-1) 
 			
 				'For Local ix:=0 To last_tex_count-1
 			
 					'driver.SetTextureAt(ix, Null )
 				
 				'Next
-				
+		
 				last_texture = Null
 				driver.SetTextureAt(0, tex_map.Get(null_tex.tex_id) )
-				'driver.SetVertexBufferAt (3, Null)
-				driver.SetVertexBufferAt (3, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2)
+				If shader.u.texcoords0>-1
+					driver.SetVertexBufferAt (shader.u.texcoords0, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2)
+				Else
+					driver.SetVertexBufferAt (shader.u.texcoords1, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2 + VertexDataBuffer.ELEMENT2, DRIVER_FLOAT_2)
+				endif
 			Endif
 			
 			
@@ -669,14 +685,29 @@ Class FlashMiniB3D Extends TRender
 			
 			'' set agal program constants
 			
+			temp_mat.Overwrite( cam.projview_mat )
 			
-	
 			If mesh.is_sprite=False
-				ent.mat.ToArray(t_array)
-				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 4, t_array)
+				'ent.mat.ToArray(t_array)
+				temp_mat.Multiply4(ent.mat)
+
+				'driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 4, t_array)
 			Else
-				TSprite(mesh).mat_sp.ToArray(t_array)
-				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 4, t_array)
+				'TSprite(mesh).mat_sp.ToArray(t_array)
+				temp_mat.Multiply4(TSprite(mesh).mat_sp)
+				
+				'driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 4, t_array)
+			Endif
+			
+			'' ** camera **
+			'' Flash Matrixes are transposed
+			'temp_mat=temp_mat.Transpose()
+			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 0, temp_mat.Transpose().ToArray() )
+			
+			'' ** light **
+			If shader.u.light_matrix[0] >-1
+				temp_mat.Overwrite(TLight.light_list.First().mat)
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_matrix[0], temp_mat.Transpose().ToArray() )
 			Endif
 			
 			'' draw tris
@@ -686,7 +717,9 @@ Class FlashMiniB3D Extends TRender
 				'glDisable(GL_FOG)
 				'glDisable(GL_LIGHTING)
 			Endif
-
+			
+			driver.SetProgram( shader.program_set )
+			
 			If TRender.render.wireframe
 				
 				''** needs special shader
@@ -743,10 +776,12 @@ Class FlashMiniB3D Extends TRender
 	
 	Method Finish:Void()
 		
-		''
-		driver.PresentToMojoBitmap(GetGraphicsDevice() )
+		If lastCam
+			driver.PresentToMojoBitmap(GetGraphicsDevice() )
+			driver.Clear(0,0,0,0)
+		endif
 		'driver.Present()
-
+		
 	End
 	
 	
@@ -772,7 +807,7 @@ Class FlashMiniB3D Extends TRender
 		TPixmapFlash.Init()
 		
 		'' set my error side-stepping for AGAL programs
-		null_tex = CreateTexture(1,1,2)
+		null_tex = CreateTexture(1,1,2) ''do i need to make this white?
 		
 		'If Not (flags & DISABLE_VBO)
 			vbo_enabled=True
@@ -804,7 +839,7 @@ Print "..Context Success"
 		driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
 		driver.SetCulling(DRIVER_NONE) 'BACK)
 		
-		TShader.LoadDefaultShader( TShaderFlash.LoadShaderString(TShaderFlash.TestVP, TShaderFlash.TestFP) )
+		TShader.LoadDefaultShader( New DefaultShader )
 		
 		render_init = True
 		
@@ -822,14 +857,20 @@ Print "..Context Success"
 		'Wend
 	End	
 	
+	
+	
 	'' assign buffer id and create buffers here
 	'' reset_vbo =-1 will reset buffer, used for clear surface and adding new vertices
 	Method UpdateBuffers:Int( surf:TSurface, vbuffer:VertexBuffer3D, ibuffer:IndexBuffer3D, abuffer:VertexBuffer3D=Null )
 		
+		'' no need to update
 		If surf.reset_vbo=0 And surf.vbo_id[0]<>0 Then Return 0
 		
 		'Local vbuffer:VertexBuffer3D
-Print "xxx"		
+		Local update:Int=0
+Print "update buffers"	
+		
+		''upload buffer data	
 		If surf.vbo_id[0]=0 Or surf.reset_vbo = -1
 			'glGenBuffers(6,surf.vbo_id)
 			
@@ -845,12 +886,14 @@ Print "create ib "+(surf.no_tris*3)
 			vbuf_map.Set(surf.vbo_id[0], vbuffer)
 			ibuf_map.Set(surf.vbo_id[0], ibuffer)
 			
+			''***TODO****
 			If surf.vert_anim
 				'abuffer = driver.CreateVertexBuffer( surf.no_verts, 3 ) ''3v
 				'abuf_map.Set(surf.vbo_id[0], abuffer)
 			Endif
 			
 			surf.reset_vbo = -1 ''set for possible vbo_id[0] reset (lost context)
+			update =1
 			
 		Else
 
@@ -871,15 +914,16 @@ Print "create ib "+(surf.no_tris*3)
 			''updated animation
 			If surf.vbo_dyn And Not surf.vert_anim
 				'driver.UploadVertexFromDataBuffer(vbuffer, surf.vert_data.buf, 0,0, surf.no_verts)
-			
+				update =1
 			''vertex animation sequence
 			Elseif surf.vbo_dyn And surf.vert_anim And surf.reset_vbo&1
 				'driver.UploadVertexFromDataBuffer(abuffer, surf.vert_anim[surf.anim_frame].buf, 0,0, surf.no_verts)
-				
+				update =1
 			Else
 				''normal static
 	Print ".. "+surf.no_verts+"  "+surf.vert_data.buf.Length()
 				driver.UploadVertexFromDataBuffer(vbuffer, surf.vert_data.buf, 0,0, surf.no_verts)
+				update =1
 			Endif
 			
 		Endif
@@ -887,13 +931,15 @@ Print "create ib "+(surf.no_tris*3)
 		If surf.reset_vbo&16
 Print ".. "+surf.no_tris*3
 			driver.UploadIndexFromDataBuffer(ibuffer, surf.tris.buf,0,0,surf.no_tris*3)
-			
+			update =1
 		Endif
 		
-		If DEBUG And GetFlashError() Then Print "*vbo update"
+		If DEBUG And GetFlashError() Then Print "*error: vbo update"
 
 		
 		surf.reset_vbo=0
+		
+		Return update
 		
 	End
 	
@@ -1117,8 +1163,9 @@ Return 0
 	End
 	
 	
-	
+
 	Method UpdateCamera(cam:TCamera)
+		
 	
 		' viewport
 		'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
@@ -1128,28 +1175,23 @@ Return 0
 
 		'cam.mod_mat.ToArray(t_array)	
 		'driver.UploadConstantsFromArray(driver.VERTEX_PROGRAM, 0, t_array)
-		
-		cam.projview_mat.ToArray(t_array)
-		driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 0, t_array)
-	
+
+		'cam.projview_mat.ToArray(t_array)
+		'driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 0, t_array)
 		
 
 		' clear buffers
-		
-		
 		If cam.cls_color=True And cam.cls_zbuffer=True
-			'glDepthMask(True)
-			'glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
-			'driver.SetDepthTest(True, driver.LESS_EQUAL)
+		
 			driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_ALL)
+			
 		Else
 			If cam.cls_color=True
 				driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_COLOR)
-			Else
-				If cam.cls_zbuffer=True
-					'driver.SetDepthTest(True, driver.LESS_EQUAL)
-					driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_DEPTH)
-				Endif
+				
+			ElseIf cam.cls_zbuffer=True
+				'driver.SetDepthTest(True, driver.LESS_EQUAL)
+				driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_DEPTH)
 			Endif
 		Endif
 

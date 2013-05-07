@@ -199,10 +199,12 @@ Class TPick
 			If ent.pick_mode=0 Or ent.Hidden()=True Then Continue
 			
 			''early sphere rejection
-			If TMesh(ent)
-				''only do this for meshes with cull_radius
-				Local rad:Float
-				If ent.cull_radius <0 Then rad = -ent.cull_radius*ent.cull_radius + radius Else rad = radius+ent.cull_radius
+			'If ent.collision
+				
+				If ent.collision.radius_x=0.0 Then CollisionInfo.UpdateSourceSphere(ent)
+				
+				Local rad:Float = ent.collision.radius_x + radius
+
 
 				'' rad * largest entity global scale
 				rad = rad*Max(Max(ent.gsx,ent.gsy),ent.gsz)
@@ -213,15 +215,16 @@ Class TPick
 				If Not col_obj.RaySphereTest(ray,cen, rad) Then Continue
 				
 				
-			Endif
+			'Endif
 			
 			col_info.CollisionSetup(ent, ent.pick_mode, col_obj)
 			pick = col_info.CollisionDetect(col_obj)
 	
 			
-			If pick
+			If pick And col_obj.col_time<picked_time
 				picked_ent=ent
-				Exit ''do we need to run through the list? yes for multiple objects, but we don't have that capability yet
+				
+				'Exit ''do we need to run through the list? yes for multiple objects, but we don't have that capability yet
 			Endif
 			
 		Next

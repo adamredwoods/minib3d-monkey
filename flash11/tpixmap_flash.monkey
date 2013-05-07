@@ -180,6 +180,9 @@ Class PreloadManager Implements IPreloadManager
 	Field total:Int
 	Field preloader:TPixmapPreloader
 	
+	Method IsLoaded:Bool(file_id:int)
+		Return (data[file_id-1] <> Null)
+	End
 		
 	Method SetPreloader:Void(m:TPixmapPreloader)
 	

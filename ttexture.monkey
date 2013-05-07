@@ -523,8 +523,14 @@ Class TTexture
 
 	End 
 #end
-
-
+	
+	'TextureBlend(n)
+	'0: Do not blend
+	'1: No blend, or Alpha (alpha when texture loaded with alpha flag)
+	'2: Multiply (default)
+	'3: Add
+	'4: Dot3
+	'5: Multiply 2
 	Method TextureBlend(blend_no:Int)
 		
 		blend=blend_no

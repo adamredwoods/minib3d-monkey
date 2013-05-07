@@ -1,4 +1,12 @@
 ****************************************
+minib3d v0.35.1
+
+- bug fixes
+- collision bug fixes
+- added: New Brush(r,g,b)
+
+
+****************************************
 minib3d v0.35
 
 - Added: CameraScissor(x,y,w,h) -- allows clipping region for cameras

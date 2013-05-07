@@ -113,6 +113,7 @@ Extern
 		Method PresentToMojoBitmap:Void(g:GraphicsDevice) = "PresentToMojoBitmap"
 		
 		Method SetContext__:Void(c:Context__) = "SetContext__"
+		Method GetContext__:Context__() = "GetContext__"
 		
 		''monkey defaults to big endian, but stage3d takes little endian
 		Function DataBufferLittleEndian:Void(b:DataBuffer)

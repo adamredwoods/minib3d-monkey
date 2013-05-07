@@ -475,7 +475,7 @@ Class OpenglES11 Extends TRender
 			
 			''GL_FRONT_AND_BACK needed for opengl es 1.x
 			
-			glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,mat_diffuse) ''combine diffuse & ambient?
+			glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,mat_diffuse)
 			glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,mat_ambient)
 			glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,mat_specular)
 			glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,mat_shininess)
