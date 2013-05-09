@@ -439,7 +439,11 @@ Print s
 			' blend modes
 			Select blend
 				Case 0
+#If TARGET<>"html5"
 					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+#Else
+   					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+#Endif
 				Case 1
 					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
 				Case 2

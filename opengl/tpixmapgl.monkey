@@ -111,58 +111,74 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		Return p
 	End
 	
-	
+	'bilinear
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
-
+	
 		''simple average 4pixel
 		''softer
-		Local enlarge:Int=0
+		Local enlarge:Int=0, r%, g%, b%, a%
+		
+		If width =0 Or height =0 Or neww=0 Or newh=0 Then Return CreatePixmap(0,0)
 		
 		Local ratiow:Float = width/Float(neww)
 		Local ratioh:Float = height/Float(newh)
 		
-		If ratiow<1.0 And ratioh<1.0 Then enlarge = 1
-			
+		'If ratiow<1.0 Or ratioh<1.0 Then enlarge = 1
 		Local newpix:TPixmapGL = TPixmapGL(CreatePixmap(neww, newh))
 		
-		Local rgb:Int[5], yi:Float=0, xx:Int, yy:Int, red:Int, green:Int, blue:Int, alpha:Int
-		
-		For Local y:Int = 0 To newh-1
-			Local xi:Float =0
-			For Local x:Int = 0 To neww-1
+		Local rgb:Int[5]
+		For Local iy = 0 Until newh
+			For Local ix = 0 Until neww
+			
+				Local fx# = Float(ix) * ratiow
+				Local fy# = Float(iy) * ratioh
 				
-				xx=Int(xi); yy=Int(yi)
+				Local x = Int(fx)
+				Local y = Int(fy)
 				
 				''ints faster than bytes
-				rgb[0] = GetPixel(xx-1,yy) 
-				rgb[1] = GetPixel(xx+1,yy)
-				rgb[2] = GetPixel(xx,yy-1)
-				rgb[3] = GetPixel(xx,yy+1)
+				rgb[0] = GetPixel(x,y) 
+				rgb[1] = GetPixel(x+1,y)
+				rgb[2] = GetPixel(x,y+1)
+				rgb[3] = GetPixel(x+1,y+1)
 				
-				red = (((rgb[0] & $000000ff) + (rgb[1] & $000000ff) +(rgb[2] & $000000ff) +(rgb[3] & $000000ff) )Shr 2) & $000000ff
-				green = (((rgb[0] & $0000ff00) + (rgb[1] & $0000ff00) +(rgb[2] & $0000ff00) +(rgb[3] & $0000ff00) )Shr 2) & $0000ff00 
-				blue = (((rgb[0] & $00ff0000) + (rgb[1] & $00ff0000) +(rgb[2] & $00ff0000) +(rgb[3] & $00ff0000) )Shr 2) & $00ff0000
-				alpha = (((((rgb[0] & $ff000000) Shr 24) + ((rgb[1] & $ff000000) Shr 24) +((rgb[2] & $ff000000)Shr 24)  +((rgb[3] & $ff000000)Shr 24) )Shr 2) Shl 24) & $ff000000
+
+					Local dx% = (Int(fx - x) /16)
+					Local dy% = (Int(fy - y) /16)
+					
+					
+					Local y1 = (rgb[0]& $000000ff) + Int(dx * ((rgb[1]& $000000ff) - (rgb[0]& $000000ff))) /16
+					Local y2 = (rgb[2]& $000000ff) + Int(dx * ((rgb[3]& $000000ff) - (rgb[2]& $000000ff))) /16
+					r = y1 + (dy * (y2 - y1)) /16
+					
+					y1 = ((rgb[0] & $0000ff00)Shr 8) + Int(dx * (((rgb[1] & $0000ff00)Shr 8) - (rgb[0] & $0000ff00)Shr 8)) /16
+					y2 = ((rgb[2] & $0000ff00)Shr 8) + Int(dx * (((rgb[3] & $0000ff00)Shr 8) - (rgb[2] & $0000ff00)Shr 8)) /16
+					g = y1 + (dy * (y2 - y1)) /16
+					
+					y1 = ((rgb[0] & $00ff0000)Shr 16) + Int(dx * (((rgb[1] & $00ff0000)Shr 16) - (rgb[0] & $00ff0000)Shr 16)) /16
+					y2 = ((rgb[2] & $00ff0000)Shr 16) + Int(dx * (((rgb[3] & $00ff0000)Shr 16) - (rgb[2] & $00ff0000)Shr 16)) /16
+					b = y1 + (dy * (y2 - y1)) /16
+					
+					y1 = ((rgb[0] & $ff000000)Shr 24) + Int(dx * (((rgb[1] & $ff000000)Shr 24) - (rgb[0] & $ff000000)Shr 24)) /16
+					y2 = ((rgb[2] & $ff000000)Shr 24) + Int(dx * (((rgb[3] & $ff000000)Shr 24) - (rgb[2] & $ff000000)Shr 24)) /16
+					a = y1 + (dy * (y2 - y1)) /16
+					
+					g=g Shl 8
+					b=b Shl 16
+					a=a Shl 24
+
+		
+				'newpix.SetPixel(ix,iy,r,g,b,a)
+				newpix.pixels.PokeInt( (ix Shl 2)+iy*(neww Shl 2), r|g|b|a )
 				
-				'' extra weight gives better results for enlarge
-				If enlarge
-					rgb[4] = GetPixel(xx,yy)
-					red = ((red+(rgb[4]&$000000ff))Shr 1) & $000000ff
-					green = ((green+(rgb[4]&$0000ff00))Shr 1) & $0000ff00
-					blue = ((blue+(rgb[4]&$00ff0000))Shr 1) & $00ff0000
-					alpha = ((((alpha Shr 24)+((rgb[4]&$ff000000)Shr 24) )Shr 1) Shl 24) & $ff000000
-				Endif
-				
-				newpix.pixels.PokeInt( (x Shl 2)+y*(neww Shl 2), red|green|blue|alpha )
-				
-				xi = xi+ratiow
-			Next
-			yi = yi+ratioh
-		Next
+			Next 
+		Next 
 		
 		Return newpix
-		
 	End
+	
+	
+
 	
 	Method ResizePixmapNoSmooth:TPixmap(neww:Int, newh:Int)
 

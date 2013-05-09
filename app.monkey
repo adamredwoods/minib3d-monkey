@@ -1,7 +1,11 @@
 
 Import minib3d
 
-
+'' allows opengles20 on GLFW
+#OPENGL_GLES20_ENABLED=0
+#If OPENGL_GLES20_ENABLED=1
+	Import minib3d.opengl.opengles20
+#Endif
 
 Class MiniB3DApp Extends App
 
