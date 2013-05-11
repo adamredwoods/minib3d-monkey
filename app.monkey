@@ -9,7 +9,8 @@ Import minib3d
 
 Class MiniB3DApp Extends App
 
-	Global Resumed:Bool = False
+	Global _resumed:Bool = False
+	Global _suspend:Bool = False
 	
 	Field init:Int=0
 	
@@ -61,11 +62,11 @@ Class MiniB3DApp Extends App
 			Return
 		Endif
 		
-		If Resumed
+		If _resumed
 			Graphics3DInit ()
 			ReloadAllSurfaces ()
-			ReloadAllTextures ()
-			Resumed = False
+			'ReloadAllTextures ()
+			_resumed = False
 		Endif
 		
 		Update()
@@ -103,6 +104,8 @@ Class MiniB3DApp Extends App
 	End
 	
 	Method OnSupsend()
+		_suspend=True
+		_resumed=false
 		Suspend()
 	End
 	
@@ -110,7 +113,11 @@ Class MiniB3DApp Extends App
 	End
 	
 	Method OnResume()
-		Resumed = True
+		_resumed = True
+		If _suspend
+			_suspend = False
+			TTexture.ReloadAllTextures()
+		Endif
 		Resume()
 	End
 	
