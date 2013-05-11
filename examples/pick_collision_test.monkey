@@ -40,9 +40,9 @@ Class Game Extends App
 
 	Method Init:int()
 		
-		If Not TPixmap.PreLoadPixmap(["mojo_font.png"]) Then Return
-		
 		If init_gl Then Return 1
+    
+		If Not TPixmap.PreLoadPixmap(["mojo_font.png"]) Then Return 0
 		init_gl = True
 		
 		
@@ -103,12 +103,10 @@ Class Game Extends App
 	End
 	
 	Method OnUpdate()	
-		
-		
+
+		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
 		
 		If Not Init() Then Return
-		
-		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
 		
 		If KeyDown(187)
 			'anim_time += 1
@@ -206,7 +204,7 @@ Class Game Extends App
 		Endif
 		
 		
-		If KeyDown(KEY_ESCAPE)
+		If KeyDown(KEY_C)
 			Print "clear"
           	ClearWorld()
 		End
