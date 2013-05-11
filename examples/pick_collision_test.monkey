@@ -14,7 +14,7 @@ Class Game Extends App
 	Field sphere1:TMesh
 	Field dot:TMesh
 
-	Field txt:TText
+	Field txt:TText, txt2:TText
 	
 	' used by fps code
 	Field old_ms:Int
@@ -40,10 +40,9 @@ Class Game Extends App
 
 	Method Init:int()
 		
+		If Not TPixmap.PreLoadPixmap(["mojo_font.png"]) Then Return
+		
 		If init_gl Then Return 1
-		
-		If Not TPixmap.PreLoadPixmap(["mojo_font.png"]) Then Return 0
-		
 		init_gl = True
 		
 		
@@ -66,9 +65,16 @@ Class Game Extends App
 		sphere1 = CreateSphere(20)
 
 		
-		txt = TText.CreateText(cam)
+		txt = TText.CreateText2D()
 		txt.NoSmooth()
 		txt.HideEntity()
+		
+		txt2 = TText.CreateText3D()
+		txt2.SetText("hello")
+		txt2.EntityParent(dot)
+		txt2.PositionEntity(0,2.5,0)
+		txt2.EntityColor(100,190,100)
+		txt2.NoSmooth
 		
 		light.PositionEntity 0,3,-3
 		cam.PositionEntity 0.5,1,-5
@@ -96,11 +102,13 @@ Class Game Extends App
 		Return 1
 	End
 	
-	Method OnUpdate()
-	
+	Method OnUpdate()	
+		
+		
+		
+		If Not Init() Then Return
+		
 		If KeyHit(KEY_CLOSE) Or KeyHit(KEY_ESCAPE) Then Error ""
-	
-		If Not Init() Then return
 		
 		If KeyDown(187)
 			'anim_time += 1
@@ -155,6 +163,8 @@ Class Game Extends App
 		'sphere1.TurnEntity(ud*2,lr*2,0)
 		cam.TurnEntity ud,lr,0
 
+		If KeyDown(KEY_M) txt.pixel_ratio=1.0; Print txt.pixel_ratio
+		If KeyDown(KEY_N) txt.pixel_ratio=2.0; Print txt.pixel_ratio
 	
 'Print PickedX()+" "+PickedY()+" "+PickedZ()
 
@@ -196,7 +206,7 @@ Class Game Extends App
 		Endif
 		
 		
-		If KeyDown(KEY_C)
+		If KeyDown(KEY_ESCAPE)
 			Print "clear"
           	ClearWorld()
 		End
@@ -206,8 +216,8 @@ Class Game Extends App
 	End
 	
 	Method OnRender()
-		
-		If Not Init() Then return
+		If Not Init() Then Return
+
 		
 		RenderWorld()
 		renders=renders+1				

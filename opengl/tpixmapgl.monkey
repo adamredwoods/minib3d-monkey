@@ -143,8 +143,8 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 				rgb[3] = GetPixel(x+1,y+1)
 				
 
-					Local dx% = (Int(fx - x) /16)
-					Local dy% = (Int(fy - y) /16)
+					Local dx% = Int((fx - x) *16.0)
+					Local dy% = Int((fy - y) *16.0)
 					
 					
 					Local y1 = (rgb[0]& $000000ff) + Int(dx * ((rgb[1]& $000000ff) - (rgb[0]& $000000ff))) /16

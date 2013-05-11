@@ -461,9 +461,9 @@ Public
 		Return vert_data.PeekVertCoords(vert_no)
 	End
 		
-	Method UpdateNormals()
+	Method UpdateNormals(create_only:Bool = false)
 
-		Local norm_map:NormMap<Vector> = New NormMap<Vector>
+		Local norm_map:NormMap<NormHelperClass> = New NormMap<NormHelperClass>
 		
 		For Local t:=0 To no_tris-1
 
@@ -486,7 +486,7 @@ Public
 			Local nz#=(ax*by)-(ay*bx) '' surf.TriangleNX#(t)
 			
 			Local norm:Vector = New Vector(nx,ny,nz)
-			Local vnorm:Vector, vx:Vector, new_norm:Vector
+			Local vnorm:Vector, vx:Vector, new_norm:Vector, vhelper:NormHelperClass
 			
 			For Local c:=0 To 2
 	
@@ -494,16 +494,22 @@ Public
 				
 				vx = vert_data.PeekVertCoords(v) 'New Vector( vert_coords.Peek(v+0), vert_coords.Peek(v+1), vert_coords.Peek(v+2))
 				
-				vnorm = norm_map.Get(vx)
-				If Not vnorm
+				vhelper = norm_map.Get(vx)
 
-					vnorm = New Vector(0.0,0.0,0.0)
-
-				Endif
 				
-				''don't disrupt the norm for other verts 
+				If Not vhelper
+					vhelper = New NormHelperClass
+					vhelper.vec = New Vector(0.0,0.0,0.0)
+					vhelper.vert = v
+				Endif
 
-				norm_map.Set(vx, norm.Add(vnorm) ) ' norm = (norm+vnorm)/2
+				''don't disrupt the norm for other verts 
+				vhelper.vec = norm.Add(vhelper.vec)
+
+				If Not create_only
+					norm_map.Set(vx, vhelper)
+				Endif
+
 		
 			Next
 			
@@ -514,12 +520,13 @@ Public
 		For Local v:=0 To no_verts-1
 			Local vx:Vector = vert_data.PeekVertCoords(v) 'New Vector( vert_coords.Peek(v*3+0), vert_coords.Peek(v*3+1), vert_coords.Peek(v*3+2))
 
-			Local norm:Vector = norm_map.Get(vx)
+			Local norm:NormHelperClass  = norm_map.Get(vx)
+
 			
 			If norm
-				norm = norm.Normalize()
+				norm.vec = norm.vec.Normalize()
 				
-				vert_data.PokeNormals(v,norm.x,norm.y,norm.z)
+				vert_data.PokeNormals(v,norm.vec.x,norm.vec.y,norm.vec.z)
 
 			Endif
 			
@@ -891,4 +898,7 @@ Class NormMap <V> Extends Map<Vector, V>
 	End
 End
 
-
+Class NormHelperClass
+	Field vec:Vector
+	Field vert:int
+End

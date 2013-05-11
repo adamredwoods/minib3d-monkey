@@ -1344,8 +1344,8 @@ End
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=UpdateNormals">Online Help</a>
 #End 
-Function UpdateNormals(mesh:TMesh)
-	mesh.UpdateNormals()
+Function UpdateNormals(mesh:TMesh, create_only:Bool = false)
+	mesh.UpdateNormals(create_only)
 End 
 
 #rem

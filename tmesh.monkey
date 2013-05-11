@@ -974,29 +974,7 @@ Class TMesh Extends TEntity
 			ent.CopyEntity(mesh)
 		Next
 		
-		mesh.name=name
-		mesh.classname=classname
-		mesh.order=order
-		mesh.hide=hide
-		mesh.auto_fade=auto_fade
-		mesh.fade_near=fade_near
-		mesh.fade_far=fade_far
-		
-		mesh.use_cam_layer = use_cam_layer
-		mesh.cam_layer = cam_layer
-		
-		mesh.anim=anim
-		mesh.anim_render=anim_render
-		mesh.anim_mode=anim_mode
-		mesh.anim_time=anim_time
-		mesh.anim_speed=anim_speed
-		mesh.anim_seq=anim_seq
-		mesh.anim_trans=anim_trans
-		mesh.anim_dir=anim_dir
-		mesh.anim_seqs_first=anim_seqs_first[..]
-		mesh.anim_seqs_last=anim_seqs_last[..]
-		mesh.no_seqs=no_seqs
-		mesh.anim_update=anim_update
+		Self.CopyBaseMeshTo(mesh,parent_ent)
 		
 		''need a full copy of bones list, not just pointers
 		If bones
@@ -1442,14 +1420,13 @@ Class TMesh Extends TEntity
 	End
 	
 	
-	Method UpdateNormals()
+	Method UpdateNormals(create_only:Bool=false)
 
 		For Local s=1 To CountSurfaces()
 
 			Local surf:TSurface=GetSurface( s )
 
-			surf.SnapVerts()
-			surf.UpdateNormals()
+			surf.UpdateNormals(create_only)
 			
 			' mesh state has changed - update reset flags
 			surf.reset_vbo = surf.reset_vbo|4
