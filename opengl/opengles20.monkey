@@ -1216,7 +1216,7 @@ Print s
 	End
 	
 	
-	Method DeleteVBO(surf:TSurface)
+	Method FreeVBO(surf:TSurface)
 	
 		If surf.vbo_id[0]<>0 
 			glDeleteBuffer(surf.vbo_id[0])

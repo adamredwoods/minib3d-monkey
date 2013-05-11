@@ -95,7 +95,7 @@ Public
 	
 	Method FreeSurface()
 	
-		TRender.render.DeleteVBO(Self)
+		TRender.render.FreeVBO(Self)
 		no_verts=0; no_tris=0
 		tris=Null; vert_data=Null
 			

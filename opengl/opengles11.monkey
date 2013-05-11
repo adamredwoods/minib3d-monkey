@@ -1031,7 +1031,7 @@ Class OpenglES11 Extends TRender
 	End
 	
 	
-	Method DeleteVBO(surf:TSurface)
+	Method FreeVBO(surf:TSurface)
 	
 		If surf.vbo_id[0]<>0 
 			glDeleteBuffers(6,surf.vbo_id)

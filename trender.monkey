@@ -68,10 +68,10 @@ Class TRender
 	
 	Method UpdateCamera(cam:TCamera) Abstract
 	
-	Method UpdateVBO(surface:TSurface)
-	End
-	Method DeleteVBO(surface:TSurface)
-	End
+	Method UpdateVBO(surface:TSurface) Abstract
+
+	Method FreeVBO(surface:TSurface) Abstract
+
 	
 	''-------------------------------------------------------
 	

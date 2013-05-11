@@ -207,6 +207,7 @@ Class Game Extends App
 		If KeyDown(KEY_C)
 			Print "clear"
           	ClearWorld()
+          	cam = CreateCamera()
 		End
 		
 		'UpdateWorld()
