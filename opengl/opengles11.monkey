@@ -302,7 +302,11 @@ Class OpenglES11 Extends TRender
 					glDepthMask(True)
 				Endif
 			Else
-				glDisable(GL_BLEND)
+				If fx&FXFLAG_FORCE_ALPHA
+					glEnable(GL_BLEND)
+				Else
+					glDisable(GL_BLEND)
+				endif
 				glDepthMask(True)
 
 			Endif
@@ -312,7 +316,8 @@ Class OpenglES11 Extends TRender
 			' blend modes
 			Select blend
 				Case 0
-					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+					'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+					glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA) 
 				Case 1
 					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
 				Case 2

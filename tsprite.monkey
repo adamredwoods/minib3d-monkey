@@ -262,11 +262,11 @@ Class TBatchSpriteMesh Extends TMesh
 		mesh.free_stack = New IntStack
 				'mainlist
 				
-		mesh.EntityFX 1+2'+32 '' full bright+ use vertex colors + alpha
+		mesh.EntityFX 1+2'+32 '' default full bright+ use vertex colors + alpha
 		mesh.brush.shine=0.0	
 				
 		mesh.classname = "BatchSpriteMesh"
-		'mesh.is_sprite = True 'no
+		'mesh.is_sprite = True 'no, it's not
 		mesh.is_update = True
 		mesh.cull_radius = -999999.0
 		
@@ -300,7 +300,9 @@ Class TBatchSpriteMesh Extends TMesh
 		''do our own bounds
 		
 		If num_sprites>0
-		
+			
+			reset_bounds=False
+			
 			Local width#=TBatchSprite.max_x-TBatchSprite.min_x
 			Local height#=TBatchSprite.max_y-TBatchSprite.min_y
 			Local depth#=TBatchSprite.max_z-TBatchSprite.min_z
@@ -328,6 +330,8 @@ Class TBatchSpriteMesh Extends TMesh
 			max_x = TBatchSprite.max_x
 			max_y = TBatchSprite.max_y
 			max_z = TBatchSprite.max_z
+			
+			
 			
 			'If brush.tex[0] Then brush.tex[0].flags = brush.tex[0].flags | 16 |32 ''always clamp
 			'If surf.brush.tex[0] Then surf.brush.tex[0].flags = surf.brush.tex[0].flags | 16 |32 ''always clamp
@@ -399,7 +403,7 @@ Class TBatchSprite Extends TSprite
 		''
 		''add a parent to the entire batch mesh
 		''-- position only
-		Function BatchSpriteParent( id:Int=0, ent:TEntity, glob:Bool=True )
+		Function BatchSpriteParent:void( id:Int=0, ent:TEntity, glob:Bool=True )
 			
 			If id = 0 Then id = total_batch
 			If id = 0 Then Return
@@ -411,7 +415,7 @@ Class TBatchSprite Extends TSprite
 		''
 		''return the sprite batch main mesh entity
 		''
-		Method BatchSpriteEntity:TEntity()
+		Method BatchSpriteEntity:TBatchSpriteMesh() Property
 			
 			Return mainsprite[batch_id]
 		
@@ -424,6 +428,15 @@ Class TBatchSprite Extends TSprite
 			
 			mainsprite[batch_id].PositionEntity(x,y,z)
 			
+		End
+		
+		''method overload
+		Method EntityBlend(blend%)
+			mainsprite[batch_id].EntityBlend(blend)
+		End
+		
+		Method EntityFX(fx%)
+			mainsprite[batch_id].EntityFX(fx)
 		End
 		
 		Function CreateBatchMesh:TBatchSpriteMesh( batchid:Int )
@@ -442,6 +455,18 @@ Class TBatchSprite Extends TSprite
 			Return mainsprite[total_batch]
 		End
 
+
+		Function CreateSprite:TBatchSprite(file$)
+			
+			For Local i:Int=1 To total_batch
+				If mainsprite[i].brush.tex And mainsprite[i].brush.tex[0].file=file
+					Return CreateSprite(i)
+				Endif
+			Next
+			
+			Return null
+			
+		End
 
 		Function CreateSprite:TBatchSprite(idx:Int=0)
 			''add sprite to batch

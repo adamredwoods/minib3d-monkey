@@ -14,7 +14,18 @@ Class BlankShader Implements IShader2D
 	end
 End
 
-Class TShader Extends TBrush
+Interface IShader
+	Method CompileShader:Int(source:String, type:Int)
+	'Function LoadShader:TShader(vp_file:String, fp_file:String)
+	Method Copy:TBrush()
+	Method IsValid:Int()
+	Method Override(i:Int)
+	Method RenderCamera(cam:TCamera)
+	Method Update()
+	Method DrawEntity:Void(cam:TCamera, ent:TEntity)
+End
+
+Class TShader Extends TBrush Implements IShader
 	
 	'' TBrush includes color, shininess, texture, etc.
 	

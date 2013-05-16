@@ -92,7 +92,7 @@ Class TText Extends TSprite Final
 		tex.is_font = True
 		tex.flags= TEXFLAG_CLAMPU|TEXFLAG_CLAMPV|TEXFLAG_ALPHA
 		tex.TextureBlend(2)
-		tex.NoSmooth() ''can be set by user
+		'tex.NoSmooth() ''can be set by user
 		tt.EntityShininess(0.0)
 		
 		tt.surf = tt.CreateSurface()

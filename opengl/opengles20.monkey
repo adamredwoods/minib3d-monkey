@@ -70,6 +70,22 @@ Function RestoreMojo2D()
 	
 End
 
+Class GLEffect
+	
+	Field depth_test:Bool = true
+	Field depth_write:Bool = true
+	Field alpha_test:Bool = false
+	Field blend_enable:Bool = true
+	
+	Method Overwrite:Void( e:GLEffect )
+		depth_test = e.depth_test
+		depth_write = e.depth_write
+		alpha_test = e.alpha_test
+		blend_enable = e.blend_enable
+	End
+	
+End
+
 
 Class OpenglES20 Extends TRender Implements IShader2D
 	
@@ -89,6 +105,8 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	Global last_tex_count:Int =8
 	
 	Global disable_depth:Bool = False '' used for EntityFx 64 - disable depth testing
+	Global effect:GLEffect = New GLEffect
+	Global last_effect:GLEffect = New GLEffect
 	
 	Field cam_matrix_upload:Int=0
 	
@@ -244,7 +262,8 @@ Print s
 	
 		''re-enable at end
 		If cam.draw2D
-			glDisable(GL_DEPTH_TEST)
+			effect.depth_test = False
+			'glDisable(GL_DEPTH_TEST)
 		Endif
 		
 		''run through surfaces twice, sort alpha surfaces for second pass
@@ -412,48 +431,36 @@ Print s
 
 	
 			' if surface contains alpha info, enable blending
-
+			
 			If ent.alpha_order<>0.0
 				
 				If ent.brush.alpha<1.0
 					''the entire entity
-					glEnable(GL_BLEND)
-					glDepthMask(False)
+					effect.blend_enable = True
+					effect.depth_write = False
+					effect.depth_test = False
 				Elseif surf.alpha_enable=True
 					''just one surface
-					glEnable(GL_BLEND)
-					glDepthMask(False)
+					effect.blend_enable = True
+					effect.depth_write = False
+					effect.depth_test = False
 				Else
 					''entity flagged for alpha, but not this surface
-					glDisable(GL_BLEND)
-					glDepthMask(True)
+					effect.blend_enable = False
+					effect.depth_write = True
+					effect.depth_test = True
 				Endif
 			Else
-				glDisable(GL_BLEND)
-				glDepthMask(True)
 
+				'glDisable(GL_BLEND)
+				'glDepthMask(True)
+				effect.blend_enable = False
+				effect.depth_write = True
+				effect.depth_test = True
 			Endif
 
 
 
-			' blend modes
-			Select blend
-				Case 0
-#If TARGET<>"html5"
-					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-#Else
-   					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
-#Endif
-				Case 1
-					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-				Case 2
-					glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
-				Case 3
-					glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
-				Case 4
-					glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
-
-			End Select
 
 			
 			' material
@@ -489,7 +496,7 @@ Print s
 			'' --------------------------------------
 			If skip_sprite_state = False
 
-
+			
 			' fx flag 2 - vertex colors ***todo*** disable all lights?
 			If fx&2
 				'glEnable(GL_COLOR_MATERIAL)
@@ -527,19 +534,38 @@ Print s
 			'' fx flag 32 - force alpha
 			''
 			
-			'' fx flag 64 - disable depth testing (new 2012)
+			'' fx flag 64 - disable depth testing
 			If fx&64
 			
-				glDisable(GL_DEPTH_TEST)
-				glDepthMask(False)
-				disable_depth = True
+				'glDisable(GL_DEPTH_TEST)
+				'glDepthMask(False)
+				'disable_depth = True
+				effect.depth_test = False
+				effect.depth_write = False
 				
-			Elseif disable_depth = True
+			Endif
 			
-				glEnable(GL_DEPTH_TEST)
-				glDepthMask(True)
-				disable_depth = False
-				
+			
+			
+			' blend modes
+			If effect.blend_enable
+				Select blend
+					Case 0
+'#If TARGET<>"html5"
+'						glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+'#Else
+	   					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)	   					
+'#Endif
+					Case 1
+						glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+					Case 2
+						glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
+					Case 3
+						glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
+					Case 4
+						glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
+	
+				End Select
 			Endif
 			
 					
@@ -617,7 +643,7 @@ Print s
 			
 			''mesh animation/batch animation
 			'' ANDROID API 8 --doesn't work without VBO
-			If vbo And (mesh.anim_render Or surf.vbo_dyn Or anim_surf2)
+			If (mesh.anim_render Or surf.vbo_dyn Or anim_surf2)
 				
 				glEnableVertexAttribArray(shader.u.vertcoords)
 				''vertex animation
@@ -741,9 +767,11 @@ Print s
 					
 					''send alpha texture test to shader----------------TOODOOO? may not need
 					If tex_flags&4<>0
-						'glEnable(GL_ALPHA_TEST)			
+						If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )
+						effect.depth_test = true
+						effect.depth_write = true			
 					Else
-						'glDisable(GL_ALPHA_TEST)
+						If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.0 )
 					Endif
 				
 					' mipmapping texture flag
@@ -785,12 +813,6 @@ Print s
 					''fx&1024 = normal mapping
 					
 
-			#rem	
-					' cubic environment map texture flag
-					
-					glDisable(GL_TEXTURE_CUBE_MAP)
-						
-			#end
 			
 			''send tex blend info to shader
 			#rem
@@ -817,9 +839,7 @@ Print s
 					End Select
 			#end
 			
-					'glEnableClientState(GL_TEXTURE_COORD_ARRAY)
-					
-					'glUniform1i(shader.texture0, ix)
+
 					
 					
 					
@@ -894,6 +914,28 @@ Print s
 			If DEBUG And GetGLError() Then Print "*tex2"			
 			
 			
+			''set GL effects
+			''
+			If Not skip_sprite_state
+				If effect.depth_test<>last_effect.depth_test
+					If effect.depth_test Then glEnable(GL_DEPTH_TEST) Else glDisable(GL_DEPTH_TEST)
+					
+				Endif
+				If effect.depth_write<>last_effect.depth_write
+					If effect.depth_write Then glDepthMask(True) Else glDepthMask(False)
+					
+				Endif
+				If effect.alpha_test<>last_effect.alpha_test
+					''**** TODO
+					'' set by texture
+				Endif
+				If effect.blend_enable<>last_effect.blend_enable
+					If effect.blend_enable Then glEnable(GL_BLEND) Else glDisable(GL_BLEND)
+					'changed = true
+				Endif
+				last_effect.Overwrite(effect)
+			Endif
+			
 			''matrices
 			
 			If mesh.is_sprite=False
@@ -933,7 +975,7 @@ Print s
 			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
 			
 			If DEBUG And GetGLError() Then Print "*mats flags"
-			
+
 
 			'' draw tris
 
@@ -967,7 +1009,8 @@ Print s
 		Next ''end non-alpha loop
 		
 		If cam.draw2D
-			glEnable(GL_DEPTH_TEST)
+			'glEnable(GL_DEPTH_TEST)
+			effect.depth_test = False
 		Endif
 
 		If Not alpha_list Then Exit ''get out of loop, no alpha
@@ -1020,10 +1063,6 @@ Print s
 		
 		EnableStates()
 		
-		glEnable(GL_DEPTH_TEST)
-		glDepthMask(True)
-		glClearDepthf(1.0)				
-		glDepthFunc(GL_LEQUAL)
 		'glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST) ''TODO???????????????????????????????????
 
 		'glAlphaFunc(GL_GEQUAL,0.5)
@@ -1065,9 +1104,13 @@ Print s
 		
 		'glEnable(GL_LIGHTING)
    		glEnable(GL_DEPTH_TEST)
+   		glDepthMask(True)
+		glClearDepthf(1.0)				
+		glDepthFunc(GL_LEQUAL)
 		'glEnable(GL_FOG)
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_SCISSOR_TEST)
+		glEnable(GL_BLEND)
 		
 		'glEnable(GL_RESCALE_NORMAL) '(GL_NORMALIZE) ' 'normal-lighting problems? this may be it
 	

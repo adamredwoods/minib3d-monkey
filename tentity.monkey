@@ -23,11 +23,12 @@ Field anim_render:Int ' true to render as anim mesh, false = static ''**** DEPRE
 Const FXFLAG_NONE% = 0
 Const FXFLAG_FULLBRIGHT% = 1
 Const FXFLAG_VERTEXCOLORS% = 2
-Const FXFLAG_FLATSHADE% = 4
+Const FXFLAG_FLATSHADE% = 4 '' (opengles11 only)
 Const FXFLAG_DISABLE_FOG% = 8
 Const FXFLAG_DISABLE_CULLING% = 16
 Const FXFLAG_FORCE_ALPHA% = 32
 Const FXFLAG_DISABLE_DEPTH% = 64
+
 
 Class TEntity
 	
@@ -830,7 +831,7 @@ Class TEntity
 		brush.green=g * inverse_255
 		brush.blue =b * inverse_255
 		
-		If a>-1.0 Then brush.alpha = a
+		If a>=0.0 Then brush.alpha = a
 	
 	End 
 	
@@ -840,7 +841,7 @@ Class TEntity
 		brush.green=g
 		brush.blue =b
 		
-		If a>-1.0 Then brush.alpha = a
+		If a>=0.0 Then brush.alpha = a
 	
 	End
 	
@@ -934,11 +935,12 @@ Class TEntity
 	''0: nothing (default)
 	''1: full-bright
 	''2: use vertex colors instead of brush color
-	''4: flatshaded
+	''4: flatshaded (opengles11 only)
 	''8: disable fog
 	''16: disable backface culling
 	''32: force alpha-blending
 	''64: no depth test
+
 	
 	Method EntityFX(fx_no%)
 	

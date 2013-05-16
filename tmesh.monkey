@@ -1672,13 +1672,13 @@ Class TMesh Extends TEntity
 	
 	
 	' used by MeshWidth, MeshHeight, MeshDepth, RenderWorld
-	Method GetBounds()
+	Method GetBounds(reset:Bool = False)
 	
 		' only get new bounds if we have to
 		' mesh.reset_bounds=True for all new meshes, plus set to True by various Mesh commands
 		' scaling is not done here (since it can change per frame)
 		' more accurately a CullBox than CullRadius
-		If reset_bounds=True
+		If reset_bounds=True Or reset=true
 		
 			reset_bounds=False
 	
@@ -1743,7 +1743,7 @@ Class TMesh Extends TEntity
 	End 
 
 	' returns true if mesh is to be drawn with alpha, i.e alpha<1.0.
-	' this func is used to see whether entity should be manually depth sorted (if alpha=true then yes).
+	' this func is also used to see whether entity should be manually depth sorted (if alpha=true then yes).
 	' alpha_enable true/false is also set for surfaces - this is used to sort alpha surfaces and enable/disable alpha blending 
 	'
 	Method Alpha:Bool()
@@ -1754,20 +1754,21 @@ Class TMesh Extends TEntity
 		' shouldn't (may cause interference if surf tex is masked?).
 
 		Local alpha:Bool=False
-
+		
+		
 		' check master brush (check alpha value, blend value, force vertex alpha flag)
 		If (brush.alpha<1.0) Or brush.blend=2 Or brush.blend=3 Or brush.fx&32
 			
 			alpha=True
-			''cut out early if the whole thing is alpha??
+			'Return True
+			''cut out early if the whole thing is alpha?? --no, need to set surfaces
 			
 		Else
 		
 			' tex 0 alpha flag
 			If brush.tex[0]<>Null
 				If brush.tex[0].flags&2<>0
-					alpha=True
-					
+					alpha= True
 				Endif
 			Endif
 			

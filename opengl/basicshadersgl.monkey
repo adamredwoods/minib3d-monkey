@@ -132,7 +132,7 @@ Class FullShader Extends TShaderGLSL
 	"/*texture*/ uniform float texflag; uniform sampler2D uTexture[5];uniform vec2 texBlend[5];uniform highp int texfxNormal[2];"+
 	"/*light*/uniform float lightflag;uniform vec4 lightColor[2];uniform vec4 lightAtt[2];uniform mat4 lightMatrix[2];uniform float lightType[2];uniform vec3 lightSpot[2];"+
 	"/*material*/"+
-	"uniform vec4 ambientcolor;uniform float shininess;uniform float flags;uniform vec4 fogColor;"+
+	"uniform vec4 ambientcolor;uniform float shininess;uniform float flags;uniform float alphaflag; uniform vec4 fogColor;"+
 	"const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec3 LIGHTUNIT = vec3(0.0,0.0,-1.0);"+
 	"vec4 BlendFunction(const float blend, const vec4 texture, const vec4 finalcolor, const vec4 vertcolorx) {"+
 	"vec4 color = all_zeros;	"+
@@ -163,7 +163,7 @@ Class FullShader Extends TShaderGLSL
 	"vec3 N = (( usenormalmap  ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : normalize(normal.xyz));"+
 	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : all_ones ; vec4 texture = all_ones;"+
 	"if (texflag<1.0) {	finalcolor = vec4(vertcolor.xyz, vertcolor.w);	} else {"+
-		"if (texflag >0.0 && (texfxNormal[0] < 1) ) {texture = texture2D(uTexture[0], (texcoord[0]).xy);	finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor);"+
+		"if (texflag >0.0 && (texfxNormal[0] < 1) ) {texture = texture2D(uTexture[0], (texcoord[0]).xy); if(texture.a<alphaflag) {discard;}; finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor);"+
 		"}if (texflag >1.0 ) {texture = texture2D(uTexture[1], (texcoord[1]).xy); /* .zw is bad on powerVR, causes dependent texture read*/"+
 			"finalcolor = BlendFunction(texBlend[1].x, texture, finalcolor, vertcolor);"+
 		"}if (texflag >2.0 ) {texture = texture2D(uTexture[2], (texcoord[2]).xy);"+
@@ -211,7 +211,9 @@ End
 
 
 Class FastBrightShader Extends TShaderGLSL
-
+	
+	''no texture blending
+	
 	Const VERTP:String = "attribute vec3 aVertcoords;attribute vec2 aTexcoords0; attribute vec4 aColors; uniform mat4 pMatrix;uniform mat4 vMatrix;uniform mat4 mMatrix;varying vec2 texcoord[1];"+
 		" uniform float colorflag; uniform vec4 basecolor; uniform vec2 texPosition[1],  texScale[1], texRotation[1]; uniform float texflag; varying vec4 vertColor; varying vec2 varTex;"+
 		" void main(){ gl_Position = (pMatrix*mMatrix ) * vec4(aVertcoords, 1.0); vertColor = mix(basecolor , aColors, colorflag);"+
@@ -219,10 +221,12 @@ Class FastBrightShader Extends TShaderGLSL
 		" (texcoord[0]).x = ((aTexcoords0.x + pos.x) * cosang - (aTexcoords0.y + pos.y) * sinang)*scale.x; (texcoord[0]).y = ((aTexcoords0.x + pos.x) * sinang + (aTexcoords0.y + pos.y) * cosang)*scale.y;"+
 		" varTex.x = step(1.0,texflag); varTex.y = step(2.0,texflag);"+
 		" ~n} "
-	Const FRAGP:String = "#ifdef GL_ES ~n precision highp float; ~n #endif ~n uniform sampler2D uTexture[2]; uniform vec4 ambientcolor;"+
+	Const FRAGP:String = "#ifdef GL_ES ~n precision highp float; ~n #endif ~n uniform sampler2D uTexture[2]; uniform vec4 ambientcolor; uniform float alphaflag;"+
 		" varying vec2 texcoord[1]; varying vec4 vertColor; varying vec2 varTex; const vec4 all_ones=vec4(1.0,1.0,1.0,1.0);"+
-		" void main(){  gl_FragColor= vec4(ambientcolor.xyz,0.0) + mix(vertColor, vertColor * texture2D( uTexture[0],texcoord[0] ) * mix(all_ones,texture2D( uTexture[1],texcoord[0] ),varTex.y), varTex.x );"+
-		" ~n} "
+		" void main(){  "+
+		" vec4 tex = texture2D( uTexture[0],texcoord[0] ); if (tex.w>=alphaflag) {"+
+		"gl_FragColor= vec4(ambientcolor.xyz,0.0) + mix(vertColor, vertColor * tex * mix(all_ones,texture2D( uTexture[1],texcoord[0] ),varTex.y), varTex.x );"+
+		" ~n} ~n}"
 	'Field uniform:Int[5]
 	
 	Global init_id:Int=0		

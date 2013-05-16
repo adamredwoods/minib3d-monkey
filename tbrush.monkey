@@ -28,15 +28,21 @@ Class TBrush
 	End 
 	
 	Method New(hexcolor:Int)
+	
 		red=((hexcolor& $00ff0000) Shr 16)*INV_255
 		green= ((hexcolor& $00ff00) Shr 8)*INV_255 
 		blue= (hexcolor& $0000ff)*INV_255
+		tex[0] = New TTexture
+		
 	End
 	
 	Method New(r%,g%,b%)
+	
 		red= r*INV_255
 		green= g*INV_255
 		blue= b*INV_255
+		tex[0] = New TTexture
+		
 	End
 	
 	Method New(texture:TTexture)
@@ -86,13 +92,7 @@ Class TBrush
 		
 	Function CreateBrush:TBrush(r#=255.0,g#=255.0,b#=255.0)
 	
-		Local brush:TBrush=New TBrush
-		brush.red=r*INV_255
-		brush.green=g*INV_255
-		brush.blue=b*INV_255
-		
-		brush.tex[0] = New TTexture
-		
+		Local brush:TBrush=New TBrush(r,g,b)
 		Return brush
 		
 	End 
@@ -161,20 +161,22 @@ Class TBrush
 		
 	End
 	
-	Method BrushColor(r#,g#,b#)
+	Method BrushColor(r#,g#,b#, a#=-1.0)
 	
 		red=r*INV_255
 		green=g*INV_255
 		blue=b*INV_255
+		If a>=0.0 Then alpha = a
 	
 	End 
 	
-	Method BrushColorFloat(r#,g#,b#)
+	Method BrushColorFloat(r#,g#,b#, a#=-1.0)
 	
 		red=r
 		green=g
 		blue=b
-	
+		If a>=0.0 Then alpha = a
+		
 	End 
 	
 	Method BrushAlpha(a#)

@@ -57,6 +57,7 @@ Class ShaderUniforms
 	Field colorflag:Int
 	Field lightflag:Int
 	Field fogflag:Int
+	Field alphaflag:int
 	
 	
 	Field lightpMatrix:Int
@@ -105,6 +106,7 @@ Class ShaderUniforms
 		colorflag = glGetUniformLocation(shader_id, "colorflag")
 		lightflag = glGetUniformLocation(shader_id, "lightflag")
 		fogflag = glGetUniformLocation(shader_id, "fogflag")
+		alphaflag = glGetUniformLocation(shader_id, "alphaflag")
 		
 		''shadows.... todo
 		
