@@ -941,12 +941,17 @@ Class TEntity
 	''32: force alpha-blending
 	''64: no depth test
 
-	
-	Method EntityFX(fx_no%)
+	Method EntityFX(fx_no%) Property
 	
 		brush.fx=fx_no
 		
-	End 
+	End
+	
+	Method EntityFX:Int() Property
+		
+		Return brush.fx
+		
+	End
 	
 	Method EntityAutoFade(near#,far#)
 	

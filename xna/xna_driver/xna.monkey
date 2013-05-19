@@ -300,6 +300,7 @@ Class XNARasterizerState = "XNARasterizerState"
 	Method MultiSampleAntiAlias:Void(value?)= "SetMultiSampleAntiAlias"
 	Method ScissorTestEnable:Void(value?)= "SetScissorTestEnable"
 	Method SlopeScaleDepthBias:Void(value#)= "SetSlopeScaleDepthBias"
+
 	
 	Function Create:XNARasterizerState() = "Create"
 	Function CullClockwise:XNARasterizerState() = "CullClockwise"
@@ -417,6 +418,7 @@ Class XNAGraphicsDevice  = "XNAGraphicsDevice"
 	Method LoadTexture:XNATexture(filename$)
 	Method CreateMesh:XNAMesh()
 	Method CreateBasicEffect:XNABasicEffect()
+	Method CreateAlphaTestEffect:XNAAlphaTestEffect()
 	'Method LoadEffect:XNAEffect(filename$)' custom effetcts not supported in REACH profile
 	Method BlendState:Void(blend:XNABlendState) Property = "SetBlend"
 	Method RasterizerState:Void(state:XNARasterizerState ) Property = "SetRasterizerState"
@@ -459,7 +461,41 @@ Class XNADirectionalLight = "XNADirectionalLight"
 	Method Enabled:Void(value?) = "SetEnabled"
 End
 
+
 '----------------------------------------------------------------------------------------------------------
+
+Class XNAAlphaTestEffect Extends XNAEffect = "XNAAlphaTestEffect"
+	'Method AlphaTestEnable:Void(value?)= "AlphaTestEnable"
+	Method AlphaFunction:Void(value%)= "SetAlphaFunction"
+	Method ReferenceAlpha:Void(value%)= "SetReferenceAlpha"
+	
+	Method Alpha:Void(value#) Property = "SetAlpha"
+	Method AmbientLightColor:Void(r#,g#,b#) Property = "SetAmbientLightColor"
+	Method DiffuseColor:Void(r#,g#,b#) Property = "SetDiffuseColor"
+	'Method DirectionalLight0:XNADirectionalLight() Property = "GetDirectionalLight0"	
+	'Method DirectionalLight1:XNADirectionalLight() Property = "GetDirectionalLight1"	
+	'Method DirectionalLight2:XNADirectionalLight() Property = "GetDirectionalLight2"	
+	'Method EmissiveColor:Void(r#,g#,b#) Property = "SetEmissiveColor"
+	Method FogColor:Void(r#,g#,b#) Property = "SetFogColor"
+	Method FogEnabled?()  Property= "GetFogEnabled"
+	Method FogEnabled:Void(value?) Property = "SetFogEnabled"
+	Method FogEnd:Void(value#) Property = "SetFogEnd"
+	Method FogStart:Void(value#) Property = "SetFogStart"
+	'Method LightingEnabled:Void(value?)  Property= "SetLightingEnabled"
+	Method PreferPerPixelLighting:Void(value?)  Property= "SetPreferPerPixelLighting"
+	'Method SpecularColor:Void(r#,g#,b#)  Property= "SetSpecularColor"
+	'Method SpecularPower:Void(value#)  Property= "SetSpecularPower"
+	Method Texture:Void(value:XNATexture) Property = "SetTexture"
+	Method VertexColorEnabled:Void(value?) Property = "SetVertexColorEnabled"
+	'Method TextureEnabled:Void(value?) Property = "SetTextureEnabled"
+	Method Projection:Void(fieldOfView#, aspect#, near#, far#)  = "SetProjection"
+	Method View:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetView"
+	Method World:Void(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) = "SetWorld"
+	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjMat"
+	Method ViewMatrix:Void(mat:Float[]) = "SetViewMat"
+	Method WorldMatrix:Void(mat:Float[]) = "SetWorldMat"
+End
+
 ' Contains a basic rendering effect.
 Class XNABasicEffect Extends XNAEffect = "XNABasicEffect"
 	Method Alpha:Void(value#) Property = "SetAlpha"
@@ -487,6 +523,8 @@ Class XNABasicEffect Extends XNAEffect = "XNABasicEffect"
 	Method ProjectionMatrix:Void(mat:Float[]) = "SetProjMat"
 	Method ViewMatrix:Void(mat:Float[]) = "SetViewMat"
 	Method WorldMatrix:Void(mat:Float[]) = "SetWorldMat"
+
+
 End
 
 

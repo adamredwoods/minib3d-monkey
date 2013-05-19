@@ -303,10 +303,19 @@ Class TBatchSpriteMesh Extends TMesh
 			
 			reset_bounds=False
 			
-			Local width#=TBatchSprite.max_x-TBatchSprite.min_x
-			Local height#=TBatchSprite.max_y-TBatchSprite.min_y
-			Local depth#=TBatchSprite.max_z-TBatchSprite.min_z
+			
 	
+			min_x = TBatchSprite.min_x
+			min_y = TBatchSprite.min_y
+			min_z = TBatchSprite.min_z
+			max_x = TBatchSprite.max_x
+			max_y = TBatchSprite.max_y
+			max_z = TBatchSprite.max_z
+			
+			Local width#=(max_x-min_x)
+			Local height#=(max_y-min_y)
+			Local depth#=(max_z-min_z)
+			
 			' get bounding sphere (cull_radius#) from AABB
 			' only get cull radius (auto cull), if cull radius hasn't been set to a negative no. by TEntity.MeshCullRadius (manual cull)
 	
@@ -319,20 +328,18 @@ Class TBatchSpriteMesh Extends TMesh
 					cull_radius=depth
 				Endif
 			Endif
+			
 			cull_radius=cull_radius * 0.5
 			Local crs#=cull_radius*cull_radius
 			cull_radius= Sqrt(crs+crs+crs)
+'Print "crs "+cull_radius
+'Print "hwd "+height*0.5+" "+width*0.5+" "+depth*0.5		
 		
-		
-			min_x = TBatchSprite.min_x
-			min_y = TBatchSprite.min_y
-			min_z = TBatchSprite.min_z
-			max_x = TBatchSprite.max_x
-			max_y = TBatchSprite.max_y
-			max_z = TBatchSprite.max_z
 			
-			
-			
+			center_x=min_x+(width)*0.5
+			center_y=min_y+(height)*0.5
+			center_z=-(min_z+(depth)*0.5) ''need to flip this
+'Print "cen "+center_x+" "+center_y+" "+center_z			
 			'If brush.tex[0] Then brush.tex[0].flags = brush.tex[0].flags | 16 |32 ''always clamp
 			'If surf.brush.tex[0] Then surf.brush.tex[0].flags = surf.brush.tex[0].flags | 16 |32 ''always clamp
 			

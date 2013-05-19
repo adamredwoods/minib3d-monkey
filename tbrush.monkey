@@ -14,7 +14,15 @@ Class TBrush
 	Field name$
 	Field red#=1.0,green#=1.0,blue#=1.0,alpha#=1.0
 	Field shine#=0.05, shine_strength#=100.0
-	Field blend:Int,fx:Int
+
+'' because html5 defaults to premultiplied canvas, this helps
+#If TARGET="html5"
+	Field blend:Int=0
+#Else
+	Field blend:Int=1
+#Endif
+
+	Field fx:Int
 	
 	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
 	Field tex_frame:Int=0

@@ -14,12 +14,18 @@ Extern
 	Class Surface_ Extends Surface = "gxtkSurface"
 	End
 #Endif
-	
+
+	Function FlashFix:Void() = "super"
+
 Public
 
 
 Function SetMojoEmulation:Void()
 	MojoEmulationDevice.SetDevice()
+End
+
+Function SetMojoFont:Void()
+	MojoEmulationDevice._device.InitFont()
 End
 
 Class MojoEmulationDevice Extends GraphicsDevice
@@ -55,25 +61,27 @@ Private
 	
 		Local first:Bool=False
 		If Not _device Then _device = New MojoEmulationDevice; first=True
+		
 		_device.Reset
 		SetGraphicsDevice( _device )
 		mojo.graphics.BeginRender() ''trick to get html5 to work
 		GetGraphicsDevice() ''trick for xna to work
-		
-		If first Then _device.InitDevice()
+
+		_device.InitFont()
 		
 	End
 	
-	Method InitDevice:Void()
+	Method InitFont:Void()
 		
+		If fontImage And fontImage.Width()>0 Then Return
 		'' consider embedding font as base64?
-		'fontFile = FixDataPath("mojo_font.png")
-		'fontImage = LoadImage( fontFile,96,Image.XPadding )
+		fontFile = FixDataPath("mojo_font.png")
+		fontImage = LoadImage( fontFile,96,Image.XPadding )
 		
-		'If fontImage Then SetFont(fontImage)
-		
+		If fontImage.Width()>0 Then SetFont(fontImage)
 
 	End
+	
 	
 Public
 
@@ -81,11 +89,10 @@ Public
 		Return (MojoEmulationDevice(GetGraphicsDevice())<>Null)
 	End
 
-	Method New()
+	'Method New()
+	'	
+	'End
 	
-		
-		
-	End
 	
 	Method NewLayer:Void()
 	
@@ -182,11 +189,13 @@ Public
 		'_device.mesh.Draw(0,0)
 		'_device.Reset
 	end
-	
-	Method DiscardGraphics:Void()
-		
-	End
-	
+
+	'' -- flash does not like
+	'Method DiscardGraphics:Void()
+	'	
+	'End
+
+
 	'Render only ops - can only be used during OnRender
 	Method Cls( r#,g#,b# )
 		TRender.render.camera2D.CameraClsColor(r,g,b)
@@ -223,7 +232,10 @@ Public
 		Elseif blend = LightenBlend
 			solid[layer].brush.blend = 4 ''minib3d doesnt really have a lighten blend 
 		Else
-			solid[layer].brush.blend = 0
+			solid[layer].brush.blend = 1 ''dont premultiply
+#If TARGET="html5"
+			solid[layer].brush.blend = 0 ''ugh....html5 is all premultiplied
+#Endif
 		Endif
 		
 		lastBlend = blend
@@ -454,7 +466,7 @@ Class MojoSurface Extends Surface_
 			
 			isLoading = True
 			
-			''** MUST PRELOAD for mojo			
+			''** MUST PRELOAD MANUALLY for mojo			
 			s.LoadTexture(path, mesh, device)
 
 
@@ -502,15 +514,15 @@ Class MojoSurface Extends Surface_
 	End
 #end
 	
-	Method LoadTexture:Void(path$, mesh:TMesh, device:MojoEmulationDevice)
+	Method LoadTexture:Bool(path$, mesh:TMesh, device:MojoEmulationDevice)
 	
 		'Local s:MojoSurface = New MojoSurface
 
 		tex.ResizeNoSmooth
 		's.tex.NoSmooth
 		tex.pixmap.ClearBind() ''Re-bind the texture
-		TTexture.LoadAnimTexture(path,TEXFLAG_COLOR|TEXFLAG_ALPHA,0,0,0,1,tex)
-		
+		TTexture.LoadAnimTexture(path,TEXFLAG_COLOR|TEXFLAG_ALPHA,0,0,0,1,tex, True) ''force new (true) will keep trying to load again
+
 		'If s.tex.width = 0 Then Print "**ERROR: MojoLoad: file not found "+path 'Else Print s.tex.width
 		
 		loaded = True
@@ -518,11 +530,12 @@ Class MojoSurface Extends Surface_
 		''hack hack hack, double load to call the init ''** does not know the frames or flags :( use metadata
 		'Local img:Image = LoadImage(path) 
 	
-'Print path+" "+tex.orig_width
-				
+		'Print path+" "+tex.orig_width
+	
 		xstep = 1.0/Float(Width())
 		ystep = 1.0/Float(Height())
 
+		Return (tex<>Null)
 	End
 
 	

@@ -56,7 +56,7 @@ public class XNAGraphicsResource : IDisposable
 public class XNAGraphicsDevice
 {
     public GraphicsDevice _device;
-	public BasicEffect _effect;
+	public Effect _effect;
 	public Viewport _viewport = new Viewport();
 	public Color _clsColor = Color.White;
 	
@@ -66,10 +66,10 @@ public class XNAGraphicsDevice
 		//_device = gxtkApp.game.app.GraphicsDevice().device;
 		_device=BBXnaGame.XnaGame().GetXNAGame().GraphicsDevice;
         _effect = new BasicEffect(_device);
-        _effect.VertexColorEnabled = false;
-        _effect.PreferPerPixelLighting = false;
-        _effect.SpecularColor = new Vector3(1,1,1);
-        _effect.FogEnabled = false;
+        ((BasicEffect)_effect).VertexColorEnabled = false;
+        ((BasicEffect)_effect).PreferPerPixelLighting = false;
+        ((BasicEffect)_effect).SpecularColor = new Vector3(1,1,1);
+        ((BasicEffect)_effect).FogEnabled = false;
     }
 
     public XNATexture LoadTexture(string fileName)
@@ -87,6 +87,11 @@ public class XNAGraphicsDevice
 	public XNABasicEffect CreateBasicEffect()
 	{
 		return new XNABasicEffect(this,new BasicEffect(_device));
+	}
+	
+	public XNAAlphaTestEffect CreateAlphaTestEffect()
+	{
+		return new XNAAlphaTestEffect(this,new AlphaTestEffect(_device));
 	}
 	
 	public XNAEffect LoadEffect(string filename)
@@ -354,6 +359,8 @@ public class XNARasterizerState
 	{
         _state.SlopeScaleDepthBias = value;
 	}
+	
+
 }
 
 public class XNASamplerState 
@@ -1476,6 +1483,103 @@ public class XNAEnvironmentMapEffect : XNAEffect
     }
 }
 
+public class XNAAlphaTestEffect : XNAEffect
+{
+	public AlphaTestEffect _alphaEffect;
+	
+	public XNAAlphaTestEffect(XNAGraphicsDevice device, AlphaTestEffect effect) 
+		: base(effect,device)
+	{
+		_effect = effect;
+		_alphaEffect = effect;
+		
+	}
+
+	
+	public void SetAlphaFunction(int value)
+	{
+        _alphaEffect.AlphaFunction = (CompareFunction)value;
+	}
+		
+	public void SetReferenceAlpha(int value)
+	{
+        _alphaEffect.ReferenceAlpha = value; //uses bit value 0-255
+	}
+	
+	
+	public void SetVertexColorEnabled(bool value)		
+	{
+		_alphaEffect.VertexColorEnabled = value;
+	}
+	
+	public void SetAlpha(float alpha)
+	{
+		_alphaEffect.Alpha = alpha;
+	}
+	
+	public void SetDiffuseColor(float r, float g, float b)	
+	{
+		_alphaEffect.DiffuseColor  = new Vector3(r,g,b);
+	}
+	
+	public void SetTexture(XNATexture value)	
+	{
+		_alphaEffect.Texture = value._texture2d;
+	}
+	
+	public override void SetFogColor(float r, float g, float b)	
+	{
+		_alphaEffect.FogColor  = new Vector3(r,g,b);
+	}
+
+	public override bool GetFogEnabled()
+	{
+		return _alphaEffect.FogEnabled;
+	}
+	
+	public override void SetFogEnabled(bool value)	
+	{
+		_alphaEffect.FogEnabled = value;
+	}
+		
+	public override void SetFogEnd(float value)	
+	{
+		_alphaEffect.FogEnd = value;
+	}
+	
+	public override void SetFogStart(float value)	
+	{
+		_alphaEffect.FogStart = value;
+	}
+	public override void SetProjection(float fieldOfView, float aspectRatio, float near, float far) 
+	{
+	    SetProjection<AlphaTestEffect>(_alphaEffect, fieldOfView, aspectRatio, near, far );
+    }
+	
+	public override void SetView(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
+	{
+        SetView<AlphaTestEffect>(_alphaEffect, px, py, pz, rx, ry, rz, sx, sy, sz);
+	}
+	
+	public override void SetWorld(float px, float py, float pz, float rx, float ry, float rz, float sx, float sy, float sz)
+	{
+        SetWorld<AlphaTestEffect>(_alphaEffect, px, py, pz, rx, ry, rz, sx, sy, sz);
+	}
+	
+	public override void SetWorldMat(float[] mat)
+	{
+		SetWorldMat<AlphaTestEffect>(_alphaEffect, mat);
+	}
+	public override void SetProjMat(float[] mat)
+	{
+		SetProjMat<AlphaTestEffect>(_alphaEffect, mat);
+	}
+	public override void SetViewMat(float[] mat)
+	{
+		SetViewMat<AlphaTestEffect>(_alphaEffect, mat);
+	}
+}
+
 
 public class XNABasicEffect : XNAEffect
 {
@@ -1615,6 +1719,7 @@ public class XNABasicEffect : XNAEffect
 	{
 		SetViewMat<BasicEffect>(_basicEffect, mat);
 	}
+	
 };
 
 public class XNAEffect
@@ -1824,6 +1929,8 @@ public class XNAEffect
 	{
 		effect.View = new Matrix(mat[0],mat[1],mat[2],mat[3],mat[4],mat[5],mat[6],mat[7],mat[8],mat[9],mat[10],mat[11],mat[12],mat[13],mat[14],mat[15]);
 	}
+	
+
 };
 
 

@@ -394,11 +394,10 @@ Class TRender
 		
 					If mesh.Alpha()
 						
-						''alpha entities are drawn last
+						''alpha entities are drawn last, sorted, without depth test
 						
-						mesh.alpha_order=cam.EntityDistanceSquared(mesh)
+						mesh.alpha_order=cam.EntityDistanceSquared(mesh)+0.000001 ''+0.000001 to keep it not zero
 						render_alpha_list.AddLast(mesh)
-
 
 					Else
 						

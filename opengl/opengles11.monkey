@@ -317,7 +317,7 @@ Class OpenglES11 Extends TRender
 			Select blend
 				Case 0
 					'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-					glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA) 
+					glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA) ''premultiply
 				Case 1
 					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
 				Case 2
@@ -596,6 +596,9 @@ Class OpenglES11 Extends TRender
 					' masked texture flag
 					If tex_flags&4<>0
 						glEnable(GL_ALPHA_TEST)
+						glDepthMask(True)
+						glEnable(GL_DEPTH_TEST)
+						disable_depth = False
 					Else
 						glDisable(GL_ALPHA_TEST)
 					Endif

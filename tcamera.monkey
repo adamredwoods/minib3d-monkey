@@ -410,7 +410,7 @@ Public
 			'' transform mesh centre into world space
 			
 			Local r:Float[] = ent.mat.TransformPoint(mesh.center_x,mesh.center_y,mesh.center_z)
-			x=r[0]; y=r[1]; z=-r[2] ''-z opengl
+			x=r[0]; y=r[1]; z=r[2]
 			
 			'' radius - apply entity scale
 			
@@ -425,17 +425,17 @@ Public
 		Local d#
 	
 		
-		d = frustum[0][0] * x + frustum[0][1] * y + frustum[0][2] * -z + frustum[0][3]
+		d = frustum[0][0] * x + frustum[0][1] * y + frustum[0][2] * z + frustum[0][3]  ''-z opengl
 		If d <= -radius Then Return 0	
-		d = frustum[1][0] * x + frustum[1][1] * y + frustum[1][2] * -z + frustum[1][3]
+		d = frustum[1][0] * x + frustum[1][1] * y + frustum[1][2] * z + frustum[1][3]
 		If d <= -radius Then Return 0
-		d = frustum[2][0] * x + frustum[2][1] * y + frustum[2][2] * -z + frustum[2][3]
+		d = frustum[2][0] * x + frustum[2][1] * y + frustum[2][2] * z + frustum[2][3]
 		If d <= -radius Then Return 0
-		d = frustum[3][0] * x + frustum[3][1] * y + frustum[3][2] * -z + frustum[3][3]
+		d = frustum[3][0] * x + frustum[3][1] * y + frustum[3][2] * z + frustum[3][3]
 		If d <= -radius Then Return 0
-		d = frustum[4][0] * x + frustum[4][1] * y + frustum[4][2] * -z + frustum[4][3]
+		d = frustum[4][0] * x + frustum[4][1] * y + frustum[4][2] * z + frustum[4][3]
 		If d <= -radius Then Return 0
-		d = frustum[5][0] * x + frustum[5][1] * y + frustum[5][2] * -z + frustum[5][3]
+		d = frustum[5][0] * x + frustum[5][1] * y + frustum[5][2] * z + frustum[5][3]
 		If d <= -radius Then Return 0
 
 		

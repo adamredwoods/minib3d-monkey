@@ -131,7 +131,7 @@ Public
 
 	Method ContextReady:Bool()
 
-		If _device Then Return True
+		If _device And _xna Then Return True
 		Return False
 		
 	End
@@ -188,8 +188,6 @@ Public
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
 
-'Return '''*****************************************************************************
-
 		Local mesh:TMesh = TMesh(ent)
 		If Not mesh Then Return
 		
@@ -199,47 +197,44 @@ Public
 		Local temp_list:List<TSurface> = mesh.surf_list
 		_alpha_list.Clear()
 	
-		' entity Transform
-		If TSprite(ent)
-			_xna.WorldMatrix(TSprite(ent).mat_sp.ToArray())
-		Else
-			_xna.WorldMatrix(ent.mat.ToArray())
-		Endif
-		
-		
-		
 		'' update camera, effects
-		_xna.UpdateEffect(ent, cam)
+		'' this must go first
+		'_xna.UpdateEffect(ent, cam)
+		
+		If TSprite(ent)
+			_xna.world_mat = (TSprite(ent).mat_sp.ToArray())
+		Else
+			_xna.world_mat = ent.mat.ToArray()
+		Endif
 					
-		' one effect per mesh
-		Local passes:= _xna.CurrentEffect.Effect.CurrentTechnique.Passes
-						
-		For Local pass:= Eachin passes
+	
+		''run through surfaces twice, sort alpha surfaces for second pass
+		For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs
+							
+			For Local surf:TSurface =Eachin temp_list
 
+				''draw alpha surfaces last in second loop
+				''also catch surfaces with no vertex
+				If surf.no_verts=0 Then Continue
+				If (surf.alpha_enable And alphaloop < 1)
+					_alpha_list.AddLast(surf)				
+					Continue
+				Endif
+				
+				' Update vertex & index buffers
+				UpdateBuffers(surf, mesh)
+				
+				' set textures / blending / shading / culling / draw2D
+				_xna.UpdateSurface(ent, surf, cam)		
+				_xna.UpdateEffect(ent, surf, cam)
+				
 ''debugging
 'Print mesh.classname		
 'Print "effect: "+_xna.CurrentEffect()._name+"  2d:"+cam.draw2D+"  alphapass:"+alpha_pass
 'Print "cam: "+cam.name
 			
-			''run through surfaces twice, sort alpha surfaces for second pass
-			For Local alphaloop:= alpha_pass To 1 ''if alpha_pass is on, no need to reorder alpha surfs
-								
-				For Local surf:TSurface =Eachin temp_list
-	
-					''draw alpha surfaces last in second loop
-					''also catch surfaces with no vertex
-					If surf.no_verts=0 Then Continue
-					If (surf.alpha_enable And alphaloop < 1)
-						_alpha_list.AddLast(surf)				
-						Continue
-					Endif
-					
-					' Update vertex & index buffers
-					UpdateBuffers(surf, mesh)
-					
-					' set textures / blending / shading / culling / draw2D
-					_xna.UpdateSurface(ent, surf, cam)		
-			
+				Local passes:= _xna.CurrentEffect.Effect.CurrentTechnique.Passes
+				For Local pass:= Eachin passes
 				
 					pass.Apply()
 	
@@ -259,17 +254,19 @@ Public
 						meshx.Bind()
 						meshx.Render()
 					Endif 
-	
-				 
-			
+
+			 	Next ' effect passes
+		
 				If Not _alpha_list Then Exit ''get out of loop, no alpha
 				temp_list = _alpha_list
-				
-				Next '' surfaces
-				
-			Next	''end alpha loop
+			
+			
+			
+			Next '' surfaces
+			
+		Next	''end alpha loop
 		
-		Next ' effect passes
+		
 			
 		temp_list = Null
 		
@@ -423,7 +420,7 @@ Public
 	End
 	
 	Method UpdateLight(cam:TCamera,light:TLight)
-	
+		
 		_light_no=_light_no+1
 		If _light_no>light.no_lights Then _light_no=0
 		_lights[_light_no] = light
@@ -443,7 +440,9 @@ Public
 	End
 
 	Method UpdateCamera(cam:TCamera)
-	
+		
+		'If Not cam Or _xna Then Return
+		
 		'If (_device)
 			' viewport
 			_device.Viewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
@@ -463,14 +462,12 @@ Public
 		
 		'Endif
 		
-		' set view matrix					
-		_xna.ViewMatrix( cam.mod_mat.ToArray())
+		''dont set matrices here
 		
-		' set projection
-		_xna.ProjectionMatrix(cam.proj_mat.ToArray())
+		_xna.proj_mat = cam.proj_mat.ToArray()
+		_xna.view_mat = cam.mod_mat.ToArray()
 		
-		' fog
-		_xna.Fog( cam.fog_range_near, cam.fog_range_far, cam.fog_r,cam.fog_g,cam.fog_b, cam.fog_mode>0)		
+		
 	End
 	
 	Method ResetBrush()
@@ -556,7 +553,7 @@ Private
 	Field _device:XNAGraphicsDevice 
 	
 	' states
-	Field _rasterizerStates		:XNARasterizerState[3]
+	Field _rasterizerStates		:XNARasterizerState[6]
 	Field _rasterizerWire		:XNARasterizerState
 	Field _rasterizerScissor		:XNARasterizerState
 	Field _depthStencil			:XNADepthStencilState
@@ -576,15 +573,21 @@ Private
 	Field _basicEffect			:BasicEffect
 	Field _enviromentEffect		:BasicEffect
 	Field _draw2DEffect			:Draw2DEffect
-
+	Field _alphaTestEffect		:AlphaTestEffect
 	
 	Field _lastTexture			:TTexture
+	
+	Field light_info:Float[8*8] ''to store light info before CurrentEffect is ready
 	
 	' last combined brush values
 	Field tex_count%, _red#,_green#,_blue#,_alpha#,_shine#,_blend%,_fx%, tex_flags%, textures:TTexture[]
 
 
 Public 
+
+	Field proj_mat:Float[]
+	Field view_mat:Float[]
+	Field world_mat:Float[]
 
 	Method New(device:XNAGraphicsDevice)
 		_device = device
@@ -593,6 +596,7 @@ Public
 		_basicEffect = New BasicEffect(device.CreateBasicEffect())
 		_enviromentEffect = New BasicEffect(device.CreateBasicEffect())
 		_draw2DEffect = New Draw2DEffect(device.CreateBasicEffect())
+		_alphaTestEffect = New AlphaTestEffect(device.CreateAlphaTestEffect())
 		
 		_lastEffect = _basicEffect
 		
@@ -605,7 +609,6 @@ Public
 		_rasterizerWire.ScissorTestEnable = True
 		
 		'_rasterizerScissor = XNARasterizerState.Create()
-		'_rasterizerScissor.ScissorTestEnable = True
 		_rasterizerStates[0] = XNARasterizerState.Create()
 		_rasterizerStates[0].CullMode = CullMode_None
 		_rasterizerStates[0].ScissorTestEnable = True
@@ -615,6 +618,7 @@ Public
 		_rasterizerStates[2] = XNARasterizerState.Create()
 		_rasterizerStates[2].CullMode = CullMode_CullClockwiseFace
 		_rasterizerStates[2].ScissorTestEnable = True
+		
 
 		_depthStencilDefault = XNADepthStencilState._Default
 		_depthStencilNone 	= XNADepthStencilState.None
@@ -638,22 +642,32 @@ Public
 	End
 
 	Method Reset()
-
+		
 		ClearStates()
-			
-		_lastEffect = _basicEffect
+		
+		_lastEffect = Null'_basicEffect
 		_basicEffect.Reset()
+		_alphaTestEffect.Reset()
 		tex_count=0
 		_lastTexture = Null
 		
 	End
 	
 	Method SetLightEnable(id, enable?)
-		_lastEffect.SetLightEnable(id, enable)
+		'_lastEffect.SetLightEnable(id, enable)
+		light_info[id*8] = Float(Int(enable))
 	End
 	
 	Method SetLight(id, dirX#, dirY#, dirZ#, r#, g#, b#)
-		_lastEffect.SetLight(id, dirX, dirY, dirZ, r, g, b)
+		'_lastEffect.SetLight(id, dirX, dirY, dirZ, r, g, b)
+		Local pos:Int=id*8
+		light_info[pos+1]= dirX
+		light_info[pos+2]= dirY
+		light_info[pos+3]= dirZ
+		light_info[pos+4]= r
+		light_info[pos+5]= g
+		light_info[pos+6]= b
+		
     End
 	
 	Method CurrentEffect:Void(effect:EffectContainer) Property
@@ -664,28 +678,20 @@ Public
 		Return _lastEffect
 	End
 	
-	'Method Projection(fieldOfView#, aspect#, near#, far#)
-		'_lastEffect.Projection(fieldOfView, aspect, near, far)
-	'End
-	
-	Method View(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) 
-		_lastEffect.View(px, py, pz, rx, ry, rz, sx, sy, sz)
-	End
-	
-	Method World(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#)
-		_lastEffect.World(px, py, pz, rx, ry, rz, sx, sy, sz)
-	End
 	
 	Method ProjectionMatrix(mat:Float[])
 		_lastEffect.Effect().ProjectionMatrix(mat)
+		'proj_mat = mat
 	End
 	
 	Method ViewMatrix(mat:Float[])
 		_lastEffect.Effect().ViewMatrix(mat)
+		'view_mat = mat
 	End
 	
 	Method WorldMatrix(mat:Float[])
 		_lastEffect.Effect().WorldMatrix(mat)
+		'world_mat = mat
 	End
 	
 	Method Fog(near# ,far# ,r#,g#, b#, enabled?)
@@ -737,9 +743,10 @@ Public
 			state = filter._cU_wV
 		Elseif tex_flags&32 'clamp v flag
 			state = filter._wU_cV
-		Elseif tex_count>0 And has_texture				
+		Elseif tex_count>0 And has_texture 'And (tex_flags&4)<>0			
 			state = filter._wU_wV ''only use wrap with power-of-two textures 
 		End
+	
 	
 		' ' preserve sampler state
 		If state <> _lastSamplerState Then 
@@ -754,23 +761,20 @@ Public
             '_device.RasterizerState = _rasterizerScissor
             '_device.ScissorRectangle(cam.vx,TRender.height-cam.vheight-cam.vy,cam.vwidth,cam.vheight)
 
-      Else
-            ''global wireframe rendering
-            If TRender.render.wireframe
-                _device.RasterizerState = _rasterizerWire
-            Else
-                ' fx flag 16 - disable backface culling
-                If _fx&16 Then 
-                    _device.RasterizerState = _rasterizerStates[0] 
-                Else 
-                    _device.RasterizerState = _rasterizerStates[2]
-                End 
-            Endif
-      End
-      
-      '' y is opposite corner from opengl
-		'_device.ScissorRectangle(cam.viewport[0],TRender.height-cam.viewport[3]-cam.viewport[1],cam.viewport[2],cam.viewport[3])
-		'_device.RasterizerState = _xna._rasterizerScissor
+		Else
+		
+			If TRender.render.wireframe
+				_device.RasterizerState = _rasterizerWire
+			Else
+				' fx flag 16 - disable backface culling
+				If _fx&16<>0
+				    _device.RasterizerState = _rasterizerStates[0] 
+				Else
+				    _device.RasterizerState = _rasterizerStates[2]
+				Endif
+			Endif
+		End
+ 
 
 		'' fx flag 32 - force alpha
 		If _fx&32
@@ -786,20 +790,23 @@ Public
 		' if surface contains alpha info, enable blending
 		''and  fx flag 64 - disable depth testing
 		
-		If _fx&64 Or cam.draw2D
+		If tex_flags&4
+			'' alpha testing, use depth
+			_device.DepthStencilState = _depthStencilDefault
+		elseIf _fx&64 Or cam.draw2D
 			_device.DepthStencilState = _depthStencilNoDepth
-			
 		Elseif (ent.alpha_order<>0.0 Or surf.alpha_enable=True)
 			_device.DepthStencilState = _depthStencilNoWrite
-			
 		Else
 			_device.DepthStencilState = _depthStencilDefault
-		Endif	
+		Endif
 		
 		' blend mode
 		_device.BlendState = _blendStates[_blend]
 		
-	End 
+	End
+	
+
 	
 	Method DisableDepth()
 		_device.DepthStencilState = _depthStencilNoDepth
@@ -812,7 +819,9 @@ Public
 		_lastSamplerState = _st_uvNormal._cU_cV
 		_device.DepthStencilState = _depthStencilDefault
 		_device.BlendState = _blendStates[0]
-
+		_device.RasterizerState = _rasterizerStates[2]
+		tex_flags=0
+		
 	End
 	
 	
@@ -865,6 +874,7 @@ Public
 	End
 	
 	
+	
 	Method UpdateTexture( mesh:TEntity, surf:TSurface, cam:TCamera)
 		''no multi-texture (we could do another pass, use fast scissor AABB function)
 		
@@ -913,31 +923,42 @@ Public
 	
 	
 	'' make sure that the current effect is getting correct camera info
-	Method UpdateEffect(ent:TEntity, cam:TCamera)
+	Method UpdateEffect(ent:TEntity, surf:TSurface, cam:TCamera)
 		
 		''set current effect (default)
 		Local e:EffectContainer = _basicEffect
 		
 		If cam.draw2D
 			
-			'e= _draw2DEffect   '''********* DOES NOT WORK! Cam problem ************
+			'e= _draw2DEffect   '''*** DOES NOT WORK! Cam problem
 
 		Else
 		
 			' if cubic environment map
 			If tex_flags&128<>0
-			
 				e= _enviromentEffect
-				
 			Endif 
 		
+		Endif
+		
+		If textures And textures[0].flags&4 And Not cam.draw2D
+			e = _alphaTestEffect
 		Endif
 	
 		If e <> CurrentEffect()
 
 			CurrentEffect(e)
-			TRender.render.UpdateCamera(cam)
 			e.Update(cam,ent,CurrentEffect )
+			
+			' set view matrix					
+			ViewMatrix(view_mat)
+			
+			' set projection
+			ProjectionMatrix(proj_mat)
+	
+			
+			' fog
+			Fog( cam.fog_range_near, cam.fog_range_far, cam.fog_r,cam.fog_g,cam.fog_b, cam.fog_mode>0)
 			
 		Endif
 		
@@ -951,6 +972,16 @@ Public
 			e.Fog(True)
 		Endif
 		
+
+		''set camera matrices after effect has been set
+		' entity Transform
+		WorldMatrix(world_mat)
+		
+		''lights
+		CurrentEffect.SetLight2(light_info)
+				
+		CurrentEffect().Bind(ent, surf, _red,_green,_blue, _alpha, _shine, _fx, tex_count, textures )	
+		
 	End
 	
 	
@@ -959,14 +990,13 @@ Public
 		' combine surface brush values with main brush values
 		CombineBrushes(ent.brush,surf.brush)	
 		
+		
 		UpdateTexture(ent, surf, cam)
 		
 		' RasterizerState / DepthStencilState / BlendState
 		SetStates(ent, surf, cam)
+		
 
-		CurrentEffect().Bind(ent, surf, _red,_green,_blue, _alpha, _shine, _fx, tex_count, textures )
-		
-		
 	End 
 	
 	
@@ -1057,6 +1087,7 @@ End
 
 
 
+
 Interface IEffectContainer
 	Method Effect:XNAEffect() 
 	Method Update(cam:TCamera, ent:TEntity, e:IEffectContainer)
@@ -1070,6 +1101,9 @@ Interface IEffectContainer
 	Method ProjectionMatrix:Void(mat:Float[])
 	Method ViewMatrix:Void(mat:Float[])
 	Method WorldMatrix:Void(mat:Float[])
+	Method AlphaTestEnable:Void(value?)
+	Method SetAlphaFunction:Void(value%)
+	Method SetReferenceAlpha:Void(value%)
 End 
 
 
@@ -1083,6 +1117,7 @@ Class EffectContainer Implements IEffectContainer
 	Field _effect				:XNAEffect
 	Field _name					:String
 	Field _disable_fog			:Bool
+	Field _lastTexture			:TTexture
 	
 	Method Bind(ent:TEntity, surf:TSurface, 
 		_red#,_green#,_blue#, _alpha#, _shine#, _fx%, tex_count, textures:TTexture[] ) Abstract
@@ -1098,9 +1133,10 @@ Class EffectContainer Implements IEffectContainer
 		_updateProjection = True
 		'_effect.FogEnabled = False
 		_disable_fog = False
+		_lastTexture = Null
 	End
 	
-	
+#rem	
 	Method SetLightEnable(id, enable?)
 		_updateLight = False
 		Select id
@@ -1131,20 +1167,32 @@ Class EffectContainer Implements IEffectContainer
 				_effect.DirectionalLight2.DiffuseColor(r,g,b);
 		End
     End
-	
-	'Method Projection(fieldOfView#, aspect#, near#, far#)
-		'_effect.Projection(fieldOfView, aspect, near, far)
-	'End
-	
-	'Method View(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#) 
-		'_updateView = False
-		'_effect.View(px, py, pz, rx, ry, rz, sx, sy, sz)
-	'End
-	
-	'Method World(px#, py#, pz#, rx#, ry#, rz#, sx#, sy#, sz#)
-		'_updateWorld = False
-		'_effect.World(px, py, pz, rx, ry, rz, sx, sy, sz)
-	'End
+#end
+    
+    Method SetLight2( info:Float[] )
+    	
+    	If Not info Or Not _effect.DirectionalLight0 Then Return
+    	'' max lights = 3
+    	
+    	Local pos0:Int = 0, pos1:Int=8, pos2:Int = 16
+    	_effect.DirectionalLight0.Enabled = Bool(Int(info[pos0+0]))
+    	_effect.DirectionalLight1.Enabled = Bool(Int(info[pos1+0]))
+    	_effect.DirectionalLight2.Enabled = Bool(Int(info[pos2+0]))
+    		
+    	If Int(info[pos0+0])
+    		_effect.DirectionalLight0.Direction(info[pos0+1], info[pos0+2], info[pos0+3]) 
+			_effect.DirectionalLight0.DiffuseColor(info[pos0+4], info[pos0+5], info[pos0+6])
+    	Endif
+    	If Int(info[pos1+0])
+    		_effect.DirectionalLight1.Direction(info[pos1+1], info[pos1+2], info[pos1+3]) 
+			_effect.DirectionalLight1.DiffuseColor(info[pos1+4], info[pos1+5], info[pos1+6])
+    	Endif
+    	If Int(info[pos2+0])
+    		_effect.DirectionalLight2.Direction(info[pos2+1], info[pos2+2], info[pos2+3]) 
+			_effect.DirectionalLight2.DiffuseColor(info[pos2+4], info[pos2+5], info[pos2+6])
+    	endif
+    	
+    End
 	
 	Method ProjectionMatrix:Void(mat:Float[])
 		_updateProjection = False
@@ -1169,6 +1217,7 @@ Class EffectContainer Implements IEffectContainer
 	
 		Return 
 	End
+
 End 
 
 
@@ -1177,7 +1226,7 @@ End
 
 Class BasicEffect Extends EffectContainer
 
-	Field _lastTexture:TTexture 
+	 
 	
 	Method New(effect:XNABasicEffect)
 		_effect = effect
@@ -1196,7 +1245,6 @@ Class BasicEffect Extends EffectContainer
 		Local effect:= XNABasicEffect(_effect)
 		effect.LightingEnabled = True
 		effect.TextureEnabled = False 
-		_lastTexture = Null
 		
 	End
 	
@@ -1223,7 +1271,7 @@ Class BasicEffect Extends EffectContainer
 		Else
 			effect.VertexColorEnabled = False 
 			effect.DiffuseColor(_red,_green,_blue)
-	      effect.Alpha = _alpha
+			effect.Alpha = _alpha
 			'effect.SpecularPower(_shine)
 		Endif
 		
@@ -1272,10 +1320,92 @@ Class BasicEffect Extends EffectContainer
 		effect.SpecularPower(0)
 		
 	End
+	
 End
 
 
-'' *** does not work
+Class AlphaTestEffect Extends EffectContainer
+
+	Method Reset()
+
+		Super.Reset()
+		'Local effect:= XNAAlphaTestEffect(_effect)
+		
+	End
+	
+	Method New(effect:XNAAlphaTestEffect)
+		_effect = effect
+		_name = "alphatest"
+
+	End
+	
+	Method Bind(ent:TEntity, surf:TSurface, _red#,_green#,_blue#, _alpha#, _shine#, _fx%, tex_count, textures:TTexture[]  )
+	
+		Local effect:= XNAAlphaTestEffect(_effect)
+		
+		' fx flag 1 - full bright '' AlphaTestEffect is always full bright?
+		If _fx&1 Then 
+			'effect.AmbientLightColor(1,1,1)
+			'effect.LightingEnabled = False
+			'effect.SpecularPower(0)
+			'effect.Alpha = _alpha
+		Else 
+			'effect.AmbientLightColor(TLight.ambient_red, TLight.ambient_green, TLight.ambient_blue)
+			'effect.LightingEnabled = True
+			'effect.SpecularPower(_shine)
+		End 
+
+		' fx flag 2 - vertex colors 
+		If _fx&2
+			effect.VertexColorEnabled = True
+			effect.DiffuseColor(1,1,1)
+			effect.Alpha = _alpha		
+		Else
+			effect.VertexColorEnabled = False 
+			effect.DiffuseColor(_red,_green,_blue)
+			effect.Alpha = _alpha
+			'effect.SpecularPower(_shine)
+		Endif
+		
+		' fx flag 4 - flatshaded
+
+		' fx flag 8 - disable fog
+		If _fx&8 Then 
+			_disable_fog = True 
+		Else
+			_disable_fog = False
+		End 
+		
+	
+		
+		If tex_count > 0
+			' activate texture or preserve texture states
+			Local cur_tex:TTexture = textures[0]
+			
+			If cur_tex
+
+				If cur_tex <> _lastTexture And XNARender._textures Then
+					_lastTexture = cur_tex
+					effect.Texture = XNARender._textures.Get(cur_tex.gltex[0])
+				Endif
+				
+			Endif			
+		Endif
+		
+		effect.AlphaFunction = CompareFunction_GreaterEqual
+		effect.ReferenceAlpha = 127
+	
+	End
+	
+	Method SetLightEnable(id, enable?)
+	end
+	Method SetLight(id, dirX#, dirY#, dirZ#, r#, g#, b#)
+	End
+	
+End
+
+
+'' *** does not work -- should work now
 Class Draw2DEffect Extends BasicEffect
 
 	Method Reset()
@@ -1284,6 +1414,7 @@ Class Draw2DEffect Extends BasicEffect
 		Local effect:= XNABasicEffect(_effect)
 		effect.LightingEnabled = False
 		effect.TextureEnabled = True
+		
 	End
 	
 	Method New(effect:XNABasicEffect)

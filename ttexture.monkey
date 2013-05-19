@@ -257,7 +257,7 @@ Class TTexture
 		If Not force_new Then old_tex=tex.TexInList()
 		
 		If old_tex<>Null And old_tex<>tex
-			'Dprint "TTexture: return old_tex"
+			'Dprint "TTexture: return old_tex"					
 			Return old_tex
 		Else
 			If old_tex<>tex

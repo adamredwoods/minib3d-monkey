@@ -55,10 +55,12 @@ function HTMLResizePixmap(image,w,h, smooth) {
 	var ctx = canvas.getContext("2d");
 	
 	ctx.imageSmoothingEnabled = smooth;
+	ctx.webkitImageSmoothingEnabled = smooth;
+	ctx.mozImageSmoothingEnabled = smooth;
 	
-	if (w>image.width || h>image.height) {
-		ctx.imageSmoothingEnabled = false;
-	}
+	//if (w>image.width || h>image.height) {
+		//ctx.imageSmoothingEnabled = false;
+	//}
 	
 	canvas.width = w;
 	canvas.height = h;
@@ -99,7 +101,7 @@ function HTMLMaskPixmap(image, r,g,b) {
 function GetImageInfo( image ) {
 
 	//print("image w/h "+image.width+" "+image.height);
-	if (!image.width) return [0,0];
+	if (!CheckIsLoaded(image)) return [0,0];
 	
 	return [image.width, image.height];
 	
