@@ -1,4 +1,20 @@
 ****************************************
+minib3d v0.36.1
+
+- alpha testing enabled xna, all targets
+- blend 0 is premultiply, blend 1 is default (except on html5, blend 0 is default)
+- bug fixes: frustum culling for batchsprites, xna bugs, mojo font loading
+
+
+****************************************
+minib3d v0.36
+
+- alpha testing enabled opengles1.1 and opengles2.0
+- bug fixes
+- added: brushes can now take optional alpha: BrushColor(r,g,b,a)
+
+
+****************************************
 minib3d v0.35.1
 
 - bug fixes
