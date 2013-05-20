@@ -634,8 +634,9 @@ Class TAnimation
 		Next 'all keys
 		
 		''clear bones & bone keys
-		For Local e:TEntity = Eachin mesh.child_list
-			e.FreeEntity()
+		
+		For Local e:TEntity = Eachin TBone.GetBaseBones(mesh) 'mesh.child_list
+			If e Then e.FreeEntity()
 		Next
 		
 		
@@ -878,6 +879,7 @@ Class TAnimationKeys
 		Return quat
 	
 	End
+	
 	
 End 
 

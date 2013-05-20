@@ -107,10 +107,9 @@ Public
 		
 	Method FreeEntity()
 	
-		Super.FreeEntity() 
-	
 		keys=Null
-	
+		Super.FreeEntity() 
+
 	End 
 
 
@@ -422,7 +421,21 @@ Public
 
 	End
 	
-
+	'' gets all base bones, returns list.
+	'' used for non-repeating iteration
+	Function GetBaseBones:List<TBone>(ent:TMesh)
+		
+		Local list:List<TBone> = New List<TBone>
+		
+		For Local i:TBone = Eachin ent.bones
+			If i.parent = Null
+				list.AddLast(i)
+			Endif
+		Next
+		
+		Return list
+		
+	End
 	
 	Method Update(cam:TCamera=Null)
 	
