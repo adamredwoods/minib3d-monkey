@@ -11,11 +11,10 @@ Class TVertexAnim Extends FloatBuffer
 	Field offset:Int
 	
 	Function Create:TVertexAnim(i:Int=0)
-	
-		i2f= CreateDataBuffer(4)
-	
+
 		Local b:TVertexAnim = New TVertexAnim
-		b.buf = CreateDataBuffer(i*SIZE+1)
+		b.buf = FloatBuffer.Create(i*SIZE+1).buf
+		b.offset=0
 		Return b
 		
 	End
@@ -603,7 +602,7 @@ Class TAnimation
 				
 				Local pack:Int=0, pack_id:Int=0
 				Local no_anim_verts:Int=0
-				Local org_surf:TSurface = mesh.anim_surf[surf.surf_id]
+				Local org_surf:TSurface = mesh.GetAnimSurface(surf)
 				
 				If Not org_surf Then Continue
 				
