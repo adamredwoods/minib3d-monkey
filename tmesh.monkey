@@ -61,7 +61,7 @@ Class TMesh Extends TEntity
 	
 	Method CopyBaseMeshTo:Void(mesh:TMesh, parent_ent:TEntity=Null)
 		
-		Self.CopyBaseEntityTo(mesh, parent_ent)
+		Self.CopyBaseEntityTo(mesh, parent_ent) ''this will add to render list
 
 
 		mesh.is_sprite = is_sprite
@@ -129,7 +129,7 @@ Class TMesh Extends TEntity
 			new_surf[id].reset_vbo=-1 ' (-1 = all)
 			
 			'' 1=bones, 2=vertanims
-			If anim=1 And Not fullcopy 
+			If anim=1 And fullcopy=0
 			
 				'mesh.anim_surf = New TSurface[no_surfs]
 				'Local new_surf:TSurface=New TSurface
@@ -967,7 +967,9 @@ Class TMesh Extends TEntity
 	Method CopyMesh:TMesh(parent_ent:TEntity=Null)
 	
 		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
-		Self.AddMesh(mesh) ''add self TO mesh 
+		Self.AddMesh(mesh) ''add self TO mesh
+		''remove from entity_list since it will re-add in CopyBaseMeshTo()
+		mesh.entity_link.Remove()
 		
 		''copy children
 		For Local ent:TEntity=Eachin child_list
@@ -1754,8 +1756,7 @@ Class TMesh Extends TEntity
 		' shouldn't (may cause interference if surf tex is masked?).
 
 		Local alpha:Bool=False
-		
-		
+				
 		' check master brush (check alpha value, blend value, force vertex alpha flag)
 		If (brush.alpha<1.0) Or brush.blend=2 Or brush.blend=3 Or brush.fx&32
 			
