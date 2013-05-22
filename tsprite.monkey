@@ -76,12 +76,7 @@ Class TSprite Extends TMesh
 		Local surf:TSurface=sprite.CreateSurface()
 		
 		'' --create a smaller buffer so we dont have to resize
-		surf.vert_data=VertexDataBuffer.Create(4)
-		'surf.vert_coords=FloatBuffer.Create(12)
-		'surf.vert_tex_coords0=FloatBuffer.Create(8)
-		'surf.vert_tex_coords1=FloatBuffer.Create(8)
-		'surf.vert_norm=FloatBuffer.Create(12)
-		'surf.vert_col=FloatBuffer.Create(16)		
+		surf.vert_data=VertexDataBuffer.Create(4)		
 		surf.vert_array_size=5
 		surf.tris=ShortBuffer.Create(12)
 		surf.tri_array_size=5
@@ -238,6 +233,7 @@ Class TBatchSpriteMesh Extends TMesh
 	Field num_sprites =0
 	Field sprite_list:List<TBatchSprite>
 	'Field mat_sp:Matrix = New Matrix
+	Field test_sphere:TMesh
 	
 	
 	Function Create:TBatchSpriteMesh(parent_ent:TEntity=Null)
@@ -268,7 +264,7 @@ Class TBatchSpriteMesh Extends TMesh
 		mesh.classname = "BatchSpriteMesh"
 		'mesh.is_sprite = True 'no, it's not
 		mesh.is_update = True
-		mesh.cull_radius = -999999.0
+		mesh.cull_radius = 999999.0
 		
 		mesh.sprite_list = New List<TBatchSprite>
 	
@@ -281,6 +277,8 @@ Class TBatchSpriteMesh Extends TMesh
 		mat.grid[0][0] = 1.0; mat.grid[0][1] = 0.0; mat.grid[0][2] = 0.0
 		mat.grid[1][0] = 0.0; mat.grid[1][1] = 1.0; mat.grid[1][2] = 0.0
 		mat.grid[2][0] = 0.0; mat.grid[2][1] = 0.0; mat.grid[2][2] = 1.0
+		
+		
 		
 		TBatchSprite.min_x=999999999.0
 		TBatchSprite.max_x=-999999999.0
@@ -297,9 +295,10 @@ Class TBatchSpriteMesh Extends TMesh
 			
 		Next
 		
+				
 		''do our own bounds
-		
-		If num_sprites>0
+	
+		If num_sprites>0 And cull_radius>=0
 			
 			reset_bounds=False
 			
@@ -311,6 +310,16 @@ Class TBatchSpriteMesh Extends TMesh
 			max_x = TBatchSprite.max_x
 			max_y = TBatchSprite.max_y
 			max_z = TBatchSprite.max_z
+			
+			''include the BatchSpriteEntity position in our min/max:
+			'' if we compute only the particles' center, then we'll never see it again as the particles move, unless it's updated every frame
+			'' instead, use include the BatchSpriteEntity position in the calculations
+			min_x = Min( px,min_x)
+			min_y = Min( py,min_y)
+			min_z = Min( pz,min_z)
+			max_x = Max( px,max_x)
+			max_y = Max( py,max_y)
+			max_z = Max( pz,max_z)
 			
 			Local width#=(max_x-min_x)
 			Local height#=(max_y-min_y)
@@ -331,25 +340,30 @@ Class TBatchSpriteMesh Extends TMesh
 			
 			cull_radius=cull_radius * 0.5
 			Local crs#=cull_radius*cull_radius
-			cull_radius= Sqrt(crs+crs+crs)
-'Print "crs "+cull_radius
-'Print "hwd "+height*0.5+" "+width*0.5+" "+depth*0.5		
-		
+			cull_radius= Sqrt(crs+crs+crs)		
+			
 			
 			center_x=min_x+(width)*0.5
 			center_y=min_y+(height)*0.5
 			center_z=-(min_z+(depth)*0.5) ''need to flip this
-'Print "cen "+center_x+" "+center_y+" "+center_z			
+			
+			
 			'If brush.tex[0] Then brush.tex[0].flags = brush.tex[0].flags | 16 |32 ''always clamp
 			'If surf.brush.tex[0] Then surf.brush.tex[0].flags = surf.brush.tex[0].flags | 16 |32 ''always clamp
 			
-		Else
+		Elseif num_sprites<1
 			''no more sprites in batch, reduce overhead
 			surf.ClearSurface()
 			free_stack.Clear()
-			
 		Endif
 		
+		If test_sphere
+			Local mat2:Matrix = mat.Copy()
+			Local r:Float[] = mat2.TransformPoint(center_x,center_y,center_z)
+			test_sphere.PositionEntity(r[0],r[1],r[2],True)
+			test_sphere.ScaleEntity(cull_radius,cull_radius,cull_radius, True)
+			
+		Endif
 		
 		
 	End
@@ -417,6 +431,25 @@ Class TBatchSprite Extends TSprite
 			
 			mainsprite[id].EntityParent(ent, glob)
 		
+		End
+		
+		''
+		''show the SpriteBatchEntity to help debug
+		''
+		Method ShowBatchSpriteEntity:TMesh()
+			
+			If mainsprite[batch_id].test_sphere =Null
+				mainsprite[batch_id].test_sphere = CreateSphere(4)',mainsprite[batch_id])
+				mainsprite[batch_id].test_sphere.EntityAlpha(0.5)
+				mainsprite[batch_id].test_sphere.EntityFX 1+16
+			Endif
+			mainsprite[batch_id].test_sphere.ShowEntity()
+			'mainsprite[batch_id].test_sphere.PositionEntity(mainsprite[batch_id].mat.grid[3][0],mainsprite[batch_id].mat.grid[3][1],mainsprite[batch_id].mat.grid[3][2],True)
+			mainsprite[batch_id].test_sphere.ScaleEntity(mainsprite[batch_id].cull_radius,mainsprite[batch_id].cull_radius,mainsprite[batch_id].cull_radius, True)
+			
+			
+			Return mainsprite[batch_id].test_sphere
+			
 		End
 		
 		''
@@ -530,7 +563,7 @@ Class TBatchSprite Extends TSprite
 				''v isnt guarateed to be v0, but seems to match up
 
 				''since vbo expands, make sure to reset so we dont use subbuffer
-				mesh.surf.reset_vbo=-1
+				mesh.surf.reset_vbo=255
 				
 			Else
 			
@@ -661,14 +694,20 @@ Class TBatchSprite Extends TSprite
 						
 			''determine our own bounds
 			
-			min_x = Min5(p0[0],p1[0],p2[0],p3[0],min_x )
-			min_y = Min5(p0[1],p1[1],p2[1],p3[1],min_y )
-			min_z = Min5(p0[2],p1[2],p2[2],p3[2],min_z )
+			'min_x = Min5(p0[0],p1[0],p2[0],p3[0],min_x )
+			'min_y = Min5(p0[1],p1[1],p2[1],p3[1],min_y )
+			'min_z = Min5(p0[2],p1[2],p2[2],p3[2],min_z )
 			
-			max_x = Max5(p0[0],p1[0],p2[0],p3[0],max_x )
-			max_y = Max5(p0[1],p1[1],p2[1],p3[1],max_y )
-			max_z = Max5(p0[2],p1[2],p2[2],p3[2],max_z )
+			'max_x = Max5(p0[0],p1[0],p2[0],p3[0],max_x )
+			'max_y = Max5(p0[1],p1[1],p2[1],p3[1],max_y )
+			'max_z = Max5(p0[2],p1[2],p2[2],p3[2],max_z )
 			
+			min_x = Min( p0[0],min_x)
+			min_y = Min( p0[1],min_y)
+			min_z = Min( p0[2],min_z)
+			max_x = Max( p1[0],max_x)
+			max_y = Max( p1[1],max_y)
+			max_z = Max( p1[2],max_z)
 		End
 		
 End
