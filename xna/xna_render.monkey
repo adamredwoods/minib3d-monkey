@@ -790,7 +790,7 @@ Public
 		' if surface contains alpha info, enable blending
 		''and  fx flag 64 - disable depth testing
 		
-		If tex_flags&4
+		If _fx& FXFLAG_ALPHA_TESTING
 			'' alpha testing, use depth
 			_device.DepthStencilState = _depthStencilDefault
 		elseIf _fx&64 Or cam.draw2D
@@ -941,7 +941,7 @@ Public
 		
 		Endif
 		
-		If textures And textures[0].flags&4 And Not cam.draw2D
+		If _fx&FXFLAG_ALPHA_TESTING And Not cam.draw2D
 			e = _alphaTestEffect
 		Endif
 	

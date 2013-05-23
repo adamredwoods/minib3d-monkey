@@ -31,7 +31,7 @@ class TPixmap {
 	
 	public static function CreatePixmap(x:int, y:int):TPixmap {
 		var pix:TPixmap = new TPixmap;
-		pix.pixels = new BitmapData(x, y, true);
+		pix.pixels = new BitmapData(x, y, true, 0xffffffff);
 		pix.width = x; pix.height = y;
 		return pix;
 	}
@@ -48,8 +48,8 @@ class TPixmap {
 		var mat:Matrix = new Matrix();
 		
 		mat.scale(nw/pix.pixels.width, nh/pix.pixels.height);
-		newpix.pixels = new BitmapData(nw, nh, false);
-		newpix.pixels.draw(pix.pixels, mat, null, null, null, smooth);
+		newpix.pixels = new BitmapData(nw, nh, true, 0x00000000);
+		newpix.pixels.draw(pix.pixels, mat, null, BlendMode.NORMAL, null, smooth);
 
 		return newpix;
 	}
@@ -61,8 +61,8 @@ class TPixmap {
 		newpix.pixels = new BitmapData(pix.pixels.width, pix.pixels.height, true);
 		var pt:Point = new Point(0, 0);
 		
-		//pix.pixels.threshold(newpix.pixels, newpix.pixels.rect, pt, "==", threshold, 0x00000000, 0xff000000, true);
-		newpix.pixels.threshold(pix.pixels, pix.pixels.rect, pt, "==", threshold, 0x00000000, 0xff000000, true);
+		//pix.pixels.threshold(newpix.pixels, newpix.pixels.rect, pt, "==", threshold, 0x00000000, 0x00ffffff, true);
+		newpix.pixels.threshold(pix.pixels, pix.pixels.rect, pt, "==", threshold, 0x00000000, 0x00ffffff, true);
 		return newpix;
 	}
 	

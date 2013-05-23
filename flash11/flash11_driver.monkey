@@ -51,6 +51,7 @@ Extern
 		Global DRIVER_LESS_EQUAL:Int = "Context3DCompareMode.LESS_EQUAL"
 		Global DRIVER_GREATER_EQUAL:Int = "Context3DCompareMode.GREATER_EQUAL"
 		Global DRIVER_NEVER:Int = "Context3DCompareMode.NEVER"
+		Global DRIVER_ALWAYS:Int = "Context3DCompareMode.ALWAYS"
 		
 		Global DRIVER_BACK:Int="Context3DTriangleFace.BACK"
 		Global DRIVER_FRONT:Int="Context3DTriangleFace.FRONT"
@@ -82,7 +83,14 @@ Extern
 		Global DRIVER_CLEAR_DEPTH:Int = "Context3DClearMask.DEPTH"
 		Global DRIVER_CLEAR_STENCIL:Int = "Context3DClearMask.STENCIL"
 		
+		Global DRIVER_WRAP_CLAMP:Int = "Context3DWrapMode.CLAMP"
+		Global DRIVER_WRAP_REPEAT:Int = "Context3DWrapMode.REPEAT"
+		
+		Global DRIVER_TEX_LINEAR:Int = "Context3DTextureFilter.LINEAR"
+		Global DRIVER_MIP_LINEAR:Int = "Context3DMipFilter.LINEAR"
+		
 		Global DRIVER_FFFFFFFF:Int = "0xffffffff"
+		Global DRIVER_FF000000:Int = "0xff000000"
 	'End
 	
 	
@@ -104,7 +112,7 @@ Extern
 		''each register is 4 float values
 		Method UploadConstantsFromArray:Void( programType:String, firstRegister:Int, data:Float[], byteArrayOffset:Int=0) = "UploadConstantsFromArray"
 		Method UploadConstantsFromArray:Void( programType:String, firstRegister:Int, data:Int[], byteArrayOffset:Int=0) = "UploadConstantsFromArray"
-		
+	
 		Method UploadIndexFromDataBuffer:Void(ib:IndexBuffer3D, data:DataBuffer, byteArrayOffset:Int, startVertex:Int, numVertices:Int) = "UploadIndexFromDataBuffer"
 		Method UploadVertexFromDataBuffer:Void(vb:VertexBuffer3D, data:DataBuffer, byteArrayOffset:Int, startVertex:Int, numVertices:Int) = "UploadVertexFromDataBuffer"
 		
@@ -167,13 +175,16 @@ Extern
 		 	 	
 		Method SetVertexBufferAt:Void(index:Int, buffer:VertexBuffer3D, bufferOffset:Int = 0, format:Int = DRIVER_FLOAT_4) = "context3d.setVertexBufferAt"
 		
-
+		'Method SetSamplerStateAt:Void(sampler:Int, wrap:int, filter:int, mipfilter:int) = "context3d.setSamplerStateAt"
 	End
 	
 	Class Program3D = "Program3D"
 		Method Dispose:Void() = "dispose"
 		Method Upload:Void(vertexProgram:AGALPointer, fragmentProgram:AGALPointer) = "upload"
 	End
+	
+	
+
 	
 Public
 

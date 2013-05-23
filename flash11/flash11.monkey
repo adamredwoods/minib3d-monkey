@@ -5,7 +5,12 @@ Import minib3d.flash11.tpixmap_flash
 Import minib3d.flash11.flash11_driver
 Import minib3d.flash11.tshader_flash
 
-
+#rem
+	
+	NOTES:
+	'' minib3d is -z, which is opposite flash
+	'' UploadConstantsFromArray() the -1 register check is in the native code
+#end
 
 
 
@@ -43,6 +48,7 @@ End
 
 Class ShaderEffect
 	
+	Field full_bright:Int=0
 	Field use_vertex_colors:Int=0
 	Field use_flatshade:Int=0
 	Field use_fog:Int=1
@@ -50,14 +56,211 @@ Class ShaderEffect
 
 	Field no_mat#[]=[0.0,0.0,0.0,0.0]
 	Field mat_ambient#[]=[1.0,1.0,1.0,1.0]
-	Field mat_diffuse#[]=[1.0,1.0,1.0,1.0]
-	Field mat_specular#[]=[1.0,1.0,1.0,1.0]
-	Field mat_shininess#[]=[100.0] ' upto 128
+	Field diffuse#[]=[1.0,1.0,1.0,1.0]
+	Field specular#[]=[1.0,1.0,1.0,1.0]
+	Field shininess#[]=[100.0] ' upto 128
+	
+	''should be on(1)/off(0)/reset(-1) -- no bool, use int
+	Field disable_depth:int
+	Field disable_depthwrite:int
+	Field backface_culling:Int
+	Field use_tex_alpha:int
+	Field red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
+	
+	Method Overwrite:Void(e:ShaderEffect)
+		full_bright = e.full_bright
+		use_vertex_colors=e.use_vertex_colors
+		use_flatshade=e.use_flatshade
+		use_fog=e.use_fog
+		ambient=[e.ambient[0],e.ambient[1],e.ambient[2],e.ambient[3]]
+
+		'no_mat#[]=[0.0,0.0,0.0,0.0]
+		'mat_ambient#[]=[1.0,1.0,1.0,1.0]
+		diffuse=[e.diffuse[0],e.diffuse[1],e.diffuse[2],e.diffuse[3]]
+		specular=[e.specular[0],e.specular[1],e.specular[2],e.specular[3]]
+		shininess=[e.shininess[0]]
+	
+		disable_depth=e.disable_depth
+		disable_depthwrite = e.disable_depthwrite
+		backface_culling=e.backface_culling
+		red=e.red ; green=e.green ; blue=e.blue ; alpha=e.alpha
+		shine=e.shine ; blend=e.blend ; fx=e.fx
+	End
+	
+	Method Reset:Void()
+		full_bright = -1
+		use_vertex_colors= -1
+		use_flatshade= -1
+		use_fog= -1
+		ambient=[-1.0,-1.0,-1.0,-1.0]
+
+		'no_mat#[]=[0.0,0.0,0.0,0.0]
+		'mat_ambient#[]=[1.0,1.0,1.0,1.0]
+		diffuse=[-1.0,-1.0,-1.0,-1.0]
+		specular=[-1.0,-1.0,-1.0,-1.0]
+		shininess=[-1.0]
+	
+		disable_depth= -1
+		disable_depthwrite = -1
+		backface_culling= -1
+		use_tex_alpha=0
+		red=-1.0 ; green=-1.0 ; blue=-1.0 ; alpha=-1.0
+		shine=-1.0  ; blend=99999 ; fx=99999
+	End
+	
+	Method UpdateEffect:Void(surf:TSurface, ent:TEntity, cam:TCamera = Null)
+		
+		
+			'Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
+			Local ambient_red#,ambient_green#,ambient_blue#
+
+			' get main brush values
+			red  =ent.brush.red
+			green=ent.brush.green
+			blue =ent.brush.blue
+			alpha=ent.brush.alpha
+			shine=ent.brush.shine
+			blend =ent.brush.blend
+			fx    =ent.brush.fx
+			
+			' combine surface brush values with main brush values
+			If surf.brush
+
+				Local shine2#=0.0
+
+				red   =red  *surf.brush.red
+				green =green*surf.brush.green
+				blue  =blue *surf.brush.blue
+				alpha =alpha *surf.brush.alpha
+				shine2=surf.brush.shine
+				If shine=0.0 Then shine=shine2
+				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
+				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
+				fx=fx|surf.brush.fx
+			
+			Endif
+			
+			' take into account auto fade alpha
+			alpha=alpha-ent.fade_alpha
+
+			disable_depth = 0
+			disable_depthwrite = 0
+				
+			' if surface contains alpha info, enable blending
+			Local enable_blend:Int=0
+			If ent.alpha_order<>0.0
+				
+				If ent.brush.alpha<1.0
+					''the entire entity
+					enable_blend=1
+					disable_depth = 1
+					disable_depthwrite = 1
+				Elseif surf.alpha_enable=True
+					''just one surface
+					enable_blend=1
+					disable_depth = 1
+					disable_depthwrite = 1
+				Else
+					''entity flagged for alpha, but not this surface
+					enable_blend=0
+					disable_depth = 0
+					disable_depthwrite = 0
+				Endif
+			Else
+				enable_blend=0
+				
+			Endif
+
+
+			If enable_blend = 0 Then blend = -1
+
+
+			
+			' fx flag 1 - full bright
+			If fx&1
+				ambient_red  =0.0; ambient_green=0.0; ambient_blue =0.0
+				'red=1.0; green=1.0; blue=1.0; alpha=1.0
+				full_bright=1
+			Else
+				ambient_red  =TLight.ambient_red
+				ambient_green=TLight.ambient_green
+				ambient_blue =TLight.ambient_blue
+				full_bright=0
+			Endif
+
+			'' --------------------------------------
+			'If skip_sprite_state = False
+			
+			
+			
+
+			' fx flag 2 - vertex colors ***todo*** disable all lights?
+			use_vertex_colors=0
+			use_flatshade=0
+			use_fog=1
+			
+			If fx&2
+				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
+				'glEnable(GL_COLOR_MATERIAL)
+				use_vertex_colors = 1		
+				red=1.0; green=1.0; blue=1.0; alpha=1.0
+			Endif
+			
+			' fx flag 4 - flatshaded
+			If fx&4
+				use_flatshade=1
+			Endif
+
+			' fx flag 8 - disable fog
+			If fx&8
+				use_fog=0
+			Endif
+			
+			' fx flag 16 - disable backface culling
+			If fx&16
+				backface_culling = 1
+				'driver.SetCulling(DRIVER_NONE)
+			Else
+				backface_culling = 0
+				'driver.SetCulling(DRIVER_FRONT) '' minib3d is -z, which is opposite flash
+			Endif
+			
+			'' fx flag 32 - force alpha, implemented TMesh.Alpha() called in TRender
+			
+			'' fx flag 64 - disable depth testing, overrides other settings
+			If fx&64
+				
+				disable_depth = 1
+				disable_depthwrite = 1
+								
+			Endif
+		
+			' material color + specular
+
+			ambient=[ambient_red,ambient_green,ambient_blue,1.0]
+
+			'mat_ambient=[red,green,blue,alpha]
+			diffuse=[red,green,blue,alpha]
+			specular=[shine,shine,shine,shine]
+			shininess=[100.0] ' upto 128
+		
+			If cam.draw2D
+			
+				'glDisable(GL_DEPTH_TEST)
+				If fx&64 = 0 Then disable_depth = 1; disable_depthwrite = 1
+				'glDisable(GL_FOG)
+				use_fog = 0
+				'glDisable(GL_LIGHTING)
+				full_bright = 1
+				
+			Endif
+		
+	End
 	
 End
 
 
-Class FlashMiniB3D Extends TRender
+Class FlashMiniB3D Extends TRender Implements IShader2D
 	
 	Global driver:Driver = New Driver()
 	
@@ -77,31 +280,36 @@ Class FlashMiniB3D Extends TRender
 	
 	Field t_array:Float[16] ''temp array
 	
-	Field vbuf_map:IntMap<VertexBuffer3D> = New IntMap<VertexBuffer3D>
-	Field ibuf_map:IntMap<IndexBuffer3D> = New IntMap<IndexBuffer3D>
-	Field abuf_map:IntMap<VertexBuffer3D> = New IntMap<VertexBuffer3D>
+	Field vbuf_map:ArrayIntMap<VertexBuffer3D> = New ArrayIntMap<VertexBuffer3D>
+	Field ibuf_map:ArrayIntMap<IndexBuffer3D> = New ArrayIntMap<IndexBuffer3D>
+	Field abuf_map:ArrayIntMap<VertexBuffer3D> = New ArrayIntMap<VertexBuffer3D>
 	
 	Private
 	
 	Field render_init:Bool = False
 	
+	Field shader:TShaderFlash
+	Field last_shader:TShaderFlash
 	Field surf_buf_id:Int =0''used to keep surface's VertexBuffer3D
 	
 	Field tex_map_id:Int =0
-	Field tex_map:IntMap<FlashTexture> = New IntMap<FlashTexture>
+	Field tex_map:ArrayIntMap<FlashTexture> = New ArrayIntMap<FlashTexture>
 	
-	Field effect:ShaderEffect = New ShaderEffect
+	Field effect:ShaderEffect = New ShaderEffect , last_effect:ShaderEffect = New ShaderEffect
+	Field depth__:Bool = true
 	
 	Global null_tex:TTexture
 	Global lastCam:Bool = False
+	Global shader2d_:TShaderFlash
 	
+	Global temp_cam:Matrix = New Matrix
 	Global temp_mat:Matrix = New Matrix
 	
 	Public
 	
 	Method New()
 		
-		
+		shader2D = self
 		
 	End
 	
@@ -146,9 +354,17 @@ Class FlashMiniB3D Extends TRender
 		''reset globals used for state caching
 		last_texture = Null ''used to preserve texture states
 		last_sprite = Null ''used to preserve last surface states
+		last_shader = null
 		TRender.alpha_pass = 0
+		last_effect.Reset()
+		
+		driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
+		
+		TShader.DefaultShader()
 		
 	End
+	
+	
 	
 	
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
@@ -192,9 +408,9 @@ Class FlashMiniB3D Extends TRender
 			Endif
 			
 			''batch optimizations (sprites/meshes)
-			Local skip_sprite_state:Bool = False
+			Local skip_state:Bool = False
 			If last_sprite = surf
-				skip_sprite_state = True
+				skip_state = True
 			Else
 				last_sprite = surf
 			Endif
@@ -202,7 +418,7 @@ Class FlashMiniB3D Extends TRender
 					
 'Print "***classname: "+ent.classname+" : "+name			
 'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
-'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_sprite_state)
+'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_state)
 'Print "   mesh.anim:"+mesh.anim
 'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
 		
@@ -211,246 +427,126 @@ Class FlashMiniB3D Extends TRender
 			Local vbo:Int=True
 			
 			''get vbuffer and ibuffer, OK if null
-			Local vbuffer:VertexBuffer3D '= vbuf_map.Get(surf.vbo_id[0])
-			Local ibuffer:IndexBuffer3D '= ibuf_map.Get(surf.vbo_id[0])
-			Local abuffer:VertexBuffer3D = Null
+			Local vbuffer:VertexBuffer3D
+			Local ibuffer:IndexBuffer3D
+			Local abuffer:VertexBuffer3D
 				
-			' update surf vbo if necessary
-			If vbo
-				
-				' update vbuffer
-				UpdateBuffers(surf, vbuffer, ibuffer)
-				vbuffer = vbuf_map.Get(surf.vbo_id[0])
-				ibuffer = ibuf_map.Get(surf.vbo_id[0])
-
-			Endif
+			
+			' update vbuffer
+			UpdateVBO(surf)
+			vbuffer = vbuf_map.Get(surf.vbo_id[0])
+			ibuffer = ibuf_map.Get(surf.vbo_id[0])
+			abuffer = null
 
 			If mesh.anim
-			
+				
 				' get anim_surf
-				anim_surf2 = mesh.anim_surf[surf.surf_id] ''assign anim surface
+				anim_surf2 = mesh.GetAnimSurface(surf) ''assign anim surface
 				
-				If surf.vert_anim
-					abuffer = vbuf_map.Get(surf.vbo_id[0])
-				Endif
+				If anim_surf2
 				
-				If vbo And anim_surf2
-				
-					' update vbuffer
-					UpdateBuffers(anim_surf2, vbuffer, ibuffer, abuffer)
-					vbuffer = vbuf_map.Get(surf.vbo_id[0])
-					ibuffer = ibuf_map.Get(surf.vbo_id[0])
-					abuffer = vbuf_map.Get(surf.vbo_id[0])
+					' update abuffer
+					anim_surf2.vbo_dyn = True ''****** flaw in the system: when is this set? set too late? *******
+					UpdateVBO(anim_surf2)
+					abuffer = abuf_map.Get(anim_surf2.vbo_id[0])
+					
 				Endif
 				
 			Endif
 	
-			
-			Local shader:TShaderFlash = TShaderFlash(TShader.g_shader)
-			
-			
-			Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
-			Local ambient_red#,ambient_green#,ambient_blue#
 
-			' get main brush values
-			red  =ent.brush.red
-			green=ent.brush.green
-			blue =ent.brush.blue
-			alpha=ent.brush.alpha
-			shine=ent.brush.shine
-			blend =ent.brush.blend
-			fx    =ent.brush.fx
+			effect.UpdateEffect( surf, ent, cam )
 			
-			' combine surface brush values with main brush values
-			If surf.brush
-
-				Local shine2#=0.0
-
-				red   =red  *surf.brush.red
-				green =green*surf.brush.green
-				blue  =blue *surf.brush.blue
-				alpha =alpha *surf.brush.alpha
-				shine2=surf.brush.shine
-				If shine=0.0 Then shine=shine2
-				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
-				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
-				fx=fx|surf.brush.fx
 			
-			Endif
-			
-			' take into account auto fade alpha
-			alpha=alpha-ent.fade_alpha
-
-	
-			' if surface contains alpha info, enable blending
-			Local enable_blend:Int=0
-			If ent.alpha_order<>0.0
-				
-				If ent.brush.alpha<1.0
-					''the entire entity
-					'glEnable(GL_BLEND)
-					enable_blend=1
-					driver.SetDepthTest(False, DRIVER_NEVER)
-				Elseif surf.alpha_enable=True
-					''just one surface
-					'glEnable(GL_BLEND)
-					enable_blend=1
-					driver.SetDepthTest(False, DRIVER_NEVER)
+			'' ENABLE CORRECT SHADER BASED ON EFFECTS
+			shader = TShaderFlash(TShader.g_shader)
+			If MultiShader(shader)
+				If effect.full_bright
+ 					shader = MultiShader(shader).GetShader(0) '' no lights, scene should be dark unless otherwise noted
 				Else
-					''entity flagged for alpha, but not this surface
-					'glDisable(GL_BLEND)
-					enable_blend=0
-					driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
+					shader = MultiShader(shader).GetShader(1)
+				Endif 
+			Endif
+			
+			If Not skip_state
+				
+				'' ** depth state **
+				If effect.disable_depth<>last_effect.disable_depth
+					If effect.disable_depth Then driver.SetDepthTest(False, DRIVER_ALWAYS) Else driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
 				Endif
-			Else
-				'glDisable(GL_BLEND)
-				enable_blend=0
-				driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
-
-			Endif
-
-
-
-			' blend modes
-			If enable_blend
-				Select blend
-					Case 0
-						'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-						driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
-					Case 1
-						'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-						driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
-					Case 2
-						'glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
-						driver.SetBlendFactors(DRIVER_DESTINATION_COLOR, DRIVER_ZERO)
-					Case 3
-						'glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
-						driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE)
-					Case 4
-						'glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
-						driver.SetBlendFactors(DRIVER_ONE, DRIVER_ONE)
-	
-				End
-			Endif
-
-			
-			' fx flag 1 - full bright ***todo*** disable all lights?
-			If fx&1
-				ambient_red  =1.0
-				ambient_green=1.0
-				ambient_blue =1.0
-			Else
-				ambient_red  =TLight.ambient_red
-				ambient_green=TLight.ambient_green
-				ambient_blue =TLight.ambient_blue
-			Endif
-
-			'' --------------------------------------
-			If skip_sprite_state = False
-
-
-			' fx flag 2 - vertex colors ***todo*** disable all lights?
-			effect.use_vertex_colors=0
-			effect.use_flatshade=0
-			effect.use_fog=1
-			If fx&2
-				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-				'glEnable(GL_COLOR_MATERIAL)
-				effect.use_vertex_colors = 1		
-
-			Endif
-			
-			' fx flag 4 - flatshaded
-			If fx&4
-				effect.use_flatshade=1
-			'Else
-				'glShadeModel(GL_SMOOTH)
-			Endif
-
-			' fx flag 8 - disable fog
-			If fx&8
-				'glDisable(GL_FOG)
-				effect.use_fog=0
-			Endif
-			
-			' fx flag 16 - disable backface culling
-			If fx&16
-				'glDisable(GL_CULL_FACE)
-				driver.SetCulling(DRIVER_NONE)
-			Else
-				'glEnable(GL_CULL_FACE)
-				driver.SetCulling(DRIVER_BACK)
-			Endif
-			
-			'' fx flag 32 - force alpha, implemented elsewhere
-			
-			'' fx flag 64 - disable depth testing
-			If fx&64
-			
-				'glDisable(GL_DEPTH_TEST)
-				driver.SetDepthTest(False, DRIVER_NEVER)
-				disable_depth = True
+				If effect.disable_depthwrite<>last_effect.disable_depthwrite
+					If effect.disable_depthwrite Then driver.SetColorMask(True, True, True, False) Else driver.SetColorMask(True, True, True, True)
+				Endif
+'Print ent.classname+" "+Int(effect.disable_depth)+" "+Int(effect.disable_depthwrite)			
 				
-			Elseif disable_depth = True ''turn back on
-			
-				'glEnable(GL_DEPTH_TEST)
-				driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
-				disable_depth = False
+				If effect.backface_culling
+					driver.SetCulling(DRIVER_NONE)
+				Else
+					driver.SetCulling(DRIVER_FRONT) '' minib3d is -z, which is opposite flash
+				Endif
 				
-			Endif
+				' blend modes
+				If effect.blend>=0
+					Select effect.blend
+						Case 0
+							'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+							'driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
+							driver.SetBlendFactors(DRIVER_ONE, DRIVER_ONE_MINUS_SOURCE_ALPHA) ''premultiplied
+						Case 1
+							'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+							driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
+						Case 2
+							'glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
+							driver.SetBlendFactors(DRIVER_DESTINATION_COLOR, DRIVER_ZERO)
+						Case 3
+							'glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
+							driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE)
+						Case 4
+							'glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
+							driver.SetBlendFactors(DRIVER_ONE, DRIVER_ONE)
 		
+					End
+				Else
+					driver.SetBlendFactors( DRIVER_ONE, DRIVER_ZERO ) ''no blending
+				Endif
 			
-			
-			'If vbo
 				
 				''static mesh
-				If Not (mesh.anim Or surf.vbo_dyn)
+				If Not (mesh.anim=True Or surf.vbo_dyn=true)
 					driver.SetVertexBufferAt (shader.u.vertcoords, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
 				Endif
-	
+				
 				If (shader.u.normals >-1) Then driver.SetVertexBufferAt (shader.u.normals, vbuffer, VertexDataBuffer.NORMAL_OFFSET Shr 2, DRIVER_FLOAT_3) ''normal 1
 				If (shader.u.colors >-1) Then driver.SetVertexBufferAt (shader.u.colors , vbuffer, VertexDataBuffer.COLOR_OFFSET Shr 2, DRIVER_FLOAT_4) ''color 2
-				
-			'Else
+
+			
+			Endif  ''end skip_state--------------------------------------
 		
-				'Print "*** Non-VBO disabled"
-			
-			'Endif
-			
-			
-			Endif ''end sprite_skip_state--------------------------------------
-			
 		
-			''mesh animation/batch animation
-			'If vbo And (mesh.anim Or surf.vbo_dyn Or anim_surf2)
-			If (mesh.anim Or surf.vbo_dyn Or anim_surf2)
+			'' ** mesh animation/batch animation **
 			
+			If abuffer And (mesh.anim Or surf.vbo_dyn Or anim_surf2)
+								
 				''vertex animation
 				If anim_surf2.vert_anim
-					'driver.SetVertexBufferAt (shader.u.vertcoords, abuffer, 0, DRIVER_FLOAT_3) ''position 0
-					'driver.SetVertexBufferAt (shader.u.vertcoords, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
-				'' mesh animation, using animsurf2	
-				Elseif surf.vbo_dyn
-					'driver.SetVertexBufferAt (shader.u.vertcoords, vbuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
+					
+					driver.SetVertexBufferAt (shader.u.vertcoords, abuffer, 0, DRIVER_FLOAT_3) '' tightly packed
+					
+				Else ' If surf.vbo_dyn
+					'' mesh animation, using animsurf2
+					driver.SetVertexBufferAt (shader.u.vertcoords, abuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3) ''position 0
 					
 				Endif
 			Endif
-					
-					
-					
-			' light + material color
-
-			effect.ambient=[ambient_red,ambient_green,ambient_blue,1.0]
-
-			effect.mat_ambient=[red,green,blue,alpha]
-			effect.mat_diffuse=[red,green,blue,alpha]
-			effect.mat_specular=[shine,shine,shine,shine]
-			effect.mat_shininess=[100.0] ' upto 128
 			
+			If abuffer=Null And surf.vbo_dyn 
+				abuffer = abuf_map.Get(surf.vbo_id[0])
+				driver.SetVertexBufferAt (shader.u.vertcoords, abuffer, VertexDataBuffer.POS_OFFSET Shr 2, DRIVER_FLOAT_3)
+			Endif
 			
-			If shader.u.base_color>-1 Then driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.base_color, effect.mat_diffuse )
+
 				
-			' textures
+			'' textures
 			Local tex_count=0	
 			
 			tex_count=ent.brush.no_texs
@@ -458,17 +554,7 @@ Class FlashMiniB3D Extends TRender
 				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
 			
-			''disable any extra textures from last pass
-			If tex_count < last_tex_count 
-				'For Local i:Int = tex_count To MAX_TEXTURES-1
-				
-					'
-				'Next
-
-			Endif
-			
-			
-			
+		
 			For Local ix=0 To tex_count-1			
 	
 				If surf.brush.tex[ix]<>Null Or ent.brush.tex[ix]<>Null
@@ -530,17 +616,17 @@ Class FlashMiniB3D Extends TRender
 					
 					
 					''assuming sprites with same surfaces are identical, preserve states---------
-					If Not skip_sprite_state
+					If Not skip_state
 					
 					
 					' masked texture flag
-					'If tex_flags&4<>0
+					If tex_flags&4<>0
 						'glEnable(GL_ALPHA_TEST)
-						'use_tex_alpha=1
-					'Else
+						effect.use_tex_alpha=1
+					Else
 						'glDisable(GL_ALPHA_TEST)
-						'use_tex_alpha=0
-					'Endif
+						effect.use_tex_alpha=0
+					Endif
 				
 					' mipmapping texture flag
 
@@ -563,18 +649,20 @@ Class FlashMiniB3D Extends TRender
 					Endif
 				
 					' clamp u flag
-					If tex_flags&16<>0
+					If tex_flags&16<>0 Or tex_flags&32<>0
 						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE)
-					'Else						
+						'driver.SetSamplerStateAt(0, DRIVER_WRAP_CLAMP, DRIVER_TEX_LINEAR, DRIVER_MIP_LINEAR)
+					Else						
 						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT)
+						'driver.SetSamplerStateAt(0, DRIVER_WRAP_REPEAT, DRIVER_TEX_LINEAR, DRIVER_MIP_LINEAR)
 					Endif
 					
 					' clamp v flag
-					If tex_flags&32<>0
+					'If tex_flags&32<>0
 						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE)
 					'Else
 						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT)
-					Endif
+					'Endif
 			
 
 			#rem	
@@ -609,23 +697,19 @@ Class FlashMiniB3D Extends TRender
 			
 
 
-					If vbo
-						If tex_coords=0 And (shader.u.texcoords0 >-1)
-						
-							driver.SetVertexBufferAt (shader.u.texcoords0, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2) ''uv 3
-						Endif
-						If (shader.u.texcoords1 >-1)
-					
-							driver.SetVertexBufferAt (shader.u.texcoords1, vbuffer, (VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2) Shr 2, DRIVER_FLOAT_2) ''uv 3
-						Endif
-					Else
-					
-						''interleaved data does not work with databuffers (no adddress offset)
 
+					If tex_coords=0 And (shader.u.texcoords0 >-1)
+					
+						driver.SetVertexBufferAt (shader.u.texcoords0, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2) ''uv 3
+					Endif
+					If tex_coords=1 And (shader.u.texcoords1 >-1)
+				
+						driver.SetVertexBufferAt (shader.u.texcoords1, vbuffer, (VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2) Shr 2, DRIVER_FLOAT_2) ''uv 3
 					Endif
 
+
 			
-					Endif ''end preserve skip_sprite_state-------------------------------
+					Endif ''end preserve skip_state-------------------------------
 					
 					
 					' texture matrix
@@ -649,9 +733,6 @@ Class FlashMiniB3D Extends TRender
 					
 					' if cubemap flag=true then manipulate texture matrix so that cubemap is displayed properly 
 					If tex_flags&128<>0
-
-						
-
 					Endif
 					
 				Endif ''end if tex[ix]
@@ -663,17 +744,18 @@ Class FlashMiniB3D Extends TRender
 			'' turn off textures if no textures
 			If tex_count = 0 And (shader.u.texcoords0>-1 or shader.u.texcoords1>-1) 
 			
-				'For Local ix:=0 To last_tex_count-1
+				For Local ix:=0 To last_tex_count-1
 			
-					'driver.SetTextureAt(ix, Null )
+					driver.SetTextureAt(ix, Null )
 				
-				'Next
+				Next
 		
 				last_texture = Null
 				driver.SetTextureAt(0, tex_map.Get(null_tex.tex_id) )
 				If shader.u.texcoords0>-1
 					driver.SetVertexBufferAt (shader.u.texcoords0, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2)
-				Else
+				Endif
+				If shader.u.texcoords1>-1
 					driver.SetVertexBufferAt (shader.u.texcoords1, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2 + VertexDataBuffer.ELEMENT2, DRIVER_FLOAT_2)
 				endif
 			Endif
@@ -681,44 +763,60 @@ Class FlashMiniB3D Extends TRender
 			
 			last_tex_count = tex_count
 			
+				
 			
 			
 			'' set agal program constants
 			
-			temp_mat.Overwrite( cam.projview_mat )
+			'' ** entity matrix **
+			temp_cam.Overwrite( cam.projview_mat )
 			
 			If mesh.is_sprite=False
-				'ent.mat.ToArray(t_array)
-				temp_mat.Multiply4(ent.mat)
+				temp_cam.Multiply4(ent.mat)
 
-				'driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 4, t_array)
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.m_matrix, AGALMatrix(ent.mat) )
+				temp_mat.Overwrite(ent.mat)
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.n_matrix, AGALMatrix(temp_mat.Inverse().Transpose()) )
 			Else
-				'TSprite(mesh).mat_sp.ToArray(t_array)
-				temp_mat.Multiply4(TSprite(mesh).mat_sp)
+				temp_cam.Multiply4(TSprite(mesh).mat_sp)
 				
-				'driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 4, t_array)
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.m_matrix, AGALMatrix(TSprite(mesh).mat_sp) )
+				temp_mat.Overwrite(TSprite(mesh).mat_sp)
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.n_matrix, AGALMatrix(temp_mat.Inverse().Transpose()) )
 			Endif
 			
 			'' ** camera **
 			'' Flash Matrixes are transposed
-			'temp_mat=temp_mat.Transpose()
-			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 0, temp_mat.Transpose().ToArray() )
+			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.p_matrix, AGALMatrix(temp_cam) )
+			
 			
 			'' ** light **
-			If shader.u.light_matrix[0] >-1
-				temp_mat.Overwrite(TLight.light_list.First().mat)
-				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_matrix[0], temp_mat.Transpose().ToArray() )
+			If shader.u.light_matrix[0] >-1 And TLight.light_list.IsEmpty()=false
+				Local ll:TLight = TLight.light_list.First()
+				temp_mat.Overwrite(ll.mat)
+				''--no not yet-- to help normal calculations, we can take the inverse object matrix for the light to enter object space
+				
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_matrix[0], AGALMatrix(temp_mat) )
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_color[0], [ll.red,ll.green,ll.blue,1.0] )
+			Else
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_color[0], [1.0,1.0,1.0,1.0] )
 			Endif
 			
-			'' draw tris
+			'' ** set material **	
+
+			''one-minus colorflag = 1,1,1,1 if not set or r,g,b,a if set
+			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.colorflag, [1.0-effect.use_vertex_colors,0.0,0.0,0.0] )
+			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.base_color, effect.diffuse )
+			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.ambient_color, effect.ambient )
+
+
 			
-			If cam.draw2D
-				'glDisable(GL_DEPTH_TEST)
-				'glDisable(GL_FOG)
-				'glDisable(GL_LIGHTING)
+			'' ** draw tris **
+			
+			If shader<>last_shader
+				driver.SetProgram( shader.program_set )
+				last_shader = shader
 			Endif
-			
-			driver.SetProgram( shader.program_set )
 			
 			If TRender.render.wireframe
 				
@@ -726,7 +824,6 @@ Class FlashMiniB3D Extends TRender
 				
 			Else
 				If vbo	
-					
 					
 					Try
 						driver.DrawTriangles(ibuffer, 0, surf.no_tris)
@@ -740,22 +837,11 @@ Class FlashMiniB3D Extends TRender
 				Endif
 			Endif
 
-			
-			
-	
-			' enable fog again if fog was enabled at start of func
-			If fog=True
-				'glEnable(GL_FOG)
-				effect.use_fog = True
-			Endif
+			last_effect.Overwrite(effect)
 
 		Next ''end non-alpha loop
 		
-		
-		If cam.draw2D
-			'glEnable(GL_DEPTH_TEST)
-			'glEnable(GL_LIGHTING)
-		Endif
+
 
 		If Not alpha_list Then Exit ''get out of loop, no alpha
 		temp_list = alpha_list
@@ -764,10 +850,6 @@ Class FlashMiniB3D Extends TRender
 		
 		temp_list = Null
 		
-		
-		
-		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
-		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
 	
 	
 	End
@@ -839,7 +921,7 @@ Print "..Context Success"
 		driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
 		driver.SetCulling(DRIVER_NONE) 'BACK)
 		
-		TShader.LoadDefaultShader( New DefaultShader )
+		TShader.LoadDefaultShader( New MultiShader )
 		
 		render_init = True
 		
@@ -861,49 +943,35 @@ Print "..Context Success"
 	
 	'' assign buffer id and create buffers here
 	'' reset_vbo =-1 will reset buffer, used for clear surface and adding new vertices
-	Method UpdateBuffers:Int( surf:TSurface, vbuffer:VertexBuffer3D, ibuffer:IndexBuffer3D, abuffer:VertexBuffer3D=Null )
+	Method UpdateVBO:Int( surf:TSurface)
+		
+		Local vbuffer:VertexBuffer3D, ibuffer:IndexBuffer3D, abuffer:VertexBuffer3D
+		Local createFlag:Bool = False
 		
 		'' no need to update
 		If surf.reset_vbo=0 And surf.vbo_id[0]<>0 Then Return 0
 		
 		'Local vbuffer:VertexBuffer3D
 		Local update:Int=0
-Print "update buffers"	
+'Print "bufid:"+surf.vbo_id[0]	
 		
 		''upload buffer data	
-		If surf.vbo_id[0]=0 Or surf.reset_vbo = -1
-			'glGenBuffers(6,surf.vbo_id)
+		If surf.vbo_id[0]=0 'Or surf.reset_vbo = -1
 			
 			surf_buf_id +=1 ''never use 0
 			If surf_buf_id=0 Then surf_buf_id =1 ''id overflow?
 			surf.vbo_id[0] = surf_buf_id
 			
-			'' CreateVertexBuffer.... the number of 32-bit(4-byte) data values associated with each vertex
-			vbuffer = driver.CreateVertexBuffer( surf.no_verts, 16 ) ''size/4 = number, not byte size
-Print "create vb "+surf.no_verts+" "+(VertexDataBuffer.SIZE*0.25	)
-			ibuffer = driver.CreateIndexBuffer(surf.no_tris*3)
-Print "create ib "+(surf.no_tris*3)
-			vbuf_map.Set(surf.vbo_id[0], vbuffer)
-			ibuf_map.Set(surf.vbo_id[0], ibuffer)
-			
-			''***TODO****
-			If surf.vert_anim
-				'abuffer = driver.CreateVertexBuffer( surf.no_verts, 3 ) ''3v
-				'abuf_map.Set(surf.vbo_id[0], abuffer)
-			Endif
-			
-			surf.reset_vbo = -1 ''set for possible vbo_id[0] reset (lost context)
+'Print "create buffer "+surf.vbo_id[0]
+			createFlag = true
+					
+			'surf.reset_vbo = -1 ''set for possible vbo_id[0] reset (lost context)
 			update =1
-			
-		Else
-
-			If Not vbuffer Or Not ibuffer Then Print "*** vbuffer/ibuffer error"; Return 0
-			If surf.vert_anim And Not abuffer Then Print "** anim buffer error";Return 0
 			
 		Endif
 		
 		''reset and renew
-		If surf.reset_vbo=-1 Then surf.reset_vbo=255
+		If surf.reset_vbo<0 Then createFlag = True; surf.reset_vbo=255
 
 
 		
@@ -912,16 +980,61 @@ Print "create ib "+(surf.no_tris*3)
 		If surf.reset_vbo&1 Or surf.reset_vbo&2 Or surf.reset_vbo&4 Or surf.reset_vbo&8
 			
 			''updated animation
-			If surf.vbo_dyn And Not surf.vert_anim
-				'driver.UploadVertexFromDataBuffer(vbuffer, surf.vert_data.buf, 0,0, surf.no_verts)
+			If surf.vbo_dyn And (surf.vert_anim.Length = 0)
+				If createFlag
+					If abuffer Then abuffer.Dispose()
+					abuffer = driver.CreateVertexBuffer( surf.no_verts, 16 )
+					abuf_map.Set(surf.vbo_id[0], abuffer)
+'Print "CREATE"
+					'If ibuf_map.Get(surf.vbo_id[0])=null
+						'ibuffer = driver.CreateIndexBuffer(surf.no_tris*3)
+						'ibuf_map.Set(surf.vbo_id[0], ibuffer)
+					'endif
+				Else
+					abuffer = abuf_map.Get(surf.vbo_id[0])
+				endif
+				
+				driver.UploadVertexFromDataBuffer(abuffer, surf.vert_data.buf, 0,0, surf.no_verts)
+				'If abuffer Then driver.UploadVertexFromDataBuffer(abuffer, surf.vert_data.buf, 0,0, surf.no_verts) Else Print "**ANIMBUFFERERROR"+surf.vbo_id[0]
 				update =1
+
+			Endif
+				
+			
 			''vertex animation sequence
-			Elseif surf.vbo_dyn And surf.vert_anim And surf.reset_vbo&1
-				'driver.UploadVertexFromDataBuffer(abuffer, surf.vert_anim[surf.anim_frame].buf, 0,0, surf.no_verts)
-				update =1
+			if surf.vbo_dyn And surf.vert_anim.Length <>0 'And surf.vert_anim[surf.anim_frame] 'surf.reset_vbo&1
+				If createFlag
+					If abuffer Then abuffer.Dispose()
+					abuffer = driver.CreateVertexBuffer( surf.no_verts, 3) ''3v
+					abuf_map.Set(surf.vbo_id[0], abuffer)
+
+
+				Else
+					abuffer = abuf_map.Get(surf.vbo_id[0])
+				Endif
+				
+				driver.UploadVertexFromDataBuffer(abuffer, surf.vert_anim[surf.anim_frame].buf, 0,0, surf.no_verts)
+				update =1		
+
+				
 			Else
 				''normal static
-	Print ".. "+surf.no_verts+"  "+surf.vert_data.buf.Length()
+				If createFlag
+					'' CreateVertexBuffer.... the number of 32-bit(4-byte) data values associated with each vertex				
+					If vbuffer Then vbuffer.Dispose()
+					If ibuffer Then ibuffer.Dispose()
+					
+					vbuffer = driver.CreateVertexBuffer( surf.no_verts, 16 ) ''size/4 = number, not byte size
+'Print "create vb "+surf.no_verts+" "+(VertexDataBuffer.SIZE*0.25	)
+					ibuffer = driver.CreateIndexBuffer(surf.no_tris*3)
+'Print "create ib "+(surf.no_tris*3)
+					vbuf_map.Set(surf.vbo_id[0], vbuffer)
+					ibuf_map.Set(surf.vbo_id[0], ibuffer)
+				Else
+					vbuffer = vbuf_map.Get(surf.vbo_id[0])
+				Endif
+'Print ".. "+surf.no_verts+"  "+surf.vert_data.buf.Length()
+				
 				driver.UploadVertexFromDataBuffer(vbuffer, surf.vert_data.buf, 0,0, surf.no_verts)
 				update =1
 			Endif
@@ -929,8 +1042,9 @@ Print "create ib "+(surf.no_tris*3)
 		Endif
 		
 		If surf.reset_vbo&16
-Print ".. "+surf.no_tris*3
-			driver.UploadIndexFromDataBuffer(ibuffer, surf.tris.buf,0,0,surf.no_tris*3)
+'Print ".. "+surf.no_tris*3
+			ibuffer = ibuf_map.Get(surf.vbo_id[0])
+			If ibuffer Then driver.UploadIndexFromDataBuffer(ibuffer, surf.tris.buf,0,0,surf.no_tris*3)
 			update =1
 		Endif
 		
@@ -944,7 +1058,9 @@ Print ".. "+surf.no_tris*3
 	End
 	
 	
-	Method FreeBuffers(surf:TSurface)
+
+	
+	Method FreeVBO(surf:TSurface)
 		
 		Local vb:VertexBuffer3D = vbuf_map.Get(surf.vbo_id[0])
 		Local ib:IndexBuffer3D = ibuf_map.Get(surf.vbo_id[0])
@@ -1240,8 +1356,53 @@ Return 0
 	End 
 
 	
+	Method SetShader2D:Void()
+		If Not shader2d_
+			shader2d_ = New FullBrightOneTexShader
+		Endif
+		TShader.SetShader(shader2d_)
+	end
+	
 End
 
 
+Function AGALMatrix:Float[](m:Matrix)
+		Return [
+		 m.grid[0][0], m.grid[1][0], m.grid[2][0],  m.grid[3][0],
+		 m.grid[0][1], m.grid[1][1], m.grid[2][1],  m.grid[3][1],
+		 m.grid[0][2], m.grid[1][2], m.grid[2][2], m.grid[3][2],
+		 m.grid[0][3], m.grid[1][3], m.grid[2][3], m.grid[3][3] ]
 
+End
 
+Class ArrayIntMap<T>
+	
+	Field data:T[]
+	Field length:Int
+	
+	Method New()
+		data = New T[32]
+		length = 31
+	End
+	
+	Method Length:Int()
+		Return length+1
+	End
+	
+	Method Clear:Void()
+		data = New T[32]
+		length = 31
+	End
+
+	Method Get:T(id:Int)
+		If id<length Then Return data[id]
+	End
+	
+	Method Set:Void(id:Int, obj:T)
+		While id>=length
+			length = length+32
+			data = data.Resize(length+1)
+		Wend
+		data[id] = obj
+	End
+End

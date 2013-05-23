@@ -14,6 +14,14 @@ Import minib3d
 
 
 
+'' Interface IRenderUpdate
+'' -- used for sprites and sprite batching, forces TRender to call Update when in view.
+Interface IRenderUpdate
+	Method Update( cam:TCamera )
+End
+
+
+
 Class TRender
 
 #If CONFIG="debug"
@@ -290,9 +298,9 @@ Class TRender
 			
 			If Not mesh Then Continue
 			
-			If mesh.is_sprite Or mesh.is_update
+			If IRenderUpdate( mesh )
 				
-				mesh.Update(camera2D ) ' rotate sprites with respect to current cam					
+				IRenderUpdate(mesh).Update(camera2D ) ' rotate sprites with respect to current cam					
 								
 			Endif
 			
@@ -360,8 +368,6 @@ Class TRender
 			'' reject non-mesh
 			mesh = TMesh( ent )
 			
-'Print "// ent:"+ent.classname+" : "+ent.name
-			
 			If mesh				
 				
 				'If mesh.parent_hidden=True Or mesh.hidden=True Or mesh.brush.alpha=0.0 Then Continue
@@ -369,6 +375,7 @@ Class TRender
 				
 				''cam layer mode
 				If (mesh.use_cam_layer And mesh.cam_layer <> cam) Or (cam.use_cam_layer And mesh.cam_layer <> cam)  Then Continue
+				
 				
 				' get new bounds
 				mesh.GetBounds()
@@ -386,14 +393,14 @@ Class TRender
 					
 					If mesh.auto_fade=True Then mesh.AutoFade(cam)
 					
-					If mesh.is_sprite Or mesh.is_update
+					If IRenderUpdate(mesh)
 				
-						mesh.Update(cam ) ' rotate sprites with respect to current cam					
+						IRenderUpdate(mesh).Update(cam ) ' update sprites, batchsprites					
 						
 					Endif
 		
 					If mesh.Alpha()
-						
+					
 						''alpha entities are drawn last, sorted, without depth test
 						
 						mesh.alpha_order=cam.EntityDistanceSquared(mesh)+0.000001 ''+0.000001 to keep it not zero
@@ -408,7 +415,7 @@ Class TRender
 					Endif
 					
 					wireframe = wireFrameIsEnabled
-					
+
 				Endif
 			Endif
 					

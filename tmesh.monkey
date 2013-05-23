@@ -8,6 +8,8 @@ Import minib3d
 '' - separated update() and render()
 '' -- render() now in TRender.monkey
 
+
+
 Class TMesh Extends TEntity
 	
 	''mesh bounding box
@@ -31,7 +33,6 @@ Class TMesh Extends TEntity
 	'Field reset_col_tree=True
 		
 	Field is_sprite:Bool = False '' used for sprites
-	Field is_update:Bool = False ''used for batching, etc.
 	
 	Field wireframe:Bool
 
@@ -65,7 +66,7 @@ Class TMesh Extends TEntity
 
 
 		mesh.is_sprite = is_sprite
-		mesh.is_update = is_update
+		'mesh.is_update = is_update
 		mesh.wireframe = wireframe
 		
 		' copy mesh info
@@ -1674,6 +1675,7 @@ Class TMesh Extends TEntity
 	
 	
 	' used by MeshWidth, MeshHeight, MeshDepth, RenderWorld
+	' overloaded by TBatchSprite
 	Method GetBounds(reset:Bool = False)
 	
 		' only get new bounds if we have to
@@ -1681,7 +1683,7 @@ Class TMesh Extends TEntity
 		' scaling is not done here (since it can change per frame)
 		' more accurately a CullBox than CullRadius
 		If reset_bounds=True Or reset=true
-		
+	
 			reset_bounds=False
 	
 			min_x=999999999.0
@@ -1714,6 +1716,7 @@ Class TMesh Extends TEntity
 			Local width#=max_x-min_x
 			Local height#=max_y-min_y
 			Local depth#=max_z-min_z
+'Print classname+" "+width+" "+height+" "+depth
 
 			' get bounding sphere (cull_radius#) from AABB
 			' only get cull radius (auto cull), if cull radius hasn't been set to a negative no. by TEntity.MeshCullRadius (manual cull)
@@ -2036,15 +2039,13 @@ Class TMesh Extends TEntity
 		
 	End
 	
-	Method Update(cam:TCamera)
+	'Method Update(cam:TCamera)
 		
 		''legacy use: may want to call Render()
 		'Print "TMesh update"
 		
-	End
+	'End
 	
-	
-
 	
 End
 

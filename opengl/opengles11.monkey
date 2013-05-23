@@ -390,6 +390,16 @@ Class OpenglES11 Extends TRender
 				disable_depth = False
 				
 			Endif
+			
+			If fx& FXFLAG_ALPHA_TESTING
+				glEnable(GL_ALPHA_TEST)
+				glDepthMask(True)
+				glEnable(GL_DEPTH_TEST)
+				disable_depth = False
+			Else
+				glDisable(GL_ALPHA_TEST)
+			Endif
+			
 		
 			
 			glEnableClientState(GL_NORMAL_ARRAY)
@@ -593,14 +603,11 @@ Class OpenglES11 Extends TRender
 					If Not skip_sprite_state
 					
 					
-					' masked texture flag
+					' mask texture (0,0,0)
 					If tex_flags&4<>0
-						glEnable(GL_ALPHA_TEST)
-						glDepthMask(True)
-						glEnable(GL_DEPTH_TEST)
-						disable_depth = False
+						
 					Else
-						glDisable(GL_ALPHA_TEST)
+						
 					Endif
 				
 					' mipmapping texture flag

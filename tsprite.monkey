@@ -4,7 +4,7 @@ Import minib3d.tmesh
 '' NOTES:
 '' -- sprites default on TexBlend=3 (additive blend)
 
-Class TSprite Extends TMesh
+Class TSprite Extends TMesh Implements IRenderUpdate
 
 	Field angle#
 	Field scale_x#=1.0,scale_y#=1.0
@@ -226,7 +226,7 @@ End
 '' - notes:
 '' - may have to add a check that camera position <> origin position. If so, move origin out a touch from camera
 
-Class TBatchSpriteMesh Extends TMesh
+Class TBatchSpriteMesh Extends TMesh Implements IRenderUpdate
 
 	Field surf:TSurface 
 	Field free_stack:IntStack ''list of available vertex
@@ -263,12 +263,25 @@ Class TBatchSpriteMesh Extends TMesh
 				
 		mesh.classname = "BatchSpriteMesh"
 		'mesh.is_sprite = True 'no, it's not
-		mesh.is_update = True
 		mesh.cull_radius = 999999.0
 		
 		mesh.sprite_list = New List<TBatchSprite>
 	
 		Return mesh
+	End
+	
+	'' Overloading
+	Method GetBounds(reset:Bool = False)
+
+		If reset_bounds = True Or reset = True
+		'If TBatchSprite.min_x = TBatchSprite.max_x Or TBatchSprite.min_y=TBatchSprite.max_y Or TBatchSprite.min_x=TBatchSprite.min_x
+
+			Local cam:TCamera = New TCamera
+			cam.CameraViewport(0,0,TRender.width,TRender.height)
+			Update( cam ) ''use a null camera
+			reset_bounds = false
+			
+		Endif
 	End
 	
 	Method Update(cam:TCamera)
@@ -280,21 +293,21 @@ Class TBatchSpriteMesh Extends TMesh
 		
 		
 		
-		TBatchSprite.min_x=999999999.0
-		TBatchSprite.max_x=-999999999.0
-		TBatchSprite.min_y=999999999.0
-		TBatchSprite.max_y=-999999999.0
-		TBatchSprite.min_z=999999999.0
-		TBatchSprite.max_z=-999999999.0
-		
-		For Local ent:TEntity = Eachin sprite_list
+		TBatchSprite.min_x2=999999999.0
+		TBatchSprite.max_x2=-999999999.0
+		TBatchSprite.min_y2=999999999.0
+		TBatchSprite.max_y2=-999999999.0
+		TBatchSprite.min_z2=999999999.0
+		TBatchSprite.max_z2=-999999999.0
+
+		For Local ent:TBatchSprite = Eachin sprite_list
 			
-			ent.Update(cam)
-			
-			surf.reset_vbo=surf.reset_vbo|16
-			
+			IRenderUpdate(ent).Update(cam)
+
 		Next
 		
+		surf.reset_vbo=surf.reset_vbo|16
+
 				
 		''do our own bounds
 	
@@ -304,13 +317,13 @@ Class TBatchSpriteMesh Extends TMesh
 			
 			
 	
-			min_x = TBatchSprite.min_x
-			min_y = TBatchSprite.min_y
-			min_z = TBatchSprite.min_z
-			max_x = TBatchSprite.max_x
-			max_y = TBatchSprite.max_y
-			max_z = TBatchSprite.max_z
-			
+			min_x = TBatchSprite.min_x2
+			min_y = TBatchSprite.min_y2
+			min_z = TBatchSprite.min_z2
+			max_x = TBatchSprite.max_x2
+			max_y = TBatchSprite.max_y2
+			max_z = TBatchSprite.max_z2
+
 			''include the BatchSpriteEntity position in our min/max:
 			'' if we compute only the particles' center, then we'll never see it again as the particles move, unless it's updated every frame
 			'' instead, use include the BatchSpriteEntity position in the calculations
@@ -324,6 +337,7 @@ Class TBatchSpriteMesh Extends TMesh
 			Local width#=(max_x-min_x)
 			Local height#=(max_y-min_y)
 			Local depth#=(max_z-min_z)
+
 			
 			' get bounding sphere (cull_radius#) from AABB
 			' only get cull radius (auto cull), if cull radius hasn't been set to a negative no. by TEntity.MeshCullRadius (manual cull)
@@ -346,8 +360,7 @@ Class TBatchSpriteMesh Extends TMesh
 			center_x=min_x+(width)*0.5
 			center_y=min_y+(height)*0.5
 			center_z=-(min_z+(depth)*0.5) ''need to flip this
-			
-			
+						
 			'If brush.tex[0] Then brush.tex[0].flags = brush.tex[0].flags | 16 |32 ''always clamp
 			'If surf.brush.tex[0] Then surf.brush.tex[0].flags = surf.brush.tex[0].flags | 16 |32 ''always clamp
 			
@@ -356,8 +369,8 @@ Class TBatchSpriteMesh Extends TMesh
 			surf.ClearSurface()
 			free_stack.Clear()
 		Endif
-		
-		If test_sphere
+
+		If test_sphere<>null
 			Local mat2:Matrix = mat.Copy()
 			Local r:Float[] = mat2.TransformPoint(center_x,center_y,center_z)
 			test_sphere.PositionEntity(r[0],r[1],r[2],True)
@@ -369,13 +382,15 @@ Class TBatchSpriteMesh Extends TMesh
 	End
 End
 
+
+
 Class TBatchSprite Extends TSprite
 		
 		Field batch_id:Int ''ids start at 1
 		Field vertex_id:Int
 		Field sprite_link:list.Node<TBatchSprite>
 		
-		Global min_x:Float, min_y:Float, max_x:Float, max_y:Float, min_z:Float, max_z:Float
+		Global min_x2:Float, min_y2:Float, max_x2:Float, max_y2:Float, min_z2:Float, max_z2:Float
 		
 		Global mainsprite:TBatchSpriteMesh[] = New TBatchSpriteMesh[10]	
 		Global total_batch:Int =0
@@ -509,8 +524,8 @@ Class TBatchSprite Extends TSprite
 		End
 
 		Function CreateSprite:TBatchSprite(idx:Int=0)
-			''add sprite to batch
-			'' never added to entity_list
+			'' add sprite to batch
+			'' NEVER added to entity_list
 			'' if idx=0 add to last created batch
 				
 			Local sprite:TBatchSprite=New TBatchSprite
@@ -563,7 +578,7 @@ Class TBatchSprite Extends TSprite
 				''v isnt guarateed to be v0, but seems to match up
 
 				''since vbo expands, make sure to reset so we dont use subbuffer
-				mesh.surf.reset_vbo=255
+				mesh.surf.reset_vbo=-1
 				
 			Else
 			
@@ -573,7 +588,7 @@ Class TBatchSprite Extends TSprite
 			Endif
 					
 			
-			mesh.reset_bounds = False ''we control our own bounds
+			mesh.reset_bounds = True ''we control our own bounds ''make true, but overload method
 		
 			sprite.vertex_id = v
 			sprite.sprite_link = mesh.sprite_list.AddLast(sprite)
@@ -606,7 +621,7 @@ Class TBatchSprite Extends TSprite
 	
 		End
 		
-		
+		''Update is called from the BatchEntity, NOT from TRender
 		Method Update(cam:TCamera )
 
 
@@ -702,12 +717,13 @@ Class TBatchSprite Extends TSprite
 			'max_y = Max5(p0[1],p1[1],p2[1],p3[1],max_y )
 			'max_z = Max5(p0[2],p1[2],p2[2],p3[2],max_z )
 			
-			min_x = Min( p0[0],min_x)
-			min_y = Min( p0[1],min_y)
-			min_z = Min( p0[2],min_z)
-			max_x = Max( p1[0],max_x)
-			max_y = Max( p1[1],max_y)
-			max_z = Max( p1[2],max_z)
+			TBatchSprite.min_x2 = Min( p0[0],min_x2)
+			TBatchSprite.min_y2 = Min( p0[1],min_y2)
+			TBatchSprite.min_z2 = Min( p0[2],min_z2)
+			TBatchSprite.max_x2 = Max( p1[0],max_x2)
+			TBatchSprite.max_y2 = Max( p1[1],max_y2)
+			TBatchSprite.max_z2 = Max( p1[2],max_z2)
+
 		End
 		
 End

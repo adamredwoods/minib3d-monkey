@@ -1,4 +1,11 @@
 ****************************************
+minib3d v0.36.2
+
+- alpha testing enabled as EntityFX(FXFLAG_ALPHA_TESTING) (changed from texture flag 4-- which was wrong)
+- fixed batchsprite bug for Flash target
+
+
+****************************************
 minib3d v0.36.1
 
 - alpha testing enabled xna, all targets

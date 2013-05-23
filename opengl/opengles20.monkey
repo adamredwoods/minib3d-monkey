@@ -147,7 +147,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		If Not CheckWebGLContext Then Error "** WebGL Context not found. Please upgrade or check browser options. ~n~n"
 		
 		Local s:String = glGetString(GL_VERSION)
-Print s	
+If DEBUG Then Print s	
 	
 		webgl = s.Split(" ")[0]
 		
@@ -545,7 +545,13 @@ Print s
 				
 			Endif
 			
-			
+			If fx& FXFLAG_ALPHA_TESTING
+				If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )
+				effect.depth_test = true
+				effect.depth_write = true			
+			Else
+				If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.0 )
+			Endif
 			
 			' blend modes
 			If effect.blend_enable
@@ -765,13 +771,11 @@ Print s
 						'
 					Endif
 					
-					''send alpha texture test to shader----------------TOODOOO? may not need
+					''mask texture with color (0,0,0)
 					If tex_flags&4<>0
-						If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )
-						effect.depth_test = true
-						effect.depth_write = true			
+									
 					Else
-						If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.0 )
+						
 					Endif
 				
 					' mipmapping texture flag
@@ -1157,65 +1161,11 @@ Print s
 
 		If surf.reset_vbo=-1 Then surf.reset_vbo=255
 	
-		#rem
-		If surf.reset_vbo&1
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-
-			If surf.vbo_dyn =False
-				glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*12),surf.vert_coords.buf,GL_STATIC_DRAW) '3*4=12
-			Else
-				If surf.reset_vbo <> 255
-					glBufferSubData(GL_ARRAY_BUFFER,0,(surf.no_verts*12),surf.vert_coords.buf)
-				Else
-					glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*12),surf.vert_coords.buf,GL_DYNAMIC_DRAW)
-				Endif
-			Endif
-		Endif
-		'If GetGLError() Then Print "vertcoords"
-		
-		If surf.reset_vbo&2
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[1])
-			glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*8),surf.vert_tex_coords0.buf,GL_STATIC_DRAW) '2*4=8
-	
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[2])
-			glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*8),surf.vert_tex_coords1.buf,GL_STATIC_DRAW)	
-		Endif
-		'If GetGLError() Then Print "verttexcords"
-		
-		If surf.reset_vbo&4
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[3])
-			glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*12),surf.vert_norm.buf,GL_STATIC_DRAW) '3*4=12
-		Endif
-		
-		'If GetGLError() Then Print "vertnorm"
-		
-		If surf.reset_vbo&8
-			glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
-			If surf.reset_vbo <> 255
-				glBufferSubData(GL_ARRAY_BUFFER,0,(surf.no_verts*16),surf.vert_col.buf) '4*4=16
-			Else
-				glBufferData(GL_ARRAY_BUFFER,(surf.no_verts*16),surf.vert_col.buf,GL_STATIC_DRAW)
-			Endif
-			
-		Endif
-		
-		'If GetGLError() Then Print "vertcol"	
-		
-		If surf.reset_vbo&16
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,surf.vbo_id[5])
-			If surf.reset_vbo <> 255
-				glBufferSubData(GL_ELEMENT_ARRAY_BUFFER,0,surf.no_tris*6,surf.tris.buf) '3*2=6
-			Else
-				glBufferData(GL_ELEMENT_ARRAY_BUFFER,surf.no_tris*6,surf.tris.buf,GL_STATIC_DRAW)
-			Endif
-			
-		Endif
-		#end
 		
 		If surf.reset_vbo&1 Or surf.reset_vbo&2 Or surf.reset_vbo&4 Or surf.reset_vbo&8
 			
 			
-			If surf.vbo_dyn And Not surf.vert_anim
+			If surf.vbo_dyn And (Not surf.vert_anim)
 			
 				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 				If surf.reset_vbo <> 255
@@ -1231,7 +1181,9 @@ Print s
 					''update just anim data
 					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].buf )
 				Else
-					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
+					'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					'glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_DYNAMIC_DRAW)
+					'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
 					glBufferData(GL_ARRAY_BUFFER,surf.no_verts*12 ,surf.vert_anim[surf.anim_frame].buf,GL_DYNAMIC_DRAW)
 				Endif
 				

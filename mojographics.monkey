@@ -6,7 +6,7 @@ Import minib3d
 
 Extern
 
-#If TARGET="html5"
+#If TARGET="html5" Or TARGET="flash"
 	'' YIKES! is this a hack or what? this empty class is tucked in TPixmaphtml5 native code
 	Class Surface_ Extends Surface = "EmptyNullClass"
 	End
@@ -15,7 +15,13 @@ Extern
 	End
 #Endif
 
-	Function FlashFix:Void() = "super"
+	'Function FlashFix:MojoSurface(s:Surface) = "gxtkSurface"
+#If TARGET="flash"
+	Class FlashFix Extends MojoSurface = "gxtkSurface"
+	End
+#Else
+	Function FlashFix:MojoSurface(s:Surface_) = ""
+#Endif
 
 Public
 
@@ -78,7 +84,7 @@ Private
 		fontFile = FixDataPath("mojo_font.png")
 		fontImage = LoadImage( fontFile,96,Image.XPadding )
 		
-		If fontImage.Width()>0 Then SetFont(fontImage)
+		If fontImage And fontImage.Width()>0 Then SetFont(fontImage)
 
 	End
 	
@@ -161,13 +167,13 @@ Public
 	Method LoadSurface:Surface( path$ )
 		Local msurf:MojoSurface = MojoSurface.PreLoad(path, mesh, _device)
 
-		Return msurf
+		Return FlashFix(msurf)
 	End
 	
 	Method CreateSurface:Surface( width,height )
 		Local msurf:MojoSurface = MojoSurface.Create()
 		
-		Return msurf
+		Return FlashFix(msurf)
 	End
 	
 	Method WritePixels2( surface:Surface,pixels[],x,y,width,height,offset,pitch )

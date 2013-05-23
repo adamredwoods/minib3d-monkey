@@ -5,6 +5,15 @@ import flash.display3D.textures.Texture;
 import flash.system.Capabilities;
 //import com.adobe.utils.AGALMiniAssembler;
 
+class EmptyNullClass extends gxtkGraphics
+{
+	override public function Width():int {return 0;};
+	override public function Height():int {return 0;};
+	 public function Discard():int {return 0;};
+	 public function Loaded():int {return 0;};
+	 public function OnUnsafeLoadComplete():Boolean {return false;};
+};
+
 class Driver3D
 {
 	protected var game:BBFlashGame;
@@ -78,18 +87,21 @@ class Driver3D
 	
 
 	public  function UploadConstantsFromArray( programType:String, firstRegister:int, data:Array, byteArrayOffset:uint):void {
-			
-		//var num_regs:int = data.length /4; //why 8? each register = 4 float values
+		
+		if (firstRegister >-1) {
 
-		var mvec:Vector.<Number> = Vector.<Number>(data);
-//for (var i:int=0; i< (data.length); i++) { print (mvec[i].toString()); };
-		context3d.setProgramConstantsFromVector(programType, firstRegister, mvec, data.length >> 2);
+			var mvec:Vector.<Number> = Vector.<Number>(data);
+			//for (var i:int=0; i< (data.length); i++) { print (mvec[i].toString()); };
+			
+			context3d.setProgramConstantsFromVector(programType, firstRegister, mvec, data.length >> 2);
+		};
 	}
 	
+	
 	public  function UploadIndexFromDataBuffer(ib:IndexBuffer3D, data:BBDataBuffer, byteArrayOffset:int, startVertex:int, numVertices:int):void {
-print("indexlen");
-	print(String(data._data.length));
-print(data.Length().toString());	
+//print("indexlen");
+//print(String(data._data.length));
+//print(data.Length().toString());	
 		var d:ByteArray = data.GetByteArray();
 		d.endian = Endian.LITTLE_ENDIAN;
 		d.position=0;
@@ -98,9 +110,9 @@ print(data.Length().toString());
 	}
 	
 	public  function UploadVertexFromDataBuffer(vb:VertexBuffer3D, data:BBDataBuffer, byteArrayOffset:int, startVertex:int, numVertices:int):void {
-print("vblen");
-	print(String(data._data.length));
-print(data.Length().toString());
+//print("vblen");
+//print(String(data._data.length));
+//print(data.Length().toString());
 		var d:ByteArray = data.GetByteArray();
 		d.endian = Endian.LITTLE_ENDIAN;
 		d.position=0;
@@ -120,7 +132,7 @@ print(data.Length().toString());
 		// ugh.... may break if mojo changes
 		//context3d.drawToBitmapData( app.graphics.bitmapData );
 		if (!mojo_clear) {
-			g.bitmap.bitmapData=new BitmapData( stage.stageWidth,stage.stageHeight,true,0x005050ff );
+			g.bitmap.bitmapData=new BitmapData( stage.stageWidth,stage.stageHeight,true,0x00505050 );
 			mojo_clear = true;
 		}
 		context3d.present();

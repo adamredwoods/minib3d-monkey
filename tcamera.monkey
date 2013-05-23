@@ -408,7 +408,6 @@ Public
 		If mesh
 			
 			'' transform mesh centre into world space
-			
 			Local r:Float[] = ent.mat.TransformPoint(mesh.center_x,mesh.center_y,mesh.center_z)
 			x=r[0]; y=r[1]; z=r[2]
 			

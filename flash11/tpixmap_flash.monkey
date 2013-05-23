@@ -140,9 +140,8 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 	Method MaskPixmap:Void(r:Int, g:Int, b:Int)
 
 		'Local maskcolor:Int = (r|(g Shl 8)|(b Shl 16)) & $00ffffff
-		
-		pixels = _MaskPixmap(pixels, $ff000000 |(r Shl 16)|(b Shl 8)|g )
-		
+
+		pixels = _MaskPixmap(pixels, DRIVER_FF000000 |(r Shl 16)|(b Shl 8)|g )
 	End
 	
 	Method ApplyAlpha:TPixmap( pixmap:TPixmap )

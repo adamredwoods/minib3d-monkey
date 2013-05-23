@@ -30,6 +30,7 @@ Class ShaderUniforms
 	Field p_matrix:Int
 	Field m_matrix:Int
 	Field v_matrix:Int
+	Field n_matrix:int
 	
 	Field light_type:Int[9]
 	Field light_matrix:Int[9]
@@ -161,9 +162,18 @@ Class TShaderFlash Extends TShader
 	Public
 	
 	
-	Method New()
+	Method New(vp$="", fp$="")
 		
 		driver = FlashMiniB3D.driver
+		If vp<>"" And fp<>""
+			TShaderFlash.LoadShaderString(vp, fp, Self)
+			
+			'shader_id = default_shader.shader_id
+			If shader_id
+				active = 1
+				'LinkVariables()
+			Endif
+		Endif
 		
 	End
 	
@@ -391,6 +401,7 @@ Class TShaderFlash Extends TShader
 		'Return 0
 	End
 	
+	
 	#rem
 	'Global TestVP:String = "m44 op, va0, vc0~nmov v0, va1"
 	'va0 = pos.xyz
@@ -416,37 +427,81 @@ Class TShaderFlash Extends TShader
 	
 End
 
+Class MultiShader Extends TShaderFlash
+	
+	Global init:Bool = False
+	
+	Field shader:TShaderFlash[8]
+	
+	Method New()
+		If init Then Return
+		init = True
+		
+		shader[0] = New FullBrightOneTexShader
+		shader[1] = New OneLightOneTexShader
+	End
+	
+	Method GetShader:TShaderFlash(num_lights:Int, num_tex:Int=1)
+		
+		Select (num_lights)
+			
+			Case 0
+				Return shader[0]
+			Case 1
+				Return shader[1]
+			Default
+				Return shader[1]
+		End
+	End
+	
+End
 
-
-Class DefaultShader Extends TShaderFlash
+Class OneLightOneTexShader Extends TShaderFlash
 	#rem
 	Global TestVP$ ="m44 op, va0, vc0~n" + '' pos to clipspace
 				"mov v0, va1" '' copy color
 	
 	Global TestFP$ = "mov oc, v0" 
 	#end
+
 	
-	Global TestVP:String =
-			'"mov vt0, vc0~nmov vt1, vc1~nmov vt2, vc2~nmov vt3, vc3~n"+
-			'"mul vt0, vt0, vc4~nmul vt1, vt1, vc5~nmul vt2, vt2, vc6~nmul vt3, vt3, vc7~n"+
-			'''"mul vt0, vc4, vt0~nmul vt1, vc5, vt1~nmul vt2, vc6, vt2~nmul vt3, vc7, vt3~n"+
-			"m44 vt1, va0, vc0~nmov v0, va1~nmov v1, va2~nmul v0, va1, vc4~n"+
+	Global VP:String =
+			'' copy attribs into varying
+			"m44 vt1, va0, vc0~nmov v0, va1~nmov v1, va2~n"+
+			
 			
 			''pointlight1
 			'"mov vt0, va3~n"+
-			"mov vt0.x, vc5.w~nmov vt0.y, vc6.w~nmov vt0.z, vc7.w~nsub vt0, vt0.xyz, vt1~ndp3 vt0.xyz, vt0.xyz, va3.xyz~nsat vt0.xyz, vt0.xyz~nmov v2, vt0.xyz~n"+
+			"m44 vt3, va3.xyz, vc8~nnrm vt3.xyz, vt3.xyz~n"+
+			"mov vt0.x, vc12.w~nmov vt0.y, vc13.w~nmov vt0.z, vc14.w~nm44 vt4, va0, vc4~nsub vt0, vt0.xyz, vt4.xyz~nnrm vt0.xyz, vt0.xyz~n"+
+			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nsat vt0.xyz, vt0.xyz~n"+
+			
+			''ambient light
+			"max vt0.xyz, vt0.xyz, vc17.xyz~n"+
+			'"mov v2, vt0.xyz~n"+
+			'' base color
+			"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag = 1111 or rgba
+			"mul vt3, vc16, vt3~n"+ 
+			"mul vt3, vt3, vc22~n"+ ''light color
+'' problem is that va1 is all 0's so it blacks everything out.			
+			
+			''light*color
+			"mul v0, vt3, vt0.xyz~n"+
+			'"mov v0, va1~n"+
+			''preserve alpha
+			'"mov v0.w, vc16.w~n"+
+			
 			"mov op, vt1~n"+
 			"~n"
 			
 	'Global TestFP:String = "tex ft1, v2, fs0 <2d, nearest, mipnearest>~nmov oc, ft1"
 	
-	Global TestFP:String =
+	Global FP:String =
 			"tex ft1, v1, fs0 <2d,clamp,linear>~n"+ ''texture
-			"mul ft2, v2, v0~n"+ ''light*color vt
-			"mov ft2.w, v0.x~n"+'preserve alpha
-			"mul oc, ft1, ft2~n"
+			"mul ft2, ft1, v0~n"+ 'color+light
+			"mov oc, ft2~n"
 
-			'"mov oc, v1~n"
+			'"mov oc, ft1~n"
 			'"mov ft2, ft1~n"
 	
 	
@@ -460,26 +515,75 @@ Class DefaultShader Extends TShaderFlash
 		u.normals = 3
 		u.colors = 1
 		
+		'' constants
 		u.p_matrix = 0 '0,1,2,3
-		u.m_matrix = -1
-		u.base_color = 4
-		u.light_matrix[0] = 5 '5,6,7,8
+		u.m_matrix = 4 '4,5,6,7
+		u.n_matrix = 8 '8'9'10'11
+		u.light_matrix[0] = 12 '12,13,14,15
+		u.base_color = 16
+		u.ambient_color = 17
+		u.light_color[0] = 22
+		
+		'' flags
+		u.colorflag = 18 '' x=use basecolor; 18,19,20,21
 		
 	end
 	
-	Method New()
+	Method New(vp$=VP, fp$=FP)
 		
-		TShaderFlash.LoadShaderString(TestVP, TestFP, self)
-		
-		'shader_id = default_shader.shader_id
-		If shader_id
-			active = 1
-			'LinkVariables()
-		Endif
+		Super.New(vp,fp)
 		
 	End
 
 	
 End
 
+Class FullBrightOneTexShader Extends OneLightOneTexShader
+	
+	Global VP:String =
+			'' copy attribs into varying
+			"m44 vt1, va0, vc0~nmov v0, va1~nmov v1, va2~n"+
+			
+			
+			''pointlight1
+			"mov vt0, va3~n"+
+			"mov vt0, vc4~n"+
+			"mov vt0, vc8~n"+
+			'"m44 vt3, va3.xyz, vc8~nnrm vt3.xyz, vt3.xyz~n"+
+			'"mov vt0.x, vc12.w~nmov vt0.y, vc13.w~nmov vt0.z, vc14.w~nm44 vt4, va0, vc4~nsub vt0, vt0.xyz, vt4.xyz~nnrm vt0.xyz, vt0.xyz~n"+
+			'"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nsat vt0.xyz, vt0.xyz~nmov v2, vt0.xyz~n"+
+			
+			'' base color
+			'"mul vt3, vc18.xxxx, va1~n"+ ''colorflag
+			'"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag 
+			"mov vt3, va1~n"+
+			"mul v0, vc16, vt3~n"+ 
+			''preserve alpha
+			'"mov v0.w, vc16.w~n"+
+			
+			"mov op, vt1~n"+
+			"~n"
+			
+	
+	Global FP:String =
+			"tex ft1, v1, fs0 <2d,clamp,linear>~n"+ ''texture
+			"mov ft2, v0~n"+ 'move color in for tinting
+			"mul ft2, ft1, ft2~n"+
 
+			"mov oc, ft2~n"
+
+			'"mov oc, ft1~n"
+			'"mov ft2, ft1~n"
+	
+	Method LinkVariables:Int()
+		Super.LinkVariables()
+		u.light_matrix[0] = -1
+		u.light_color[0] = -1
+	End
+	
+	Method New(vp$=VP, fp$=FP)
+		
+		Super.New(vp,fp)
+		
+	End
+End

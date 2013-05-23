@@ -27,8 +27,8 @@ Const FXFLAG_FLATSHADE% = 4 '' (opengles11 only)
 Const FXFLAG_DISABLE_FOG% = 8
 Const FXFLAG_DISABLE_CULLING% = 16
 Const FXFLAG_FORCE_ALPHA% = 32
-Const FXFLAG_DISABLE_DEPTH% = 64
-
+Const FXFLAG_DISABLE_DEPTH% = 64 
+Const FXFLAG_ALPHA_TESTING% = 128 ''enables alpha testing+depth enable for sprites
 
 Class TEntity
 	
@@ -93,6 +93,8 @@ Class TEntity
 	Global tformed_y#
 	Global tformed_z#
 	
+	Global testvec:Vector = New Vector
+	
 	''internal temp use
 	Private
 	
@@ -103,7 +105,7 @@ Class TEntity
 	
 	Method CopyEntity:TEntity(parent_ent:TEntity=Null) Abstract
 	
-	Method Update(cam:TCamera=Null) Abstract
+	'Method Update(cam:TCamera=Null) Abstract ''moved to interface IMeshUpdate
 
 	Method New()
 		
@@ -939,7 +941,8 @@ Class TEntity
 	''8: disable fog
 	''16: disable backface culling
 	''32: force alpha-blending
-	''64: no depth test
+	''64: disable depth testing
+	''128: alpha testing + depth testing enabled
 
 	Method EntityFX(fx_no%) Property
 	
