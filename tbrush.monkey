@@ -16,7 +16,7 @@ Class TBrush
 	Field shine#=0.05, shine_strength#=100.0
 
 '' because html5 defaults to premultiplied canvas, this helps
-#If TARGET="html5"
+#If TARGET="html5" Or TARGET="flash"
 	Field blend:Int=0
 #Else
 	Field blend:Int=1
