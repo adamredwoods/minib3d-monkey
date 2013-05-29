@@ -46,215 +46,85 @@ End
 
 
 
-Class ShaderEffect
+Class TexData
 	
-	Field full_bright:Int=0
-	Field use_vertex_colors:Int=0
-	Field use_flatshade:Int=0
-	Field use_fog:Int=1
-	Field ambient#[]=[1.0,1.0,1.0,1.0]
-
-	Field no_mat#[]=[0.0,0.0,0.0,0.0]
-	Field mat_ambient#[]=[1.0,1.0,1.0,1.0]
-	Field diffuse#[]=[1.0,1.0,1.0,1.0]
-	Field specular#[]=[1.0,1.0,1.0,1.0]
-	Field shininess#[]=[100.0] ' upto 128
+	Field tex_count:Int
+	Field texture:TTexture[8]
+	Field tex_flags:Int[8]
+	Field tex_blend:Int[8]
+	Field tex_coords:Int[8]
+	Field tex_u_scale:Float[8]
+	Field tex_v_scale:Float[8]
+	Field tex_u_pos:Float[8]
+	Field tex_v_pos:Float[8]
+	Field tex_ang:Float[8]
+	Field tex_cube_mode:Int[8]
+	Field frame:Int[8]
+	Field tex_smooth:Int[8]
 	
-	''should be on(1)/off(0)/reset(-1) -- no bool, use int
-	Field disable_depth:int
-	Field disable_depthwrite:int
-	Field backface_culling:Int
-	Field use_tex_alpha:int
-	Field red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
+	Field uv_clamp:int
 	
-	Method Overwrite:Void(e:ShaderEffect)
-		full_bright = e.full_bright
-		use_vertex_colors=e.use_vertex_colors
-		use_flatshade=e.use_flatshade
-		use_fog=e.use_fog
-		ambient=[e.ambient[0],e.ambient[1],e.ambient[2],e.ambient[3]]
-
-		'no_mat#[]=[0.0,0.0,0.0,0.0]
-		'mat_ambient#[]=[1.0,1.0,1.0,1.0]
-		diffuse=[e.diffuse[0],e.diffuse[1],e.diffuse[2],e.diffuse[3]]
-		specular=[e.specular[0],e.specular[1],e.specular[2],e.specular[3]]
-		shininess=[e.shininess[0]]
+	Method UpdateTexture(surf:TSurface, ent:TEntity)
 	
-		disable_depth=e.disable_depth
-		disable_depthwrite = e.disable_depthwrite
-		backface_culling=e.backface_culling
-		red=e.red ; green=e.green ; blue=e.blue ; alpha=e.alpha
-		shine=e.shine ; blend=e.blend ; fx=e.fx
-	End
-	
-	Method Reset:Void()
-		full_bright = -1
-		use_vertex_colors= -1
-		use_flatshade= -1
-		use_fog= -1
-		ambient=[-1.0,-1.0,-1.0,-1.0]
-
-		'no_mat#[]=[0.0,0.0,0.0,0.0]
-		'mat_ambient#[]=[1.0,1.0,1.0,1.0]
-		diffuse=[-1.0,-1.0,-1.0,-1.0]
-		specular=[-1.0,-1.0,-1.0,-1.0]
-		shininess=[-1.0]
-	
-		disable_depth= -1
-		disable_depthwrite = -1
-		backface_culling= -1
-		use_tex_alpha=0
-		red=-1.0 ; green=-1.0 ; blue=-1.0 ; alpha=-1.0
-		shine=-1.0  ; blend=99999 ; fx=99999
-	End
-	
-	Method UpdateEffect:Void(surf:TSurface, ent:TEntity, cam:TCamera = Null)
+		'' textures
+			tex_count=0	
+			
+			tex_count=ent.brush.no_texs
+			'If surf.brush<>Null
+				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
+			'EndIf
+			
+			
 		
-		
-			'Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
-			Local ambient_red#,ambient_green#,ambient_blue#
+			For Local ix=0 To tex_count-1			
+	
+				If surf.brush.tex[ix]<>Null Or ent.brush.tex[ix]<>Null
+					
+					'Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#,tex_v_scale#
+					'Local tex_u_pos#,tex_v_pos#,tex_ang#,tex_cube_mode,frame, tex_smooth
 
-			' get main brush values
-			red  =ent.brush.red
-			green=ent.brush.green
-			blue =ent.brush.blue
-			alpha=ent.brush.alpha
-			shine=ent.brush.shine
-			blend =ent.brush.blend
-			fx    =ent.brush.fx
-			
-			' combine surface brush values with main brush values
-			If surf.brush
-
-				Local shine2#=0.0
-
-				red   =red  *surf.brush.red
-				green =green*surf.brush.green
-				blue  =blue *surf.brush.blue
-				alpha =alpha *surf.brush.alpha
-				shine2=surf.brush.shine
-				If shine=0.0 Then shine=shine2
-				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
-				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
-				fx=fx|surf.brush.fx
-			
-			Endif
-			
-			' take into account auto fade alpha
-			alpha=alpha-ent.fade_alpha
-
-			disable_depth = 0
-			disable_depthwrite = 0
-				
-			' if surface contains alpha info, enable blending
-			Local enable_blend:Int=0
-			If ent.alpha_order<>0.0
-				
-				If ent.brush.alpha<1.0
-					''the entire entity
-					enable_blend=1
-					disable_depth = 1
-					disable_depthwrite = 1
-				Elseif surf.alpha_enable=True
-					''just one surface
-					enable_blend=1
-					disable_depth = 1
-					disable_depthwrite = 1
-				Else
-					''entity flagged for alpha, but not this surface
-					enable_blend=0
-					disable_depth = 0
-					disable_depthwrite = 0
+					' Main brush texture takes precedent over surface brush texture
+					If ent.brush.tex[ix]<>Null
+						If ent.brush.tex[ix].width=0 Then tex_count=0; Exit
+						
+						texture[ix]=ent.brush.tex[ix]
+						tex_flags[ix]=ent.brush.tex[ix].flags
+						tex_blend[ix]=ent.brush.tex[ix].blend
+						tex_coords[ix]=ent.brush.tex[ix].coords
+						tex_u_scale[ix]=ent.brush.tex[ix].u_scale
+						tex_v_scale[ix]=ent.brush.tex[ix].v_scale
+						tex_u_pos[ix]=ent.brush.tex[ix].u_pos
+						tex_v_pos[ix]=ent.brush.tex[ix].v_pos
+						tex_ang[ix]=ent.brush.tex[ix].angle
+						tex_cube_mode[ix]=ent.brush.tex[ix].cube_mode
+						frame[ix]=ent.brush.tex[ix].tex_frame
+						tex_smooth[ix] = ent.brush.tex[ix].tex_smooth		
+					Else
+						If surf.brush.tex[ix].width=0 Then tex_count=ix-1; Exit
+						
+						texture[ix]=surf.brush.tex[ix]
+						tex_flags[ix]=surf.brush.tex[ix].flags
+						tex_blend[ix]=surf.brush.tex[ix].blend
+						tex_coords[ix]=surf.brush.tex[ix].coords
+						tex_u_scale[ix]=surf.brush.tex[ix].u_scale
+						tex_v_scale[ix]=surf.brush.tex[ix].v_scale
+						tex_u_pos[ix]=surf.brush.tex[ix].u_pos
+						tex_v_pos[ix]=surf.brush.tex[ix].v_pos
+						tex_ang[ix]=surf.brush.tex[ix].angle
+						tex_cube_mode[ix]=surf.brush.tex[ix].cube_mode
+						frame[ix]=surf.brush.tex[ix].tex_frame
+						tex_smooth[ix] = surf.brush.tex[ix].tex_smooth		
+					Endif
+					
+					If tex_flags[ix]&16<>0 Or tex_flags[ix]&32<>0
+						uv_clamp = 1
+					Else
+						uv_clamp = 0
+					Endif
+					
 				Endif
-			Else
-				enable_blend=0
-				
-			Endif
-
-
-			If enable_blend = 0 Then blend = -1
-
-
-			
-			' fx flag 1 - full bright
-			If fx&1
-				ambient_red  =0.0; ambient_green=0.0; ambient_blue =0.0
-				'red=1.0; green=1.0; blue=1.0; alpha=1.0
-				full_bright=1
-			Else
-				ambient_red  =TLight.ambient_red
-				ambient_green=TLight.ambient_green
-				ambient_blue =TLight.ambient_blue
-				full_bright=0
-			Endif
-
-			'' --------------------------------------
-			'If skip_sprite_state = False
-			
-			
-			
-
-			' fx flag 2 - vertex colors ***todo*** disable all lights?
-			use_vertex_colors=0
-			use_flatshade=0
-			use_fog=1
-			
-			If fx&2
-				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-				'glEnable(GL_COLOR_MATERIAL)
-				use_vertex_colors = 1		
-				red=1.0; green=1.0; blue=1.0; alpha=1.0
-			Endif
-			
-			' fx flag 4 - flatshaded
-			If fx&4
-				use_flatshade=1
-			Endif
-
-			' fx flag 8 - disable fog
-			If fx&8
-				use_fog=0
-			Endif
-			
-			' fx flag 16 - disable backface culling
-			If fx&16
-				backface_culling = 1
-				'driver.SetCulling(DRIVER_NONE)
-			Else
-				backface_culling = 0
-				'driver.SetCulling(DRIVER_FRONT) '' minib3d is -z, which is opposite flash
-			Endif
-			
-			'' fx flag 32 - force alpha, implemented TMesh.Alpha() called in TRender
-			
-			'' fx flag 64 - disable depth testing, overrides other settings
-			If fx&64
-				
-				disable_depth = 1
-				disable_depthwrite = 1
-								
-			Endif
-		
-			' material color + specular
-
-			ambient=[ambient_red,ambient_green,ambient_blue,1.0]
-
-			'mat_ambient=[red,green,blue,alpha]
-			diffuse=[red,green,blue,alpha]
-			specular=[shine,shine,shine,shine]
-			shininess=[100.0] ' upto 128
-		
-			If cam.draw2D
-			
-				'glDisable(GL_DEPTH_TEST)
-				If fx&64 = 0 Then disable_depth = 1; disable_depthwrite = 1
-				'glDisable(GL_FOG)
-				use_fog = 0
-				'glDisable(GL_LIGHTING)
-				full_bright = 1
-				
-			Endif
-		
+			Next
+					
 	End
 	
 End
@@ -295,8 +165,10 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 	Field tex_map_id:Int =0
 	Field tex_map:ArrayIntMap<FlashTexture> = New ArrayIntMap<FlashTexture>
 	
-	Field effect:ShaderEffect = New ShaderEffect , last_effect:ShaderEffect = New ShaderEffect
-	Field depth__:Bool = true
+	Field effect:EffectState = New EffectState , last_effect:EffectState = New EffectState
+	Field texdata:TexData = New TexData
+	'Field depth__:Bool = True
+	
 	
 	Global null_tex:TTexture
 	Global lastCam:Bool = False
@@ -356,7 +228,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 		last_sprite = Null ''used to preserve last surface states
 		last_shader = null
 		TRender.alpha_pass = 0
-		last_effect.Reset()
+		last_effect.SetNull() ''forces next state to set
 		
 		driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
 		
@@ -456,38 +328,48 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 	
 
 			effect.UpdateEffect( surf, ent, cam )
+			texdata.UpdateTexture( surf, ent )
 			
 			
 			'' ENABLE CORRECT SHADER BASED ON EFFECTS
 			shader = TShaderFlash(TShader.g_shader)
 			If MultiShader(shader)
-				If effect.full_bright
- 					shader = MultiShader(shader).GetShader(0) '' no lights, scene should be dark unless otherwise noted
+				If effect.use_full_bright
+ 					If texdata.uv_clamp
+ 						shader = MultiShader(shader).GetShader(0) '' no lights, scene should be dark unless otherwise noted
+ 					Else
+ 						shader = MultiShader(shader).GetShader(1) ''uv repeat
+ 					Endif
 				Else
-					shader = MultiShader(shader).GetShader(1)
+					If texdata.uv_clamp
+ 						shader = MultiShader(shader).GetShader(2)
+ 					Else
+ 						shader = MultiShader(shader).GetShader(3) ''uv repeat
+ 					Endif
 				Endif 
 			Endif
 			
-			If Not skip_state
+'Print ent.classname+" "+Int(effect.depth_test)+" "+Int(effect.depth_write)+" "+effect.blend	
+	
+			If skip_state=false
 				
 				'' ** depth state **
-				If effect.disable_depth<>last_effect.disable_depth
-					If effect.disable_depth Then driver.SetDepthTest(False, DRIVER_ALWAYS) Else driver.SetDepthTest(True, DRIVER_LESS_EQUAL)
-				Endif
-				If effect.disable_depthwrite<>last_effect.disable_depthwrite
-					If effect.disable_depthwrite Then driver.SetColorMask(True, True, True, False) Else driver.SetColorMask(True, True, True, True)
-				Endif
-'Print ent.classname+" "+Int(effect.disable_depth)+" "+Int(effect.disable_depthwrite)			
+				Local write:Bool = true
+				If effect.use_depth_write=0 Then write=false
 				
-				If effect.backface_culling
+				If effect.use_depth_test<>last_effect.use_depth_test Or effect.use_depth_write<>last_effect.use_depth_write
+					If effect.use_depth_test=0 Then driver.SetDepthTest(write, DRIVER_ALWAYS) Else driver.SetDepthTest(write, DRIVER_LESS_EQUAL)
+				Endif
+			
+				
+				If effect.use_backface_culling=0
 					driver.SetCulling(DRIVER_NONE)
 				Else
 					driver.SetCulling(DRIVER_FRONT) '' minib3d is -z, which is opposite flash
 				Endif
 				
 				' blend modes
-				If effect.blend>=0
-					Select effect.blend
+				Select effect.blend
 						Case 0
 							'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
 							'driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
@@ -504,12 +386,10 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 						Case 4
 							'glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
 							driver.SetBlendFactors(DRIVER_ONE, DRIVER_ONE)
-		
-					End
-				Else
-					driver.SetBlendFactors( DRIVER_ONE, DRIVER_ZERO ) ''no blending
-				Endif
-			
+						Default
+							driver.SetBlendFactors( DRIVER_ONE, DRIVER_ZERO ) ''no blending
+				End
+	
 				
 				''static mesh
 				If Not (mesh.anim=True Or surf.vbo_dyn=true)
@@ -546,59 +426,16 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			
 
 				
-			'' textures
-			Local tex_count=0	
-			
-			tex_count=ent.brush.no_texs
-			'If surf.brush<>Null
-				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
-			'EndIf
-			
+			'' ** textures **
+			Local tex_count=texdata.tex_count			
 		
 			For Local ix=0 To tex_count-1			
 	
-				If surf.brush.tex[ix]<>Null Or ent.brush.tex[ix]<>Null
+				If texdata.texture[ix]<>Null
 					
-					Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#,tex_v_scale#
-					Local tex_u_pos#,tex_v_pos#,tex_ang#,tex_cube_mode,frame, tex_smooth
-
-					' Main brush texture takes precedent over surface brush texture
-					If ent.brush.tex[ix]<>Null
-						If ent.brush.tex[ix].width=0 Then tex_count=0; Exit
 						
-						texture=ent.brush.tex[ix]
-						tex_flags=ent.brush.tex[ix].flags
-						tex_blend=ent.brush.tex[ix].blend
-						tex_coords=ent.brush.tex[ix].coords
-						tex_u_scale=ent.brush.tex[ix].u_scale
-						tex_v_scale=ent.brush.tex[ix].v_scale
-						tex_u_pos=ent.brush.tex[ix].u_pos
-						tex_v_pos=ent.brush.tex[ix].v_pos
-						tex_ang=ent.brush.tex[ix].angle
-						tex_cube_mode=ent.brush.tex[ix].cube_mode
-						frame=ent.brush.tex[ix].tex_frame
-						tex_smooth = ent.brush.tex[ix].tex_smooth		
-					Else
-						If surf.brush.tex[ix].width=0 Then tex_count=0; Exit
-						
-						texture=surf.brush.tex[ix]
-						tex_flags=surf.brush.tex[ix].flags
-						tex_blend=surf.brush.tex[ix].blend
-						tex_coords=surf.brush.tex[ix].coords
-						tex_u_scale=surf.brush.tex[ix].u_scale
-						tex_v_scale=surf.brush.tex[ix].v_scale
-						tex_u_pos=surf.brush.tex[ix].u_pos
-						tex_v_pos=surf.brush.tex[ix].v_pos
-						tex_ang=surf.brush.tex[ix].angle
-						tex_cube_mode=surf.brush.tex[ix].cube_mode
-						frame=surf.brush.tex[ix].tex_frame
-						tex_smooth = surf.brush.tex[ix].tex_smooth		
-					Endif
-	
-	
 					''preserve texture states--------------------------------------
-					If (surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
-					    (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix])
+					If (last_texture = texdata.texture[ix])
 						
 						'' skip texture Bind
 						
@@ -606,7 +443,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 					
 						''texture bind
 						
-						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
+						last_texture = texdata.texture[ix]
 						
 						If (shader.u.texcoords0 >-1) Then driver.SetTextureAt(ix, tex_map.Get(last_texture.tex_id) )
 	
@@ -619,19 +456,17 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 					If Not skip_state
 					
 					
-					' masked texture flag
-					If tex_flags&4<>0
-						'glEnable(GL_ALPHA_TEST)
-						effect.use_tex_alpha=1
+					' masked texture flag, handled during pixmapload
+					If texdata.tex_flags[ix]&4<>0
+						
 					Else
-						'glDisable(GL_ALPHA_TEST)
-						effect.use_tex_alpha=0
+						
 					Endif
 				
 					' mipmapping texture flag
 
-					If tex_flags&8<>0
-						If tex_smooth
+					If texdata.tex_flags[ix]&8<>0
+						If texdata.tex_smooth[ix]
 							'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
 							'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST_MIPMAP_LINEAR)
 						'Else
@@ -639,7 +474,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 							'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
 						Endif
 					Else
-						If tex_smooth
+						If texdata.tex_smooth[ix]
 							'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
 							'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
 						'Else
@@ -648,8 +483,8 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 						Endif
 					Endif
 				
-					' clamp u flag
-					If tex_flags&16<>0 Or tex_flags&32<>0
+					' clamp u flag ' clamp v flag
+					If texdata.tex_flags[ix]&16<>0 Or texdata.tex_flags[ix]&32<>0
 						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE)
 						'driver.SetSamplerStateAt(0, DRIVER_WRAP_CLAMP, DRIVER_TEX_LINEAR, DRIVER_MIP_LINEAR)
 					Else						
@@ -657,52 +492,36 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 						'driver.SetSamplerStateAt(0, DRIVER_WRAP_REPEAT, DRIVER_TEX_LINEAR, DRIVER_MIP_LINEAR)
 					Endif
 					
-					' clamp v flag
-					'If tex_flags&32<>0
-						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE)
-					'Else
-						'glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT)
-					'Endif
-			
-
-			#rem	
+		
+					'driver.UploadConstantsFromArray(DRIVER_FRAGMENT_PROGRAM, shader.u.tex_blend[ix], tex_blend[ix])
+	
 					' cubic environment map texture flag
-					If tex_flags&128<>0
+					'If tex_flags&128<>0
 
-			#end
+					''fx&1024 = normal mapping
 			
-			#rem
-					Select tex_blend
-						Case 0 'glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_REPLACE)
-						Case 1 'glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_BLEND)
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_DECAL)
-						Case 2
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
-						Case 3
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_ADD)
-						Case 4
-							glTexEnvf GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE
-							glTexEnvf GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_DOT3_RGB
-						Case 5
-							glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE)
-							glTexEnvi(GL_TEXTURE_ENV,GL_COMBINE_RGB,GL_MODULATE)
-							glTexEnvi(GL_TEXTURE_ENV,GL_RGB_SCALE,2.0)
-						Case 6
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_BLEND)
-						Default
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
-					End Select
-			#end
+					''send tex blend info to shader
+					#rem
+							Select tex_blend
+								Case 0 repalce
+								Case 1 decal
+								Case 2 modulate
+								Case 3 add+alpha
+								Case 4 dot3 combine
+								Case 5 modulate*2
+								Case 6 blend
+								Default modulate
+							End Select
+					#end
 			
 
 
 
-					If tex_coords=0 And (shader.u.texcoords0 >-1)
+					If texdata.tex_coords[ix]=0 And (shader.u.texcoords0 >-1)
 					
 						driver.SetVertexBufferAt (shader.u.texcoords0, vbuffer, VertexDataBuffer.TEXCOORDS_OFFSET Shr 2, DRIVER_FLOAT_2) ''uv 3
 					Endif
-					If tex_coords=1 And (shader.u.texcoords1 >-1)
+					If texdata.tex_coords[ix]=1 And (shader.u.texcoords1 >-1)
 				
 						driver.SetVertexBufferAt (shader.u.texcoords1, vbuffer, (VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2) Shr 2, DRIVER_FLOAT_2) ''uv 3
 					Endif
@@ -713,17 +532,10 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 					
 					
 					' texture matrix
-				#rem				
-					If tex_u_pos<>0.0 Or tex_v_pos<>0.0
-						glTranslatef(tex_u_pos,tex_v_pos,0.0)
-					Endif
-					If tex_ang<>0.0
-						glRotatef(tex_ang,0.0,0.0,1.0)
-					Endif
-					If tex_u_scale<>1.0 Or tex_v_scale<>1.0
-						glScalef(tex_u_scale,tex_v_scale,1.0)
-					Endif
-				#end
+					'' pos shares with rot
+					driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.tex_position[ix], [texdata.tex_u_pos[ix],texdata.tex_v_pos[ix], Cos(texdata.tex_ang[ix]), Sin(texdata.tex_ang[ix])])
+					'' *DEGREESTORAD,tex_ang*DEGREESTORAD); 					
+					driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.tex_scale[ix], [texdata.tex_u_scale[ix], texdata.tex_v_scale[ix],0.0,0.0])
 				#rem
 					' if spheremap flag=true then flip tex
 					If tex_flags&64<>0
@@ -732,7 +544,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 				#end
 					
 					' if cubemap flag=true then manipulate texture matrix so that cubemap is displayed properly 
-					If tex_flags&128<>0
+					If texdata.tex_flags[ix]&128<>0
 					Endif
 					
 				Endif ''end if tex[ix]
@@ -742,7 +554,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			
 			
 			'' turn off textures if no textures
-			If tex_count = 0 And (shader.u.texcoords0>-1 or shader.u.texcoords1>-1) 
+			If texdata.tex_count = 0 And (shader.u.texcoords0>-1 Or shader.u.texcoords1>-1) 
 			
 				For Local ix:=0 To last_tex_count-1
 			
@@ -761,7 +573,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			Endif
 			
 			
-			last_tex_count = tex_count
+			last_tex_count = texdata.tex_count
 			
 				
 			
@@ -791,7 +603,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			
 			
 			'' ** light **
-			If shader.u.light_matrix[0] >-1 And TLight.light_list.IsEmpty()=false
+			If shader.u.light_matrix[0] >-1 And TLight.light_list.IsEmpty()=False And effect.use_full_bright =0
 				Local ll:TLight = TLight.light_list.First()
 				temp_mat.Overwrite(ll.mat)
 				''--no not yet-- to help normal calculations, we can take the inverse object matrix for the light to enter object space
@@ -830,10 +642,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 					Catch e:FlashError
 						Print "**"+e.ToString()
 					End
-				Else
 
-					'
-					
 				Endif
 			Endif
 
@@ -1358,7 +1167,7 @@ Return 0
 	
 	Method SetShader2D:Void()
 		If Not shader2d_
-			shader2d_ = New FullBrightOneTexShader
+			shader2d_ = New FullBrightOneTexShader("clamp")
 		Endif
 		TShader.SetShader(shader2d_)
 	end

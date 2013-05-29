@@ -278,9 +278,9 @@ Class TRender
 	
 		If draw_list.IsEmpty Or Not TRender.render.ContextReady() Then Return
 		
-		shader2D.SetShader2D()
-		TRender.render.Reset()
 		
+		TRender.render.Reset()
+		shader2D.SetShader2D()
 		
 		'camera2D.CameraClsMode(False,False) ''moved this to the end of method to allow mojo CLS
 		
@@ -297,7 +297,7 @@ Class TRender
 		For Local mesh:TMesh = Eachin draw_list
 			
 			If Not mesh Then Continue
-			
+		
 			If IRenderUpdate( mesh )
 				
 				IRenderUpdate(mesh).Update(camera2D ) ' rotate sprites with respect to current cam					
@@ -308,7 +308,7 @@ Class TRender
 			Local sp:TSprite = TSprite(mesh)
 			If mesh.is_sprite
 				sp.mat_sp.Scale( (sp.pixel_scale[0]) , (sp.pixel_scale[1]), 1.0)
-				mesh.EntityFX 64 ''is this needed?
+				mesh.EntityFX FXFLAG_DISABLE_DEPTH ''is this needed?
 			Endif
 		
 		
@@ -509,6 +509,232 @@ Class TRender
 	End
 	
 End
+
+
+
+''
+'' EffectState
+''
+'' -- unifies render behavior
+Class EffectState
+	
+	''should be on(1)/off(0)/reset(-1) -- no bool, use int
+	Field use_full_bright:Int=0
+	Field use_vertex_colors:Int=0
+	Field use_flatshade:Int=0
+	Field use_fog:Int=1
+	Field use_depth_test:int
+	Field use_depth_write:int
+	Field use_backface_culling:Int
+	Field use_alpha_test:int
+	
+	Field ambient#[]=[1.0,1.0,1.0,1.0]
+	Field no_mat#[]=[0.0,0.0,0.0,0.0]
+	Field mat_ambient#[]=[1.0,1.0,1.0,1.0]
+	Field diffuse#[]=[1.0,1.0,1.0,1.0]
+	Field specular#[]=[1.0,1.0,1.0,1.0]
+	Field shininess#[]=[100.0] ' upto 128
+	Field shine#
+	
+	Field red#,green#,blue#
+	Field alpha#
+	Field blend:Int
+	Field fx:Int
+	
+	Method Overwrite:Void(e:EffectState)
+		use_full_bright = e.use_full_bright
+		use_vertex_colors=e.use_vertex_colors
+		use_flatshade=e.use_flatshade
+		use_fog=e.use_fog
+		ambient=[e.ambient[0],e.ambient[1],e.ambient[2],e.ambient[3]]
+
+		'no_mat#[]=[0.0,0.0,0.0,0.0]
+		'mat_ambient#[]=[1.0,1.0,1.0,1.0]
+		diffuse=[e.diffuse[0],e.diffuse[1],e.diffuse[2],e.diffuse[3]]
+		specular=[e.specular[0],e.specular[1],e.specular[2],e.specular[3]]
+		shininess=[e.shininess[0]]
+	
+		use_depth_test=e.use_depth_test
+		use_depth_write = e.use_depth_write
+		use_backface_culling=e.use_backface_culling
+		red=e.red ; green=e.green ; blue=e.blue ; alpha=e.alpha
+		shine=e.shine ; blend=e.blend ; fx=e.fx
+		use_alpha_test = e.use_alpha_test
+	End
+	
+	Method SetNull:Void()
+		use_full_bright = -1
+		use_vertex_colors= -1
+		use_flatshade= -1
+		use_fog= -1
+		ambient=[-1.0,-1.0,-1.0,1.0]
+
+		'no_mat#[]=[0.0,0.0,0.0,0.0]
+		'mat_ambient#[]=[1.0,1.0,1.0,1.0]
+		diffuse=[-1.0,-1.0,-1.0,1.0]
+		specular=[-1.0,-1.0,-1.0,1.0]
+		shininess=[-1.0]
+	
+		use_depth_test= -1
+		use_depth_write = -1
+		use_backface_culling= -1
+		use_alpha_test=0
+		red=-1.0 ; green=-1.0 ; blue=-1.0 ; alpha=-1.0
+		shine=-1.0  ; blend=99999 ; fx=99999
+	End
+	
+	Method UpdateEffect:Void(surf:TSurface, ent:TEntity, cam:TCamera = Null)
+		
+		
+			'Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
+			Local ambient_red#,ambient_green#,ambient_blue#
+
+			' get main brush values
+			red  =ent.brush.red
+			green=ent.brush.green
+			blue =ent.brush.blue
+			alpha=ent.brush.alpha
+			shine=ent.brush.shine
+			blend =ent.brush.blend
+			fx    =ent.brush.fx
+			
+			' combine surface brush values with main brush values
+			If surf.brush
+
+				Local shine2#=0.0
+
+				red   =red  *surf.brush.red
+				green =green*surf.brush.green
+				blue  =blue *surf.brush.blue
+				alpha =alpha *surf.brush.alpha
+				shine2=surf.brush.shine
+				If shine=0.0 Then shine=shine2
+				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
+				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
+				fx=fx|surf.brush.fx
+			
+			Endif
+			
+			' take into account auto fade alpha
+			alpha=alpha-ent.fade_alpha
+
+			use_depth_test = 1
+			use_depth_write = 1
+				
+			' if surface contains alpha info, enable blending
+			Local enable_blend:Int=0
+			If ent.alpha_order<>0.0
+				
+				If ent.brush.alpha<1.0
+					''the entire entity
+					enable_blend=1
+					'depth_test = 0
+					use_depth_write = 0
+				Elseif surf.alpha_enable=True
+					''just one surface
+					enable_blend=1
+					'depth_test = 0
+					use_depth_write = 0
+				Else
+					''entity flagged for alpha, but not this surface
+					enable_blend=0
+					use_depth_test = 1
+					use_depth_write = 1
+				Endif
+			Else
+				enable_blend=0
+				
+			Endif
+
+
+			If enable_blend = 0 Then blend = -1
+
+			use_vertex_colors=0
+			use_flatshade=0
+			use_fog=Int(cam.fog_mode >0)
+			
+			' fx flag 1 - full bright
+			If fx&1
+				ambient_red  =0.0; ambient_green=0.0; ambient_blue =0.0
+				use_full_bright=1
+			Else
+				ambient_red  =TLight.ambient_red
+				ambient_green=TLight.ambient_green
+				ambient_blue =TLight.ambient_blue
+				use_full_bright=0
+			Endif
+
+
+			' fx flag 2 - vertex colors ***todo*** disable all lights?
+			If fx&2
+				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
+				'glEnable(GL_COLOR_MATERIAL)
+				use_vertex_colors = 1		
+				red=1.0; green=1.0; blue=1.0; alpha=1.0
+			Endif
+			
+			' fx flag 4 - flatshaded
+			If fx&4
+				use_flatshade=1
+			Endif
+
+			' fx flag 8 - disable fog
+			If fx&8
+				use_fog=0
+			Endif
+			
+			' fx flag 16 - disable backface culling
+			If fx&16
+				use_backface_culling = 0
+				'driver.SetCulling(DRIVER_NONE)
+			Else
+				use_backface_culling = 1
+				'driver.SetCulling(DRIVER_FRONT) '' minib3d is -z, which is opposite flash
+			Endif
+			
+			'' fx flag 32 - force alpha, implemented TMesh.Alpha() called in TRender
+			
+			'' fx flag 64 - disable depth testing, overrides other settings
+			If fx&64
+				
+				use_depth_test = 0
+				use_depth_write = 0
+								
+			Endif
+			
+			use_alpha_test = 0
+			If fx& FXFLAG_ALPHA_TESTING
+				use_alpha_test = 1
+				use_depth_test = 1
+				use_depth_write = 1
+			Endif
+		
+			' material color + specular
+
+			ambient=[ambient_red,ambient_green,ambient_blue,1.0]
+
+			'mat_ambient=[red,green,blue,alpha]
+			diffuse=[red,green,blue,alpha]
+			specular=[shine,shine,shine,1.0]
+			shininess=[100.0] ' upto 128
+		
+			If cam.draw2D
+			
+				'glDisable(GL_DEPTH_TEST)
+				If fx&64 = 0 Then use_depth_test = 0; use_depth_write = 0
+				'glDisable(GL_FOG)
+				use_fog = 0
+				'glDisable(GL_LIGHTING)
+				use_full_bright = 1
+				
+			Endif
+		
+	End
+	
+End
+
+
+
 
 
 ''

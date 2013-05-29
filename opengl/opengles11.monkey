@@ -30,8 +30,10 @@ Const VBO_MIN_TRIS=1	' if USE_VBO=True and vbos are supported by hardware, then 
 Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
 
-
-
+Extern
+	Global GL_TRUE:Bool = "GL_TRUE"
+	Global GL_FALSE:Bool = "GL_FALSE"
+public
 
 ''this is highly experimental-- won't work in opengl2.0, only in opengl1.1
 
@@ -97,6 +99,9 @@ Class OpenglES11 Extends TRender
 	Global _useMojo:Bool = false
 	Field t_array:Float[16] ''temp array
 	
+	Field effect:EffectState = New EffectState
+	Field last_effect:EffectState = New EffectState
+	
 	public
 	
 	Method New()
@@ -141,6 +146,7 @@ Class OpenglES11 Extends TRender
 		last_sprite = Null ''used to preserve last surface states
 		last_tex_count = 8
 		TRender.alpha_pass = 0
+		last_effect.SetNull() ''forces next state to set
 		
 		If _useMojo
 			glEnable(GL_DEPTH_TEST)
@@ -160,9 +166,9 @@ Class OpenglES11 Extends TRender
 		Local name$=ent.EntityName()
 	
 		Local fog%=False
-		If cam.fog_mode = True Then fog=True ' if fog enabled, we'll enable it again at end of each surf loop in case of fx flag disabling it
+		'If cam.fog_mode = True Then fog=True ' if fog enabled, we'll enable it again at end of each surf loop in case of fx flag disabling it
 	
-		glDisable(GL_ALPHA_TEST)
+		
 
 
 		Local anim_surf2:TSurface
@@ -251,159 +257,117 @@ Class OpenglES11 Extends TRender
 				
 			Endif
 			
-			Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
-			Local ambient_red#,ambient_green#,ambient_blue#
-
-			' get main brush values
-			red  =ent.brush.red
-			green=ent.brush.green
-			blue =ent.brush.blue
-			alpha=ent.brush.alpha
-			shine=ent.brush.shine
-			blend =ent.brush.blend
-			fx    =ent.brush.fx
 			
-			' combine surface brush values with main brush values
-			If surf.brush
-
-				Local shine2#=0.0
-
-				red   =red  *surf.brush.red
-				green =green*surf.brush.green
-				blue  =blue *surf.brush.blue
-				alpha =alpha *surf.brush.alpha
-				shine2=surf.brush.shine
-				If shine=0.0 Then shine=shine2
-				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
-				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
-				fx=fx|surf.brush.fx
+			effect.UpdateEffect( surf, ent, cam )
 			
-			Endif
 			
-			' take into account auto fade alpha
-			alpha=alpha-ent.fade_alpha
-
-	
-			' if surface contains alpha info, enable blending
-
-			If ent.alpha_order<>0.0
-				
-				If ent.brush.alpha<1.0
-					''the entire entity
-					glEnable(GL_BLEND)
-					glDepthMask(False)
-				Elseif surf.alpha_enable=True
-					''just one surface
-					glEnable(GL_BLEND)
-					glDepthMask(False)
-				Else
-					''entity flagged for alpha, but not this surface
-					glDisable(GL_BLEND)
-					glDepthMask(True)
-				Endif
-			Else
-				If fx&FXFLAG_FORCE_ALPHA
-					glEnable(GL_BLEND)
-				Else
-					glDisable(GL_BLEND)
-				endif
-				glDepthMask(True)
-
-			Endif
-
-
-
+			
+			
 			' blend modes
-			Select blend
-				Case 0
-					'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-					glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA) ''premultiply
-				Case 1
-					glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-				Case 2
-					glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
-				Case 3
-					glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
-				Case 4
-					glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
+			If effect.blend > -1 And effect.blend<>last_effect.blend
+				glEnable(GL_BLEND)
+				Select effect.blend
+					Case 0
+						'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+						glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA) ''premultiply
+					Case 1
+						glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+					Case 2
+						glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
+					Case 3
+						glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
+					Case 4
+						glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
+					
+				End Select
+			Elseif  effect.blend<>last_effect.blend
+				glDisable(GL_BLEND)
+			Endif
+			
+			
+			
+			If skip_sprite_state = False
+				
+				' fx flag 2 - vertex colors ***todo*** disable all lights?
+				If effect.use_vertex_colors = 1
+					'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
+					glDisable(GL_COLOR_MATERIAL)
+					glEnableClientState(GL_COLOR_ARRAY)
+				Else
+					glEnable(GL_COLOR_MATERIAL)
+					glDisableClientState(GL_COLOR_ARRAY)
+				Endif
+				
+				' fx flag 4 - flatshaded
+				If effect.use_flatshade <> last_effect.use_flatshade
+					If effect.use_flatshade = 1 Then glShadeModel(GL_FLAT) Else glShadeModel(GL_SMOOTH)
+				Endif
+	
+				' fx flag 8 - disable fog
+				If effect.use_fog <> last_effect.use_fog
+					If effect.use_fog=1 Then glEnable(GL_FOG) Else glDisable(GL_FOG)
+				Endif
+				
+				' fx flag 16 - disable backface culling
+				'If effect.backface_culling<>last_effect.backface_culling
+					If effect.use_backface_culling = 0
+						glDisable(GL_CULL_FACE)
+						glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 1.0) ''enable two-sided lighting?
+					Else
+						glEnable(GL_CULL_FACE)
+						glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0) ''disable two-sided lighting?
+					Endif
+				'endif
+	
+				
+				If effect.use_depth_test <> last_effect.use_depth_test
+					If effect.use_depth_test=1 Then glEnable(GL_DEPTH_TEST) Else glDisable(GL_DEPTH_TEST)
+				Endif
+				
+				If effect.use_depth_write <> last_effect.use_depth_write
+					If effect.use_depth_write=1 Then glDepthMask(true) Else glDepthMask(false)
 
-			End Select
+				Endif
 
+				
+				If effect.use_alpha_test <> last_effect.use_alpha_test
+					If effect.use_alpha_test=1
+						glEnable(GL_ALPHA_TEST)
+					Else
+						glDisable(GL_ALPHA_TEST)
+					Endif
+				endif
+				
+			
+			Endif ''---end skip_sprite_state---
+			
+			''GL_FRONT_AND_BACK needed for opengl es 1.x
+			
+			glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,effect.diffuse)
+			glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
+			glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
+			glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
+		
+			'glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.ambient)
+			glColor4f(effect.red,effect.green,effect.blue, effect.alpha)
+
+			If effect.use_full_bright<>last_effect.use_full_bright
+				If effect.use_full_bright=1 Then glDisable(GL_LIGHTING) Else glEnable(GL_LIGHTING)
+				'If effect.full_bright=1 Then glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.diffuse) Else glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.ambient)
+				'If effect.full_bright=1 Then glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,[1.0,1.0,1.0,1.0]) Else glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
+				'If effect.full_bright=1 Then glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[1.0,1.0,1.0,1.0]) Else glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[0.0,0.0,0.0,1.0])
+			Endif
 
 			
-			' fx flag 1 - full bright ***todo*** disable all lights?
-			If fx&1
-				ambient_red  =1.0
-				ambient_green=1.0
-				ambient_blue =1.0
-			Else
-				ambient_red  =TLight.ambient_red
-				ambient_green=TLight.ambient_green
-				ambient_blue =TLight.ambient_blue
-			Endif
+			
+			
 
 			'' --------------------------------------
 			If skip_sprite_state = False
-
-
-			' fx flag 2 - vertex colors ***todo*** disable all lights?
-			If fx&2
-				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-				glEnable(GL_COLOR_MATERIAL)
-							
-			Else
-				glDisable(GL_COLOR_MATERIAL)
-			Endif
+	
 			
-			' fx flag 4 - flatshaded
-			If fx&4
-				glShadeModel(GL_FLAT)
-			Else
-				glShadeModel(GL_SMOOTH)
-			Endif
-
-			' fx flag 8 - disable fog
-			If fx&8
-				glDisable(GL_FOG)
-			Endif
-			
-			' fx flag 16 - disable backface culling
-			If fx&16
-				glDisable(GL_CULL_FACE)
-				glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 1.0) ''enable two-sided lighting?
-			Else
-				glEnable(GL_CULL_FACE)
-				glLightModelf(GL_LIGHT_MODEL_TWO_SIDE, 0.0) ''disable two-sided lighting?
-			Endif
-			
-			'' fx flag 32 - force alpha
-			
-			'' fx flag 64 - disable depth testing (new)
-			If fx&64
-			
-				glDisable(GL_DEPTH_TEST)
-				disable_depth = True
-				
-			Elseif disable_depth = True
-			
-				glEnable(GL_DEPTH_TEST)
-				disable_depth = False
-				
-			Endif
-			
-			If fx& FXFLAG_ALPHA_TESTING
-				glEnable(GL_ALPHA_TEST)
-				glDepthMask(True)
-				glEnable(GL_DEPTH_TEST)
-				disable_depth = False
-			Else
-				glDisable(GL_ALPHA_TEST)
-			Endif
-			
-		
-			
-			glEnableClientState(GL_NORMAL_ARRAY)
-			glEnableClientState(GL_COLOR_ARRAY)
+			'glEnableClientState(GL_NORMAL_ARRAY)
+			'glEnableClientState(GL_COLOR_ARRAY)
 			
 			If vbo
 				
@@ -474,28 +438,9 @@ Class OpenglES11 Extends TRender
 				
 				Endif
 			Endif
-					
-					
-					
-			' light + material color
-
-			Local ambient#[]=[ambient_red,ambient_green,ambient_blue,1.0]	
-			glLightModelfv(GL_LIGHT_MODEL_AMBIENT,ambient)
-
-			Local no_mat#[]=[0.0,0.0,0.0,0.0]
-			Local mat_ambient#[]=[red,green,blue,alpha]
-			Local mat_diffuse#[]=[red,green,blue,alpha]
-			Local mat_specular#[]=[shine,shine,shine,shine]
-			Local mat_shininess#[]=[100.0] ' upto 128
+							
 			
-			''GL_FRONT_AND_BACK needed for opengl es 1.x
 			
-			glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,mat_diffuse)
-			glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,mat_ambient)
-			glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,mat_specular)
-			glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,mat_shininess)
-			
-			glColor4f(1.0,1.0,1.0, alpha)
 			
 			
 			' textures
@@ -585,18 +530,18 @@ Class OpenglES11 Extends TRender
 						''texture bind
 						
 						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
-							
+
 						glActiveTexture(GL_TEXTURE0+ix)
 						glClientActiveTexture(GL_TEXTURE0+ix)
 	
 						
 						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
-	
+						glEnable(GL_TEXTURE_2D) ''needs to be after??
 					
 					Endif ''end preserve texture states---------------------------------
 					
 					
-					If tex_count<>0 Then glEnable(GL_TEXTURE_2D)
+					'If tex_count<>0 Then glEnable(GL_TEXTURE_2D)
 					
 					
 					''assuming sprites with same surfaces are identical, preserve states---------
@@ -816,13 +761,13 @@ Class OpenglES11 Extends TRender
 				TSprite(mesh).mat_sp.ToArray(t_array)
 				glMultMatrixf(t_array )
 			Endif
-			
+	#rem		
 			If cam.draw2D
 				'glDisable(GL_DEPTH_TEST) ''use entityfx 64
 				glDisable(GL_FOG)
 				glDisable(GL_LIGHTING)
 			Endif
-
+#end
 			If TRender.render.wireframe
 				
 				If Not vbo Then glDrawElements(GL_LINE_LOOP,surf.no_tris*3,GL_UNSIGNED_SHORT,surf.tris.buf)
@@ -843,20 +788,22 @@ Class OpenglES11 Extends TRender
 			glPopMatrix()
 			
 			
-	
+#rem	
 			' enable fog again if fog was enabled at start of func
 			If fog=True
 				glEnable(GL_FOG)
 			Endif
+#end			
+			last_effect.Overwrite(effect)
 
 		Next ''end non-alpha loop
 		
-		
+#REM	
 		If cam.draw2D
 			'glEnable(GL_DEPTH_TEST)
 			glEnable(GL_LIGHTING)
 		Endif
-
+#end
 		If Not alpha_list Then Exit ''get out of loop, no alpha
 		temp_list = alpha_list
 		
@@ -906,17 +853,6 @@ Class OpenglES11 Extends TRender
 			vbo_enabled=True 'THardwareInfo.VBOSupport
 		Endif
 
-		If Not (flags & DISABLE_MAX2D )
-
-			' save the Max2D settings for later - by Oddball
-			glMatrixMode GL_MODELVIEW
-			glPushMatrix
-			glMatrixMode GL_PROJECTION
-			glPushMatrix
-			glMatrixMode GL_TEXTURE
-			glPushMatrix
-		
-		Endif
 		
 		EnableStates()
 		
@@ -957,6 +893,8 @@ Class OpenglES11 Extends TRender
 		glEnable(GL_FOG)
 		glEnable(GL_CULL_FACE)
 		glEnable(GL_SCISSOR_TEST)
+		glDisable(GL_ALPHA_TEST)
+		glDisable(GL_STENCIL_TEST)
 		
 		glEnable(GL_RESCALE_NORMAL) '(GL_NORMALIZE) ' 'normal-lighting problems? this may be it
 		

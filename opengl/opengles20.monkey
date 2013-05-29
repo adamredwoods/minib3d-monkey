@@ -70,22 +70,6 @@ Function RestoreMojo2D()
 	
 End
 
-Class GLEffect
-	
-	Field depth_test:Bool = true
-	Field depth_write:Bool = true
-	Field alpha_test:Bool = false
-	Field blend_enable:Bool = true
-	
-	Method Overwrite:Void( e:GLEffect )
-		depth_test = e.depth_test
-		depth_write = e.depth_write
-		alpha_test = e.alpha_test
-		blend_enable = e.blend_enable
-	End
-	
-End
-
 
 Class OpenglES20 Extends TRender Implements IShader2D
 	
@@ -105,8 +89,8 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	Global last_tex_count:Int =8
 	
 	Global disable_depth:Bool = False '' used for EntityFx 64 - disable depth testing
-	Global effect:GLEffect = New GLEffect
-	Global last_effect:GLEffect = New GLEffect
+	Global effect:EffectState = New EffectState
+	Global last_effect:EffectState = New EffectState
 	
 	Field cam_matrix_upload:Int=0
 	
@@ -184,7 +168,7 @@ If DEBUG Then Print s
 		cam_matrix_upload=0
 		
 		ResetLights()
-		
+		last_effect.SetNull() ''forces next state to set
 		TShader.DefaultShader()
 
 		'Print "....begin render...."
@@ -262,7 +246,7 @@ If DEBUG Then Print s
 	
 		''re-enable at end
 		If cam.draw2D
-			effect.depth_test = False
+			effect.use_depth_test = False
 			'glDisable(GL_DEPTH_TEST)
 		Endif
 		
@@ -363,30 +347,6 @@ If DEBUG Then Print s
 			
 				'Print shader.name+" "+(shader.MAX_LIGHTS)
 								
-				''shader light info, for all lights
-				For Local li:Int = 0 To shader.MAX_LIGHTS-1
-					If light[li]
-						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
-						light[li].mat.ToArray(t_array)
-						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, t_array  )
-						If shader.u.light_att[li]<>-1 Then glUniform4fv( shader.u.light_att[li], 1,[ light[li].const_att,light[li].lin_att,light[li].quad_att,light[li].actual_range ]  )
-						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ light[li].red, light[li].green, light[li].blue, 1.0 ]  )
-						If shader.u.light_spot[li]<>-1 Then glUniform3fv( shader.u.light_spot[li], 1,[ Cos(light[li].outer_ang), Cos(light[li].inner_ang), light[li].spot_exp ]  )
-					Else
-						''nullify other lights
-						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], 0.0 )
-						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ 0.0, 0.0, 0.0, 1.0 ]  )
-					Endif	
-				Next
-				
-				
-					
-				If cam.fog_mode >0
-					If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, cam.fog_mode )
-					If shader.u.fog_color<> -1 Then glUniform4fv( shader.u.fog_color, 1, [cam.fog_r,cam.fog_g,cam.fog_b,1.0])
-					If shader.u.fog_range<> -1 Then glUniform2fv( shader.u.fog_range, 1, [cam.fog_range_near,cam.fog_range_far])
-				Endif
-				
 			Endif
 		
 			'' Update additional uniforms for current shader
@@ -394,185 +354,12 @@ If DEBUG Then Print s
 			shader.Update()
 			
 			
-			Local red#,green#,blue#,alpha#,shine#,blend:Int,fx:Int
-			Local ambient_red#,ambient_green#,ambient_blue#
-			Local shine_strength#
-
-			' get main brush values
-			red  =ent.brush.red
-			green=ent.brush.green
-			blue =ent.brush.blue
-			alpha=ent.brush.alpha
-			shine=ent.brush.shine
-			blend =ent.brush.blend
-			fx    =ent.brush.fx
-			shine_strength = ent.brush.shine_strength
+			effect.UpdateEffect( surf, ent, cam )
 			
-			' combine surface brush values with main brush values
-			If surf.brush
-
-				Local shine2#=0.0
-
-				red   =red  *surf.brush.red
-				green =green*surf.brush.green
-				blue  =blue *surf.brush.blue
-				alpha =alpha *surf.brush.alpha
-				shine2=surf.brush.shine
-				shine_strength = surf.brush.shine_strength
-				If shine=0.0 Then shine=shine2
-				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
-				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
-				fx=fx|surf.brush.fx
-			
-			Endif
-			
-			' take into account auto fade alpha
-			alpha=alpha-ent.fade_alpha
-
-	
-			' if surface contains alpha info, enable blending
-			
-			If ent.alpha_order<>0.0
-				
-				If ent.brush.alpha<1.0
-					''the entire entity
-					effect.blend_enable = True
-					effect.depth_write = False
-					effect.depth_test = False
-				Elseif surf.alpha_enable=True
-					''just one surface
-					effect.blend_enable = True
-					effect.depth_write = False
-					effect.depth_test = False
-				Else
-					''entity flagged for alpha, but not this surface
-					effect.blend_enable = False
-					effect.depth_write = True
-					effect.depth_test = True
-				Endif
-			Else
-
-				'glDisable(GL_BLEND)
-				'glDepthMask(True)
-				effect.blend_enable = False
-				effect.depth_write = True
-				effect.depth_test = True
-			Endif
-
-
-
-
-			
-			' material
-			
-			' fx flag 1 - full bright 
-			If fx&1
-				ambient_red  =0.0
-				ambient_green=0.0
-				ambient_blue =0.0
-				
-				lightflag=0 ''disable lights
-				
-			Else
-				ambient_red  =TLight.ambient_red
-				ambient_green=TLight.ambient_green
-				ambient_blue =TLight.ambient_blue
-			Endif
-			
-			If cam.draw2D
-				lightflag=0
-				ambient_red  =0.0
-				ambient_green=0.0
-				ambient_blue =0.0
-				If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, 0 )
-			Endif
-
-			'Local ambient#[]=[ambient_red,ambient_green,ambient_blue,1.0]	
-			Local no_mat#[]=[0.0,0.0,0.0,0.0]
-			Local mat_diffuse#[]=[red,green,blue,alpha]
-			Local mat_shininess#[]=[100.0] ' upto 128
-			
-			
+		
+			'' *** update buffers ***
 			'' --------------------------------------
 			If skip_sprite_state = False
-
-			
-			' fx flag 2 - vertex colors ***todo*** disable all lights?
-			If fx&2
-				'glEnable(GL_COLOR_MATERIAL)
-				red=1.0; green=1.0; blue=1.0; alpha=1.0
-			Else
-				''use base color
-				'glDisable(GL_COLOR_MATERIAL)
-			Endif
-			
-			' fx flag 4 - flatshaded
-			If fx&4
-				'glShadeModel(GL_FLAT)
-			Else
-				'glShadeModel(GL_SMOOTH)
-			Endif
-
-			' fx flag 8 - disable fog
-			If fx&8
-				'glDisable(GL_FOG)
-				If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, 0 )
-			Else If cam.fog_mode >0
-			
-				If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, cam.fog_mode )
-				
-			Endif
-
-			
-			' fx flag 16 - disable backface culling
-			If fx&16
-				glDisable(GL_CULL_FACE)
-			Else
-				glEnable(GL_CULL_FACE)
-			Endif
-			
-			'' fx flag 32 - force alpha
-			''
-			
-			'' fx flag 64 - disable depth testing
-			If fx&64
-			
-				'glDisable(GL_DEPTH_TEST)
-				'glDepthMask(False)
-				'disable_depth = True
-				effect.depth_test = False
-				effect.depth_write = False
-				
-			Endif
-			
-			If fx& FXFLAG_ALPHA_TESTING
-				If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )
-				effect.depth_test = true
-				effect.depth_write = true			
-			Else
-				If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.0 )
-			Endif
-			
-			' blend modes
-			If effect.blend_enable
-				Select blend
-					Case 0
-'#If TARGET<>"html5"
-'						glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-'#Else
-	   					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA)	   					
-'#Endif
-					Case 1
-						glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-					Case 2
-						glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
-					Case 3
-						glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
-					Case 4
-						glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
-	
-				End Select
-			Endif
 			
 					
 			If DEBUG And GetGLError() Then Print "*pre vbos"
@@ -671,11 +458,107 @@ If DEBUG Then Print s
 				Endif
 							
 			Endif
-			
-			If Not vbo And DEBUG Then Print "*no vbos"
 					
 			If DEBUG And GetGLError() Then Print "*vbos"					
 					
+			
+			
+			'' *** set GL effects ***
+			''
+			
+			If shader.u.flags<>-1 Then glUniform1f( shader.u.flags, effect.fx  )
+			If shader.u.colorflag<>-1 Then glUniform1f( shader.u.colorflag, Float(effect.use_vertex_colors) )
+			If shader.u.lightflag<>-1 Then glUniform1f( shader.u.lightflag, Float(1.0-effect.use_full_bright) )
+
+			If shader.u.ambient_color<>-1 Then glUniform4fv( shader.u.ambient_color, 1, effect.ambient ) ''ambient = 0 to provide fading
+			If shader.u.base_color<>-1 Then glUniform4fv( shader.u.base_color, 1, effect.diffuse )
+			If shader.u.shininess<>-1 Then glUniform1f( shader.u.shininess, effect.shine )
+			
+			If Not skip_sprite_state
+				
+				If effect.use_flatshade
+					'glShadeModel(GL_FLAT)
+				Else
+					'glShadeModel(GL_SMOOTH)
+				Endif
+	
+				If effect.use_backface_culling <> last_effect.use_backface_culling
+					If effect.use_backface_culling =0
+						glDisable(GL_CULL_FACE)
+					Else
+						glEnable(GL_CULL_FACE)
+					Endif
+				endif
+				
+	
+				
+				' blend modes
+				If effect.blend>-1
+					Select effect.blend
+						Case 0
+							'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+		   					glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA) ' premultiply				
+						Case 1
+							glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
+						Case 2
+							glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
+						Case 3
+							glBlendFunc(GL_SRC_ALPHA,GL_ONE) ' additive and alpha
+						Case 4
+							glBlendFunc(GL_ONE,GL_ONE) ' blend after texture
+		
+					End Select
+				Endif
+				
+				If effect.blend<>last_effect.blend
+					If effect.blend>-1 Then glEnable(GL_BLEND) Else glDisable(GL_BLEND)
+				Endif
+			
+				If effect.use_depth_test<>last_effect.use_depth_test
+					If effect.use_depth_test=1 Then glEnable(GL_DEPTH_TEST) Else glDisable(GL_DEPTH_TEST)
+					
+				Endif
+				If effect.use_depth_write<>last_effect.use_depth_write
+					If effect.use_depth_write=1 Then glDepthMask(True) Else glDepthMask(False)
+					
+				Endif
+				If effect.use_alpha_test>0
+					If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )		
+				Else
+					If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.0 )
+				Endif
+				
+				
+				
+				''shader light info, for all lights
+				For Local li:Int = 0 To shader.MAX_LIGHTS-1
+					If light[li]
+						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
+						light[li].mat.ToArray(t_array)
+						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, t_array  )
+						If shader.u.light_att[li]<>-1 Then glUniform4fv( shader.u.light_att[li], 1,[ light[li].const_att,light[li].lin_att,light[li].quad_att,light[li].actual_range ]  )
+						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ light[li].red, light[li].green, light[li].blue, 1.0 ]  )
+						If shader.u.light_spot[li]<>-1 Then glUniform3fv( shader.u.light_spot[li], 1,[ Cos(light[li].outer_ang), Cos(light[li].inner_ang), light[li].spot_exp ]  )
+					Else
+						''nullify other lights
+						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], 0.0 )
+						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ 0.0, 0.0, 0.0, 1.0 ]  )
+					Endif	
+				Next
+				
+				
+					
+				If cam.fog_mode >0 And effect.use_fog
+					If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, cam.fog_mode )
+					If shader.u.fog_color<> -1 Then glUniform4fv( shader.u.fog_color, 1, [cam.fog_r,cam.fog_g,cam.fog_b,1.0])
+					If shader.u.fog_range<> -1 Then glUniform2fv( shader.u.fog_range, 1, [cam.fog_range_near,cam.fog_range_far])
+				Else
+					If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, 0 )
+				Endif
+				
+				
+				
+			Endif
 			
 
 
@@ -815,37 +698,22 @@ If DEBUG Then Print s
 					
 					
 					''fx&1024 = normal mapping
-					
-
 			
-			''send tex blend info to shader
-			#rem
-					Select tex_blend
-						Case 0 'glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_REPLACE)
-						Case 1 'glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_BLEND)
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_DECAL)
-						Case 2
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
-						Case 3
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_ADD)
-						Case 4
-							glTexEnvf GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE
-							glTexEnvf GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_DOT3_RGB
-						Case 5
-							glTexEnvi(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_COMBINE)
-							glTexEnvi(GL_TEXTURE_ENV,GL_COMBINE_RGB,GL_MODULATE)
-							glTexEnvi(GL_TEXTURE_ENV,GL_RGB_SCALE,2.0)
-						Case 6
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_BLEND)
-						Default
-							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
-					End Select
-			#end
+					''send tex blend info to shader
+					#rem
+							Select tex_blend
+								Case 0 repalce
+								Case 1 decal
+								Case 2 modulate
+								Case 3 add+alpha
+								Case 4 dot3 combine
+								Case 5 modulate*2
+								Case 6 blend
+								Default modulate
+							End Select
+					#end
 			
 
-					
-					
 					
 					If shader.u.texcoords0<>-1 Then glEnableVertexAttribArray(shader.u.texcoords0)
 					If shader.u.texcoords1<>-1 Then glEnableVertexAttribArray(shader.u.texcoords1)
@@ -914,31 +782,15 @@ If DEBUG Then Print s
 
 			last_tex_count = tex_count
 			
+			'' turn on textures
+			'If tex_count > 0 Then tex_count = 1
+			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
 			
 			If DEBUG And GetGLError() Then Print "*tex2"			
 			
 			
-			''set GL effects
-			''
-			If Not skip_sprite_state
-				If effect.depth_test<>last_effect.depth_test
-					If effect.depth_test Then glEnable(GL_DEPTH_TEST) Else glDisable(GL_DEPTH_TEST)
-					
-				Endif
-				If effect.depth_write<>last_effect.depth_write
-					If effect.depth_write Then glDepthMask(True) Else glDepthMask(False)
-					
-				Endif
-				If effect.alpha_test<>last_effect.alpha_test
-					''**** TODO
-					'' set by texture
-				Endif
-				If effect.blend_enable<>last_effect.blend_enable
-					If effect.blend_enable Then glEnable(GL_BLEND) Else glDisable(GL_BLEND)
-					'changed = true
-				Endif
-				last_effect.Overwrite(effect)
-			Endif
+			
+			
 			
 			''matrices
 			
@@ -963,23 +815,9 @@ If DEBUG Then Print s
 			''inverse global scale
 			If shader.u.scaleInv<>-1 Then glUniform3fv( shader.u.scaleInv, 1, [1.0/mesh.gsx,1.0/mesh.gsy,1.0/mesh.gsz] )
 			
-			If shader.u.flags<>-1 Then glUniform1f( shader.u.flags, fx  )
-			If shader.u.colorflag<>-1 Then glUniform1f( shader.u.colorflag, Float((fx Shr 1) &1) )
-			If shader.u.lightflag<>-1 Then glUniform1f( shader.u.lightflag, Float(lightflag) )
-
-			If shader.u.ambient_color<>-1 Then glUniform4fv( shader.u.ambient_color, 1, [ambient_red,ambient_green,ambient_blue,1.0] ) ''ambient = 0 to provide fading
-			If shader.u.base_color<>-1 Then glUniform4fv( shader.u.base_color, 1, [red,green,blue,alpha] )
-			If shader.u.shininess<>-1 Then glUniform1f( shader.u.shininess, shine )
-			
-			
-			
-			'' turn on textures
-			'If tex_count > 0 Then tex_count = 1
-
-			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
-			
 			If DEBUG And GetGLError() Then Print "*mats flags"
-
+			
+			
 
 			'' draw tris
 
@@ -1005,17 +843,17 @@ If DEBUG Then Print s
 			If DEBUG And GetGLError() Then Print "*glDrawElements"		
 
 	
-			' enable fog again if fog was enabled at start of func
-			'If fog=True
-				'glEnable(GL_FOG)
-			'Endif
+			'' *** cleanup ***
+			
+			last_effect.Overwrite(effect)
+			
 
 		Next ''end non-alpha loop
 		
-		If cam.draw2D
+		'If cam.draw2D
 			'glEnable(GL_DEPTH_TEST)
-			effect.depth_test = False
-		Endif
+			'effect.use_depth_test = 0
+		'Endif
 
 		If Not alpha_list Then Exit ''get out of loop, no alpha
 		temp_list = alpha_list

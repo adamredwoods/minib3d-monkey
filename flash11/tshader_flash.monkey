@@ -253,11 +253,12 @@ Class TShaderFlash Extends TShader
 		''bind shader
 		program_set = driver.CreateProgram()
 		
-		'Try
+		Try
 			program_set.Upload( vertex_code, fragment_code )
-		'Catch e:FlashError
-			'Print e.ToString()
-		'End
+		Catch e:FlashError
+			Print e.ToString()
+			Error ""
+		End
 		
 		Try
 		
@@ -401,31 +402,20 @@ Class TShaderFlash Extends TShader
 		'Return 0
 	End
 	
-	
-	#rem
-	'Global TestVP:String = "m44 op, va0, vc0~nmov v0, va1"
-	'va0 = pos.xyz
-	'va1,v0 = norm.xyz
-	'va2,v1 = color.argb
-	'va3,v2 = uv.xy
-	Global TestVP:String =
-			'"mov vt0, vc0~nmov vt1, vc1~nmov vt2, vc2~nmov vt3, vc3~n"+
-			'"mul vt0, vt0, vc4~nmul vt1, vt1, vc5~nmul vt2, vt2, vc6~nmul vt3, vt3, vc7~n"+
-			'''"mul vt0, vc4, vt0~nmul vt1, vc5, vt1~nmul vt2, vc6, vt2~nmul vt3, vc7, vt3~n"+
-			"m44 vt0, va0, vc1~nm44 op, vt0, vc0~nmov v0, va1~nmov v1, va2~nmov v2, va3~n"
-	
-	'Global TestFP:String = "tex ft1, v2, fs0 <2d, nearest, mipnearest>~nmov oc, ft1"
-	
-	Global TestFP:String =
-			"tex ft1, v2, fs0 <2d,clamp,linear>~n"+
-			'"mul oc, ft1, v1~n"+
-			"mov oc, v1~n"+
-			"mov ft2, ft1~n"
-	#end
-	
-	
+
 	
 End
+
+
+
+'' FLash Shaders
+''
+'' the thought would be to create a matrix of shaders in groups
+'' - 0 to 1 textures+ 5 blends, 2-4 textures + 5 blends
+'' - 0 lights, 1 light x 3 types, 2-4 lights x3types
+'' - texture clamp, texture repeat
+'' .... or compile on-demand, but no WP8
+'' ... or.... for lighting, 0-1 lights in main shader, 2+lights in multi-pass using additive blend
 
 Class MultiShader Extends TShaderFlash
 	
@@ -437,21 +427,16 @@ Class MultiShader Extends TShaderFlash
 		If init Then Return
 		init = True
 		
-		shader[0] = New FullBrightOneTexShader
-		shader[1] = New OneLightOneTexShader
+		shader[0] = New FullBrightOneTexShader("clamp")
+		shader[1] = New FullBrightOneTexShader("repeat")
+		shader[2] = New OneLightOneTexShader("clamp")
+		shader[3] = New OneLightOneTexShader("repeat")
 	End
 	
-	Method GetShader:TShaderFlash(num_lights:Int, num_tex:Int=1)
+	Method GetShader:TShaderFlash(i:int)
 		
-		Select (num_lights)
-			
-			Case 0
-				Return shader[0]
-			Case 1
-				Return shader[1]
-			Default
-				Return shader[1]
-		End
+		Return shader[i]
+		
 	End
 	
 End
@@ -497,7 +482,7 @@ Class OneLightOneTexShader Extends TShaderFlash
 	'Global TestFP:String = "tex ft1, v2, fs0 <2d, nearest, mipnearest>~nmov oc, ft1"
 	
 	Global FP:String =
-			"tex ft1, v1, fs0 <2d,clamp,linear>~n"+ ''texture
+			"tex ft1, v1, fs0 <2d,TEXTURE_WRAP,linear>~n"+ ''texture
 			"mul ft2, ft1, v0~n"+ 'color+light
 			"mov oc, ft2~n"
 
@@ -524,14 +509,30 @@ Class OneLightOneTexShader Extends TShaderFlash
 		u.ambient_color = 17
 		u.light_color[0] = 22
 		
+		u.tex_position[0] = 23 'x,y, cos, sin
+		u.tex_scale[0] = 24 'scalex y
+		u.tex_blend[0] = 1 'frag tex_blend
+		
 		'' flags
 		u.colorflag = 18 '' x=use basecolor; 18,19,20,21
 		
 	end
 	
-	Method New(vp$=VP, fp$=FP)
+	Method New(tex_clamp$, vp$=VP, fp$=FP)
 		
-		Super.New(vp,fp)
+		'' find, replace
+		fp = StringReplace("TEXTURE_WRAP",tex_clamp,fp)
+		
+		driver = FlashMiniB3D.driver
+		If vp<>"" And fp<>""
+			TShaderFlash.LoadShaderString(vp, fp, Self)
+			
+			'shader_id = default_shader.shader_id
+			If shader_id
+				active = 1
+				'LinkVariables()
+			Endif
+		Endif
 		
 	End
 
@@ -555,18 +556,33 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 			
 			'' base color
 			'"mul vt3, vc18.xxxx, va1~n"+ ''colorflag
-			'"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag 
-			"mov vt3, va1~n"+
+			"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag 
+			'"mov vt3, va1~n"+
 			"mul v0, vc16, vt3~n"+ 
 			''preserve alpha
 			'"mov v0.w, vc16.w~n"+
+			
+			''texture sampler adjust
+			''(texcoord[0]).x = ((aTexcoords0.x + pos.x) * cosang - (aTexcoords0.y + pos.y) * sinang)*scale.x;
+			"add vt0.x, vc23.x, va2.x~nmul vt0.x, vc23.z, vt0.x~n"+
+			"add vt0.y, va2.y, vc23.y~nmul vt0.y, vc23.w, vt0.y~n"+
+			"sub vt0.x, vt0.x, vt0.y~nmul v1.x, vc24.x, vt0.x~n"+
+			''(texcoord[0]).y = ((aTexcoords0.x + pos.x) * sinang + (aTexcoords0.y + pos.y) * cosang)*scale.y;
+			"add vt0.x, vc23.x, va2.x~nmul vt0.x, vc23.w, vt0.x~n"+
+			"add vt0.y, va2.y, vc23.y~nmul vt0.y, vc23.z, vt0.y~n"+
+			"add vt0.x, vt0.x, vt0.y~nmul v1.y, vc24.y, vt0.x~n"+
+			
 			
 			"mov op, vt1~n"+
 			"~n"
 			
 	
 	Global FP:String =
-			"tex ft1, v1, fs0 <2d,clamp,linear>~n"+ ''texture
+			"tex ft1, v1, fs0 <2d,TEXTURE_WRAP,linear>~n"+ ''texture
+			
+			''texture blend
+			 
+			
 			"mov ft2, v0~n"+ 'move color in for tinting
 			"mul ft2, ft1, ft2~n"+
 
@@ -574,6 +590,7 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 
 			'"mov oc, ft1~n"
 			'"mov ft2, ft1~n"
+
 	
 	Method LinkVariables:Int()
 		Super.LinkVariables()
@@ -581,9 +598,26 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 		u.light_color[0] = -1
 	End
 	
-	Method New(vp$=VP, fp$=FP)
-		
-		Super.New(vp,fp)
-		
+	Method New(tex_clamp$, vp$=VP, fp$=FP)
+	
+		'' find, replace
+		fp = StringReplace("TEXTURE_WRAP",tex_clamp,fp)
+				
+		driver = FlashMiniB3D.driver
+		If vp<>"" And fp<>""
+			TShaderFlash.LoadShaderString(vp, fp, Self)
+			
+			'shader_id = default_shader.shader_id
+			If shader_id
+				active = 1
+				'LinkVariables()
+			Endif
+		Endif
 	End
+End
+
+Function StringReplace:String(r$, n$, st$)
+	Local a:String[] = st.Split(r)
+	If a.Length=2 Then st= a[0]+n+a[1] Else Print"**Shader error: string replace"
+	Return st
 End

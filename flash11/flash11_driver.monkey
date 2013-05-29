@@ -52,6 +52,7 @@ Extern
 		Global DRIVER_GREATER_EQUAL:Int = "Context3DCompareMode.GREATER_EQUAL"
 		Global DRIVER_NEVER:Int = "Context3DCompareMode.NEVER"
 		Global DRIVER_ALWAYS:Int = "Context3DCompareMode.ALWAYS"
+		Global DRIVER_GREATER:Int = "Context3DCompareMode.GREATER"
 		
 		Global DRIVER_BACK:Int="Context3DTriangleFace.BACK"
 		Global DRIVER_FRONT:Int="Context3DTriangleFace.FRONT"
