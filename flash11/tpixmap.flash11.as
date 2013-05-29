@@ -18,12 +18,19 @@ class TPixmap {
 		height = pixels.height;
 	}
 	
+	private function onError (e:IOErrorEvent):void
+	{
+		isLoaded = true;
+		width=0; height=0;
+	}
+	
 	
 	public static function LoadImageData(file:String):TPixmap {
 		var pix:TPixmap = new TPixmap;
 		
 		var loader:Loader = new Loader();
 		loader.contentLoaderInfo.addEventListener(Event.COMPLETE, pix.onComplete);
+		loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, pix.onError);
 		loader.load(new URLRequest(file));
 
 		return pix;
