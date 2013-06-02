@@ -5,13 +5,19 @@ import flash.display3D.textures.Texture;
 import flash.system.Capabilities;
 //import com.adobe.utils.AGALMiniAssembler;
 
-class EmptyNullClass extends gxtkGraphics
+class EmptyNullClass extends gxtkSurface
 {
+	protected var bitmap_null:Bitmap = new Bitmap;
+	
+	override public function EmptyNullClass() {
+		super(bitmap_null);
+	};
+	
 	override public function Width():int {return 0;};
 	override public function Height():int {return 0;};
-	 public function Discard():int {return 0;};
-	 public function Loaded():int {return 0;};
-	 public function OnUnsafeLoadComplete():Boolean {return false;};
+	override public function Discard():int {return 0;};
+	override public function Loaded():int {return 1;};
+	override public function OnUnsafeLoadComplete():Boolean {return true;};
 };
 
 class Driver3D
@@ -128,18 +134,25 @@ class Driver3D
 		context3d.present();
 	}
 	
-	public function PresentToMojoBitmap(g:gxtkGraphics):void {
+	public function PresentToDevice(g:gxtkGraphics):void {
 		// ugh.... may break if mojo changes
 		//context3d.drawToBitmapData( app.graphics.bitmapData );
-		if (!mojo_clear) {
-			g.bitmap.bitmapData=new BitmapData( stage.stageWidth,stage.stageHeight,true,0x00505050 );
-			mojo_clear = true;
-		}
+		//if (!g.bitmap.bitmapData.transparent) {
+			//g.bitmap.bitmapData=new BitmapData( stage.stageWidth,stage.stageHeight,true,0x00505050 );
+			//mojo_clear = true
+			//if (game.GetDisplayObjectContainer().contains(g.bitmap)) { game.GetDisplayObjectContainer().removeChild(g.bitmap);}
+		//}
 		context3d.present();
 	}
 
 	public static function DataBufferLittleEndian(b:BBDataBuffer):void {
 		b.GetByteArray().endian = Endian.LITTLE_ENDIAN;
+	}
+	
+	public function ForceDeviceTransparency(g:gxtkGraphics):void {
+		g.bitmap.bitmapData=new BitmapData( stage.stageWidth,stage.stageHeight,true,0x00505050 );
+		//if (game.GetDisplayObjectContainer().contains(g.bitmap)) { game.GetDisplayObjectContainer().removeChild(g.bitmap);}
+		//print("xxx");
 	}
 
 }

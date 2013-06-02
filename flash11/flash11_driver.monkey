@@ -29,7 +29,7 @@ Extern
 		'' returns a bytearray, pass as int?
 		Method Assemble:AGALPointer ( mode:String, source:String, verbose:Bool = False ) = "assemble"
 	End
-	Class AGALMiniAssemblerDebug Extends AGALMiniAssembler = "AGALMiniAssembler(true)"
+	Class AGALMiniAssemblerDebug Extends AGALMiniAssembler = "AGALMiniAssembler(false)"
 	End
 	Class AGALPointer = "ByteArray"
 		Method Length:Int() = "length; //" ''use for debugging only
@@ -119,13 +119,15 @@ Extern
 		
 		Method SetScissorRectangle:Void(x:Int,y:Int,w:Int,h:Int) = "SetScissorRectangle_"
 		
-		Method PresentToMojoBitmap:Void(g:GraphicsDevice) = "PresentToMojoBitmap"
+		Method PresentToDevice:Void(g:GraphicsDevice=null) = "PresentToDevice"
 		
 		Method SetContext__:Void(c:Context__) = "SetContext__"
 		Method GetContext__:Context__() = "GetContext__"
 		
 		''monkey defaults to big endian, but stage3d takes little endian
 		Function DataBufferLittleEndian:Void(b:DataBuffer)
+		
+		Method ForceDeviceTransparency:Void(g:GraphicsDevice)
 		
 		''--------stock
 		
@@ -183,7 +185,6 @@ Extern
 		Method Dispose:Void() = "dispose"
 		Method Upload:Void(vertexProgram:AGALPointer, fragmentProgram:AGALPointer) = "upload"
 	End
-	
 	
 
 	

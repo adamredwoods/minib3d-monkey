@@ -39,6 +39,7 @@ Class MojoEmulationDevice Extends GraphicsDevice
 	Const MAXLAYERS:Int=512
 	
 	Global _device:MojoEmulationDevice
+	Global _olddevice:GraphicsDevice
 	
 	Field mesh:TMesh
 	Field solid:TSurface[MAXLAYERS] ''512 blend layers available
@@ -66,25 +67,38 @@ Private
 	Function SetDevice:Void()
 	
 		Local first:Bool=False
-		If Not _device Then _device = New MojoEmulationDevice; first=True
+		
+		If Not _device
+		
+			_olddevice = GetGraphicsDevice() ''trick to get flash to work
+			_device = New MojoEmulationDevice
+			
+#If TARGET="flash"
+			FlashMiniB3D(TRender.render).ForceFlashTransparency(_olddevice)
+			FlashMiniB3D(TRender.render).ForceFlashTransparency(_device)
+#Endif
+
+		endif
 		
 		_device.Reset
 		SetGraphicsDevice( _device )
 		mojo.graphics.BeginRender() ''trick to get html5 to work
-		GetGraphicsDevice() ''trick for xna to work
+		''GetGraphicsDevice() ''trick for xna to work
 
 		_device.InitFont()
 		
 	End
 	
 	Method InitFont:Void()
-		
+
 		If fontImage And fontImage.Width()>0 Then Return
 		'' consider embedding font as base64?
 		fontFile = FixDataPath("mojo_font.png")
 		fontImage = LoadImage( fontFile,96,Image.XPadding )
 		
-		If fontImage And fontImage.Width()>0 Then SetFont(fontImage)
+		If fontImage And fontImage.Width()>0
+			SetFont(fontImage)
+		endif
 
 	End
 	
@@ -95,13 +109,16 @@ Public
 		Return (MojoEmulationDevice(GetGraphicsDevice())<>Null)
 	End
 
-	'Method New()
-	'	
-	'End
+
+	Method New()
+		'
+	End
 	
 	
 	Method NewLayer:Void()
-	
+		
+		If mesh = Null Then return
+		
 		layer+=1
 		If layer>MAXLAYERS Then layer=0
 		If Not solid[layer] Then solid[layer] = mesh.CreateSurface() Else mesh.AddSurface(solid[layer])
@@ -248,14 +265,17 @@ Public
 	End
 	
 	Method DrawPoint( x#,y# )
+	
 		Check(Null)
 		AddQuad(solid[layer], x,y,1.0,1.0)
+		
 	End
 	
 	Method DrawRect( x#,y#,w#,h# )
+	
 		Check(Null)
 		AddQuad(solid[layer], x,y,w,h)
-		
+			
 	End
 	
 	Method DrawLine( x1#,y1#,x2#,y2# )
@@ -323,6 +343,7 @@ Public
 	End
 	
 	Method DrawPoly( verts#[] )
+	
 		Check(Null)
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
@@ -457,84 +478,36 @@ Class MojoSurface Extends Surface_
 	End
 	
 	Function PreLoad:MojoSurface(path$, mesh:TMesh, device:MojoEmulationDevice)
+	
+		Local s:MojoSurface = Create(path)
+
+		Local sz% = list.Length()
+		list = list.Resize(sz+1)
+		list[sz] = path
+		'surfmap.Set(path, s)
 		
-		''hack hack hack, i call LoadImage twice, to get the Init burried within mojo
-		'Local s:MojoSurface = surfmap.Get(path)
- 		
- 		'If s = Null
+		isLoading = True
+		
+		''** MUST PRELOAD MANUALLY for mojo			
+		s.LoadTexture(path, mesh, device)
 
-			Local s:MojoSurface = Create(path)
-
-			Local sz% = list.Length()
-			list = list.Resize(sz+1)
-			list[sz] = path
-			'surfmap.Set(path, s)
-			
-			isLoading = True
-			
-			''** MUST PRELOAD MANUALLY for mojo			
-			s.LoadTexture(path, mesh, device)
-
-
-		'Endif
 		
 		Return s
 		
 	End
 
 	
-	'Global trig:Int=300
-#rem	
-	Function UpdateLoad:Void(mesh:TMesh, device:MojoEmulationDevice)
-		
-		If Not TPixmap.PreLoadPixmap( list )
-			isLoading = True
-
-		Else
-			
-			''all done, wrap it up
-			If isLoading
-				
-				For Local p$ = Eachin list
-					'Local s:MojoSurface = Create(p)
-					Local s:MojoSurface = surfmap.Get(p)
-					If s
-						
-						s.LoadTexture(p, mesh, device)
-							
-						
-						
-					Endif
-				Next
-				
-				list = New String[0]
-				surfmap.Clear()
-				
-			Endif
-'Print "doneLoading"	
-
-
-			isLoading = False
-		Endif
-		
-	End
-#end
 	
 	Method LoadTexture:Bool(path$, mesh:TMesh, device:MojoEmulationDevice)
-	
-		'Local s:MojoSurface = New MojoSurface
 
 		tex.ResizeNoSmooth
-		's.tex.NoSmooth
+		'tex.NoSmooth
 		tex.pixmap.ClearBind() ''Re-bind the texture
 		TTexture.LoadAnimTexture(path,TEXFLAG_COLOR|TEXFLAG_ALPHA,0,0,0,1,tex, True) ''force new (true) will keep trying to load again
 
-		'If s.tex.width = 0 Then Print "**ERROR: MojoLoad: file not found "+path 'Else Print s.tex.width
+		'If tex.width = 0 Then Print "**ERROR: MojoLoad: file not found "+path 'Else Print tex.width
 		
-		loaded = True
-		
-		''hack hack hack, double load to call the init ''** does not know the frames or flags :( use metadata
-		'Local img:Image = LoadImage(path) 
+		loaded = 1
 	
 		'Print path+" "+tex.orig_width
 	
@@ -562,7 +535,7 @@ Class MojoSurface Extends Surface_
 		Return tex.orig_height
 	End
 	Method Loaded() Property
-		Return true
+		Return loaded
 	End
 
 	'INTERNAL - subject to change etc.

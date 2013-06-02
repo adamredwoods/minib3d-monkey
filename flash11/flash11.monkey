@@ -41,6 +41,7 @@ Function SetRender(flags:Int=0)
 
 	TRender.render = New FlashMiniB3D
 	TRender.render.GraphicsInit(flags)
+	SetMojoEmulation()
 	
 End	
 
@@ -169,9 +170,11 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 	Field texdata:TexData = New TexData
 	'Field depth__:Bool = True
 	
+	Field _device:GraphicsDevice
 	
 	Global null_tex:TTexture
 	Global lastCam:Bool = False
+	Global current_cam:TCamera
 	Global shader2d_:TShaderFlash
 	
 	Global temp_cam:Matrix = New Matrix
@@ -219,10 +222,11 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 	End
 	
 	Method Reset:Void()
-		
+'If Not MojoEmulationDevice(_device) And (Not _device) Then _device = GetGraphicsDevice()	
 		''need to wait until the context is ready
 		If Not render_init Then EnableStates()
 		
+
 		''reset globals used for state caching
 		last_texture = Null ''used to preserve texture states
 		last_sprite = Null ''used to preserve last surface states
@@ -234,6 +238,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 		
 		TShader.DefaultShader()
 		
+		
 	End
 	
 	
@@ -242,7 +247,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 	Method Render:Void(ent:TEntity, cam:TCamera = Null)
 		
 		''for stage3d, limits the number of present calls
-		If cam = TCamera.cam_list.Last() Then lastCam = True Else lastCam = False
+		current_cam = cam
 		
 		Local mesh:TMesh = TMesh(ent)
 		
@@ -348,7 +353,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
  					Endif
 				Endif 
 			Endif
-			
+		
 'Print ent.classname+" "+Int(effect.depth_test)+" "+Int(effect.depth_write)+" "+effect.blend	
 	
 			If skip_state=false
@@ -659,20 +664,23 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 		
 		temp_list = Null
 		
-	
+		
 	
 	End
 	
 	
 	
 	Method Finish:Void()
-		
-		If lastCam
-			driver.PresentToMojoBitmap(GetGraphicsDevice() )
-			driver.Clear(0,0,0,0)
-		endif
+	
 		'driver.Present()
 		
+	End
+	
+	Method RenderWorldFinish:Void()
+
+		driver.PresentToDevice()
+		driver.Clear(0,0,0,0)
+
 	End
 	
 	
@@ -712,6 +720,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 		
 	End 
 	
+	'' in Flash, EnableStates runs after Init() -- called from TRenderFlash.Reset()
 	Method EnableStates:Void()
 		
 		If GetVersion() < 11 Then Error "You will need at least Flash 11 for this to work."
@@ -731,6 +740,9 @@ Print "..Context Success"
 		driver.SetCulling(DRIVER_NONE) 'BACK)
 		
 		TShader.LoadDefaultShader( New MultiShader )
+		
+		FlashMiniB3D(TRender.render).ForceFlashTransparency(GetGraphicsDevice())
+			
 		
 		render_init = True
 		
@@ -953,11 +965,12 @@ Print "..Context Success"
 		Local ftex:FlashTexture
 		
 		If tex.pixmap.bind And tex.tex_id Then Return tex
+		If width=0 Or height=0 Then Return tex '' width height=0 means this wasn't loaded yet
 		
 		If Not tex.tex_id
 			tex_map_id += 1
 			tex.tex_id = tex_map_id
-			ftex = driver.CreateTexture(width, height, DRIVER_BGRA, False);
+			ftex = driver.CreateTexture(width, height, DRIVER_BGRA, False)
 			
 			tex_map.Set(tex.tex_id, ftex)
 
@@ -974,7 +987,7 @@ Print "..Context Success"
 				Local uploaded:Int = driver.UploadTextureData(ftex, pix.pixels, mip_level) ''cheating... beware
 				
 				If( Not uploaded )
-					Error "** out of texture memory **"
+					Error "** out of texture memory or no data **"
 				Endif
 				
 				If Not mipmap Or (width=1 And height =1) Then Exit
@@ -1091,7 +1104,7 @@ Return 0
 
 	Method UpdateCamera(cam:TCamera)
 		
-	
+		
 		' viewport
 		'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 		driver.SetScissorRectangle(cam.vx,cam.vy,cam.vwidth,cam.vheight)
@@ -1167,10 +1180,16 @@ Return 0
 	
 	Method SetShader2D:Void()
 		If Not shader2d_
-			shader2d_ = New FullBrightOneTexShader("clamp")
+			'shader2d_ = New FullBrightOneTexShader("clamp")
 		Endif
-		TShader.SetShader(shader2d_)
+		'TShader.SetShader(shader2d_)
+		
+		shader2d_ = TShaderFlash(TShader.DefaultShader())
 	end
+	
+	Method ForceFlashTransparency:Void(g:GraphicsDevice)
+		driver.ForceDeviceTransparency(g )
+	End
 	
 End
 

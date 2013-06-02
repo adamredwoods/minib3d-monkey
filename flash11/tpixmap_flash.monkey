@@ -11,7 +11,7 @@ Import mojo.data
 	#Error "Needs Flash Target."
 #Endif
 
-'' ********** FLASH BITMAPS TEXTURES ARE BGRA ?? ***********
+'' **FLASH BITMAPS TEXTURES ARE BGRA ?? maybe
 
 Import "tpixmap.flash11.as"
 
@@ -81,8 +81,8 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 		p.format = PF_RGBA8888
 		
 		If p.width Then p.pitch = p.width
-		
-		If (Not p.width And Not p.height) Or (Not p.pixels) Then Dprint "Image Not Found: "+f
+	
+		If (p.width=0 or p.height=0) Or (Not p.pixels) Then Dprint "Image Not Found: "+f
 
 		Return p
 		
@@ -202,7 +202,7 @@ Class PreloadManager Implements IPreloadManager
 		'' then also expand this class as the Buffer Callback
 		
 		If id<1 Then Return
-		
+	
 		f = FixDataPath(f)
 		f=f.Replace("monkey://","")
 		data[id-1] = _LoadImageData(f) ', id)
@@ -227,7 +227,7 @@ Class PreloadManager Implements IPreloadManager
 			
 			
 			''NOT ALLOWED in FLASH, MUST PRELOAD	
-			'Else
+			Else
 				'Local info:Int[2]
 				'p.pixels = LoadImageData(f, info)
 				'p.width = info[0]

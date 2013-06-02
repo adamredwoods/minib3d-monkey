@@ -295,7 +295,7 @@ Class TShaderFlash Extends TShader
 		Local verbose:Bool = False
 		
 #if CONFIG="debug"
-		verbose = True
+		verbose = False 'True ''too much data dump if enabled
 #endif
 
 		Local result:AGALPointer
@@ -304,7 +304,7 @@ Class TShaderFlash Extends TShader
 		
 			vertex_id = g_id
 			vertex_assembly = New AGALMiniAssemblerDebug() ''add true for debugging
-			vertex_code = vertex_assembly.Assemble( DRIVER_VERTEX_PROGRAM, source, false)'verbose  )
+			vertex_code = vertex_assembly.Assemble( DRIVER_VERTEX_PROGRAM, source, verbose  )
 			result = vertex_code
 			
 		Endif
@@ -313,7 +313,7 @@ Class TShaderFlash Extends TShader
 		
 			fragment_id = g_id
 			fragment_assembly = New AGALMiniAssemblerDebug()
-			fragment_code = fragment_assembly.Assemble( DRIVER_FRAGMENT_PROGRAM, source, false)'verbose )
+			fragment_code = fragment_assembly.Assemble( DRIVER_FRAGMENT_PROGRAM, source, verbose )
 			result = fragment_code
 			
 		Endif

@@ -15,7 +15,7 @@ Import minib3d
 
 
 '' Interface IRenderUpdate
-'' -- used for sprites and sprite batching, forces TRender to call Update when in view.
+'' -- used for sprites and sprite batching, forces TRender to call Update when in camera view.
 Interface IRenderUpdate
 	Method Update( cam:TCamera )
 End
@@ -271,16 +271,18 @@ Class TRender
 		
 		RenderDrawList()
 		
+		render.RenderWorldFinish()
+		
 	End 
 	
 
 	Function RenderDrawList:Void()
-	
+
 		If draw_list.IsEmpty Or Not TRender.render.ContextReady() Then Return
 		
 		
 		TRender.render.Reset()
-		shader2D.SetShader2D()
+		shader2D.SetShader2D() ''multi-shader is automatic
 		
 		'camera2D.CameraClsMode(False,False) ''moved this to the end of method to allow mojo CLS
 		
@@ -506,6 +508,11 @@ Class TRender
 	
 	Method ClearErrors:Int()
 		Return 1
+	End
+	
+	
+	Method RenderWorldFinish:Void()
+		''optional
 	End
 	
 End
