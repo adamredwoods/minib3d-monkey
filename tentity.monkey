@@ -1660,13 +1660,15 @@ Class TEntity
 		For Local i=1 To CountCollisions()
 			If CollisionEntity(i).collision.type=type_no Then Return CollisionEntity(i)
 		Next
-	
-		' if self is dest entity and type_no is src entity
-		For Local ent:TEntity=Eachin TCollisionPair.ent_lists[type_no]
-			For Local i=1 To ent.CountCollisions()
-				If CollisionEntity(i)=Self Then Return ent		
+		
+		If TCollisionPair.ent_lists[type_no] <> Null
+			' if self is dest entity and type_no is src entity
+			For Local ent:TEntity=Eachin TCollisionPair.ent_lists[type_no]
+				For Local i=1 To ent.CountCollisions()
+					If CollisionEntity(i)=Self Then Return ent		
+				Next
 			Next
-		Next
+		endif
 	
 		Return Null
 
