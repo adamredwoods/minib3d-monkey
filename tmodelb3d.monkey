@@ -64,6 +64,8 @@ Public
 		
 		Local data:DataBuffer = DataBuffer.Load(FixDataPath(f_name))
 
+		If DEBUGMODEL Then Print"..loading B3DBinary:"+FixDataPath(f_name)
+
 		If Not data Or (data And data.Length() <=1)
 			Print "**File not found: "+f_name
 			Return New TMesh
@@ -450,6 +452,8 @@ Public
 		
 						brush_no=brush_no+1
 						brush=brush.Resize(brush_no+1) ' resize array +1
+						
+						If DEBUGMODEL Then Print "brush rgb:"+b_red+" "+b_green+" "+b_blue+"  blend:"+b_blend+" fx:"+b_fx+" no_texs:"+b_no_texs
 						
 						new_tag=file.ReadTag()
 				
