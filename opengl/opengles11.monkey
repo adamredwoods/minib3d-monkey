@@ -204,7 +204,7 @@ Class OpenglES11 Extends TRender
 				last_sprite = surf
 			Endif
 			
-					
+'Print "::"+Int(surf.alpha_enable)+" "+ent.classname					
 'Print "***classname: "+ent.classname+" : "+name			
 'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
 'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_sprite_state)
@@ -283,21 +283,13 @@ Class OpenglES11 Extends TRender
 			Elseif  effect.blend<>last_effect.blend
 				glDisable(GL_BLEND)
 			Endif
-			
+
 			
 			
 			If skip_sprite_state = False
 				
-				' fx flag 2 - vertex colors ***todo*** disable all lights?
-				If effect.use_vertex_colors = 1
-					'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-					glDisable(GL_COLOR_MATERIAL)
-					glEnableClientState(GL_COLOR_ARRAY)
-				Else
-					glEnable(GL_COLOR_MATERIAL)
-					glDisableClientState(GL_COLOR_ARRAY)
-				Endif
 				
+			
 				' fx flag 4 - flatshaded
 				If effect.use_flatshade <> last_effect.use_flatshade
 					If effect.use_flatshade = 1 Then glShadeModel(GL_FLAT) Else glShadeModel(GL_SMOOTH)
@@ -325,8 +317,7 @@ Class OpenglES11 Extends TRender
 				Endif
 				
 				If effect.use_depth_write <> last_effect.use_depth_write
-					If effect.use_depth_write=1 Then glDepthMask(true) Else glDepthMask(false)
-
+					If effect.use_depth_write=0 Then glDepthMask(false) Else glDepthMask(true)
 				Endif
 
 				
@@ -343,13 +334,41 @@ Class OpenglES11 Extends TRender
 			
 			''GL_FRONT_AND_BACK needed for opengl es 1.x
 			
-			glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,effect.diffuse)
-			glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
-			glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
-			glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
-		
-			'glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.ambient)
-			glColor4f(effect.red,effect.green,effect.blue, effect.alpha)
+			
+			
+			
+			'glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.diffuse)
+			
+			
+			' fx flag 2 - vertex colors ***todo*** disable all lights?
+			If effect.use_vertex_colors = 1
+				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
+				'glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[1.0,1.0,1.0,1.0])
+				'glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE,[1.0,1.0,1.0,1.0])
+				glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
+				glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
+				
+				glEnable(GL_COLOR_MATERIAL) ' needs to go after glMaterial()
+				glEnableClientState(GL_COLOR_ARRAY)
+				
+			Else
+			
+				
+				glColor4f(effect.red,effect.green,effect.blue, effect.alpha)
+				glDisable(GL_COLOR_MATERIAL)
+				glDisableClientState(GL_COLOR_ARRAY)
+				'glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[0.0,0.0,0.0,1.0])
+				glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,effect.diffuse)
+				glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
+				glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
+				glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
+				
+			Endif
+			
+			
+			
+
+
 
 			If effect.use_full_bright<>last_effect.use_full_bright
 				If effect.use_full_bright=1 Then glDisable(GL_LIGHTING) Else glEnable(GL_LIGHTING)
@@ -367,7 +386,6 @@ Class OpenglES11 Extends TRender
 	
 			
 			'glEnableClientState(GL_NORMAL_ARRAY)
-			'glEnableClientState(GL_COLOR_ARRAY)
 			
 			If vbo
 				
@@ -456,7 +474,7 @@ Class OpenglES11 Extends TRender
 			'' turn off textures if no textures
 			If tex_count < last_tex_count 
 			
-				For Local ix:=0 To last_tex_count-1
+				For Local ix:=tex_count To last_tex_count-1
 					
 					If ix>MAX_TEXTURES Then Exit
 					
@@ -520,8 +538,8 @@ Class OpenglES11 Extends TRender
 	
 	
 					''preserve texture states--------------------------------------
-					If (surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
-					    (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix])
+					If ((surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
+					    (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix])) And ix=0
 						
 						'' skip texture Bind
 						
@@ -529,7 +547,7 @@ Class OpenglES11 Extends TRender
 					
 						''texture bind
 						
-						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
+						If surf.brush.tex[ix] Then last_texture = surf.brush.tex[ix] Else last_texture = ent.brush.tex[ix]
 
 						glActiveTexture(GL_TEXTURE0+ix)
 						glClientActiveTexture(GL_TEXTURE0+ix)
@@ -661,7 +679,7 @@ Class OpenglES11 Extends TRender
 
 					glEnableClientState(GL_TEXTURE_COORD_ARRAY)
 
-					If vbo
+					'If vbo
 						If tex_coords=0
 							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) '1
 							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET)
@@ -669,7 +687,7 @@ Class OpenglES11 Extends TRender
 							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) '2
 							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2)
 						Endif
-					Else
+					'Else
 					
 					''interleaved data does not work with databuffers (no adddress offset)
 #rem
@@ -681,7 +699,7 @@ Class OpenglES11 Extends TRender
 							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf.PeekByte(VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2))
 						Endif
 #end
-					Endif
+					'Endif
 
 			
 					Endif ''end preserve skip_sprite_state-------------------------------
@@ -1058,6 +1076,8 @@ Class OpenglES11 Extends TRender
 
 		Local width=tex.pixmap.width
 		Local height=tex.pixmap.height
+		
+		If width=0 Or height=0 Then Return tex
 
 		If Not tex.gltex[0]
 			glGenTextures 1,tex.gltex
@@ -1080,6 +1100,8 @@ Class OpenglES11 Extends TRender
 		
 		Local mipmap:Int= 0, mip_level:Int=0
 		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
+		
+		'If Not pix.pixels Then Return tex
 		
 		If flags&8 Then mipmap=True
 			
@@ -1167,7 +1189,7 @@ Class OpenglES11 Extends TRender
 		
 		glLightfv(gl_light[light_no-1],GL_POSITION,pos)
 		glLightfv(gl_light[light_no-1],GL_DIFFUSE,rgba)
-
+		
 		' point or spotlight, set attenuation
 		glLightfv(gl_light[light_no-1],GL_LINEAR_ATTENUATION,[light.lin_att])
 

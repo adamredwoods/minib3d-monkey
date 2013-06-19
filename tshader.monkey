@@ -14,18 +14,8 @@ Class BlankShader Implements IShader2D
 	end
 End
 
-Interface IShader
-	Method CompileShader:Int(source:String, type:Int)
-	'Function LoadShader:TShader(vp_file:String, fp_file:String)
-	Method Copy:TBrush()
-	Method IsValid:Int()
-	Method Override(i:Int)
-	Method RenderCamera(cam:TCamera)
-	Method Update()
-	Method DrawEntity:Void(cam:TCamera, ent:TEntity)
-End
 
-Class TShader Extends TBrush Implements IShader
+Class TShader Extends TBrush
 	
 	'' TBrush includes color, shininess, texture, etc.
 	
@@ -132,18 +122,22 @@ Class TShader Extends TBrush Implements IShader
 		
 	End
 	
-	Method RenderCamera(cam:TCamera)
-		
-		TRender.render.RenderCamera(cam)
-		
-	End
-	
 	Method Update()
 		
 		''runs per each surface (if implemented in hardware render). ideal for setting uniforms
 		
 	End
 	
+	
+	'-- helper function, can be used to bounce back to default render function
+	Method RenderCamera(cam:TCamera)
+		
+		TRender.render.RenderCamera(cam)
+		
+	End
+	
+
+	''-- helper function
 	''-- draws entity with g_shader instead of brush shader
 	Method DrawEntity:Void(cam:TCamera, ent:TEntity)
 		
@@ -183,7 +177,7 @@ Interface IShaderProcess
 End
 
 ''
-''used to take control of the pipeline
+''used to take control of the pipeline. could be used to implements passes (call RenderCamera() per pass)
 ''
 Interface IShaderRender Extends IShaderProcess
 	
@@ -200,4 +194,3 @@ Interface IShaderEntity Extends IShaderProcess
 	Method RenderEntity:Void(cam:TCamera, ent:TEntity)
 	
 End
-

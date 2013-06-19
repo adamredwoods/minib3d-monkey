@@ -56,7 +56,7 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 	Function Init()
 	
 		If Not manager Then manager = New TPixmapFlash
-		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadFlash)
 	
 	End
 	
@@ -82,7 +82,7 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 		
 		If p.width Then p.pitch = p.width
 	
-		If (p.width=0 or p.height=0) Or (Not p.pixels) Then Dprint "Image Not Found: "+f
+		If (p.width=0 or p.height=0) Or (Not p.pixels) Then Dprint "Image Not Preloaded: "+f
 
 		Return p
 		
@@ -103,7 +103,9 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 	
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
 		
-		Local newpix:TPixmapFlash = New TPixmapFlash 
+		Local newpix:TPixmapFlash = New TPixmapFlash
+		If neww<1 Or newh<1 Then Return newpix
+		
 		newpix.pixels = _ResizePixmap(pixels, neww, newh)
 		newpix.width = neww
 		newpix.height = newh
@@ -115,7 +117,8 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 	Method ResizePixmapNoSmooth:TPixmap(neww:Int, newh:Int)
 		
 		Local newpix:TPixmapFlash = New TPixmapFlash 
-
+		If neww<1 Or newh<1 Then Return newpix
+		
 		newpix.pixels = _ResizePixmap(pixels, neww, newh, False)
 		newpix.width = neww
 		newpix.height = newh
@@ -171,31 +174,24 @@ Return
 End
 
 
-Class PreloadManager Implements IPreloadManager
+Class PreloadData
+	Field data:FlashPixmap
+	Field w:Int=0, h:Int=0
+	Field id:int
+End
+
+Class PreloadFlash Implements IPreloadManager
 	
-	Field data:FlashPixmap[]
-	Field load_complete:Bool[]
-	Field w:Int[], h:Int[]
-	Field total:Int
-	Field preloader:TPixmapPreloader
+	Field p_map:ArrayIntMap<PreloadData> = New ArrayIntMap<PreloadData>
 	
 	Method IsLoaded:Bool(file_id:int)
-		Return (data[file_id-1] <> Null)
+		
+		Local f:PreloadData = p_map.Get(file_id)
+		If f Then Return _CheckIsLoaded(f.data)
+		
+		Return False
 	End
 		
-	Method SetPreloader:Void(m:TPixmapPreloader)
-	
-		preloader = m
-		
-	End
-	
-	Method AllocatePreLoad:Void(size:Int)
-		data = New FlashPixmap[size]
-		load_complete = New Bool[size]
-		w = New Int[size]
-		h = New Int[size]
-		total = size
-	End
 	
 	Method PreLoadData:Void(f$, id:Int)
 		''we can do this with buffers, when available
@@ -204,54 +200,43 @@ Class PreloadManager Implements IPreloadManager
 		If id<1 Then Return
 	
 		f = FixDataPath(f)
-		f=f.Replace("monkey://","")
-		data[id-1] = _LoadImageData(f) ', id)
-
+		f=f.Replace("monkey://","") ''because flash loader doesn't use monkey:// prefix
+		
+		Local d:PreloadData = New PreloadData
+		d.id = id
+		d.data = _LoadImageData(f) ', id)
+		
+		p_map.Set( id, d )
 		
 	End
 	
 	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
 		
 		Local p:TPixmapFlash = TPixmapFlash(pixmap)
-		If p
+		If p And id>0
 			
-			If id>0
-				p.pixels = data[id-1]
+				Local d:PreloadData = p_map.Get(id)
 				
-				Local info:Int[] = _GetImageInfo(p.pixels)
-				p.width = info[0]
-				p.height = info[1]
+				If d ''load_complete moved to tpixmap
+									
+					''set pixels, width, height
+					p.pixels = d.data			
+					Local info:Int[] = _GetImageInfo(p.pixels)
+					p.width = info[0]
+					p.height = info[1]
 
-
+				endif
 				''clear buffer if need be here
 			
 			
-			''NOT ALLOWED in FLASH, MUST PRELOAD	
-			Else
-				'Local info:Int[2]
-				'p.pixels = LoadImageData(f, info)
-				'p.width = info[0]
-				'p.height = info[1]
-			Endif
-			
+			''NO DIRECT LOADING NOT ALLOWED in Flash, MUST PRELOAD	
+			'
+
 		Endif
 		
 	End
 
-	Method Update:Void()
-		''update sync events here
-		For Local i:Int=0 To total-1
-			'If data[i] Then Print "i "+i+" :"+Int(CheckIsLoaded(data[i]))
-			If data[i]
-				If _CheckIsLoaded(data[i])  And Not load_complete[i]
-					''callback
-					load_complete[i]=True
-					preloader.IncLoader()
-					
-				Endif
-			Endif
-		Next	
-	End
+
 	
 End
 

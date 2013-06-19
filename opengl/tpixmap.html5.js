@@ -23,7 +23,7 @@ function LoadImageData(file, idx) {
 		//print ("image load error function");
 	};
 
-//print (idx+" "+file);		
+//print ("tpixmap: "+idx+" "+file);		
 	image.filename = file;
 	image.id =-1;
 	image.src = file;

@@ -30,8 +30,8 @@ End
 Class Vertex
 	
 	Field x#, y#, z#
-	Field r#,g#,b#,a#
 	Field nx#,ny#,nz#
+	Field r#,g#,b#,a#
 	Field u0#,v0#,u1#,v1#
 	Field w0#=0.0, w1#=0.0
 	

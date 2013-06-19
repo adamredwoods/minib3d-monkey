@@ -511,7 +511,7 @@ Class TBatchSprite Extends TSprite
 		End
 
 
-		Function CreateSprite:TBatchSprite(file$)
+		Function CreateSprite:TBatchSprite(file$, not_used:Int=0)
 			
 			For Local i:Int=1 To total_batch
 				If mainsprite[i].brush.tex And mainsprite[i].brush.tex[0].file=file

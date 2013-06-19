@@ -69,7 +69,7 @@ Class ShaderUniforms
 	Field tex_scale:Int[9]
 	Field tex_rotation:Int[9]
 	Field tex_blend:Int[9]
-	Field texfx_normal:Int[9]
+	Field texfx_normal:Int[] = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
 	
 	
 	Method Link:Int(shader_id:Int)
@@ -122,6 +122,7 @@ Class ShaderUniforms
 			tex_blend[i] = glGetUniformLocation(shader_id, "texBlend["+i+"]")
 			''texfx_normal[i] = glGetUniformLocation(shader_id, "texfxNormal["+i+"]")
 		Next
+		
 		texfx_normal[0] = glGetUniformLocation(shader_id, "texfxNormal[0]")
 		texfx_normal[1] = glGetUniformLocation(shader_id, "texfxNormal[1]")
 		

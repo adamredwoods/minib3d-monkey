@@ -1531,7 +1531,7 @@ Class TMesh Extends TEntity
 	Method GetTexture:TTexture(i:Int=0)
 		
 		If brush And brush.tex[0] Then Return brush.tex[0]
-		If GetSurface(1).brush And GetSurface(1).brush.tex[0] Then Return GetSurface(1).brush.tex[0]
+		If GetSurface(1).brush And GetSurface(1).brush.tex[i] Then Return GetSurface(1).brush.tex[i]
 		Return Null
 		
 	End
@@ -1778,7 +1778,7 @@ Class TMesh Extends TEntity
 			
 		Endif
 
-		' check surf brushes
+		' check and set surf brushes
 		For Local surf:TSurface=Eachin surf_list
 		
 			surf.alpha_enable=False
@@ -1813,6 +1813,7 @@ Class TMesh Extends TEntity
 			
 		Next
 		
+		using_alpha = alpha
 		Return alpha
 
 
@@ -2038,6 +2039,16 @@ Class TMesh Extends TEntity
 		surf_list.Clear()
 		
 	End
+	
+	Method FlipSurfaceOrder:Void()
+		
+		Local ll:List<TSurface> = New List<TSurface>
+		For Local ss:TSurface = Eachin surf_list
+			ll.AddFirst(ss)
+		Next
+		surf_list = ll
+	
+	end
 	
 	'Method Update(cam:TCamera)
 		

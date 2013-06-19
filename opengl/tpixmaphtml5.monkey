@@ -18,7 +18,7 @@ Import "tpixmap.html5.js"
 
 Extern
 	
-	Class HTMLImage
+	Class HTMLImage = "image"
 	End
 	
 	'Function PreLoadTextures:Int(file$[]) = "_preLoadTextures.Loader"
@@ -36,7 +36,7 @@ Extern
 	
 	Function GetHTMLImageInfo:Int[]( p:HTMLImage ) = "GetImageInfo"
 	
-	Function CheckIsLoaded:Bool( p:HTMLImage ) = "CheckIsLoaded"
+	Function CheckIsLoadedHTML:Bool( p:HTMLImage ) = "CheckIsLoaded"
 	'Function ClearHTMLPreLoad:Void() = "Clear"
 	
 	''special
@@ -63,7 +63,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	Function Init()
 	
 		If Not manager Then manager = New TPixmapGL
-		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadHTML)
 	
 	End
 	
@@ -88,7 +88,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		
 		If p.width Then p.pitch = p.width
 		
-		If (Not p.width And Not p.height) Or (Not p.pixels) Then Dprint "Image Not Found: "+f
+		If (Not p.width And Not p.height) Or (Not p.pixels) Then Dprint "**Image Not Preloaded: "+f
 
 		Return p
 		
@@ -110,6 +110,8 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	Method ResizePixmap:TPixmap(neww:Int, newh:Int)
 		
 		Local newpix:TPixmapGL = New TPixmapGL
+		If neww<1 Or newh<1 Then Return newpix
+		
 		newpix.pixels = HTMLResizePixmap(pixels, neww, newh, True)
 		newpix.width = neww
 		newpix.height = newh
@@ -121,7 +123,8 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	Method ResizePixmapNoSmooth:TPixmap(neww:Int, newh:Int)
 		
 		Local newpix:TPixmapGL = New TPixmapGL
-
+		If neww<1 Or newh<1 Then Return newpix
+		
 		newpix.pixels = HTMLResizePixmap(pixels, neww, newh, False)
 		newpix.width = neww
 		newpix.height = newh
@@ -178,32 +181,28 @@ Return
 End
 
 
-Class PreloadManager Implements IPreloadManager
+
+Class PreloadData
+	Field data:HTMLImage
+	Field w:Int=0, h:Int=0
+	Field id:int
+End
+
+
+
+Class PreloadHTML Implements IPreloadManager
 	
-	Field data:HTMLImage[]
-	Field load_complete:Bool[]
-	Field w:Int[], h:Int[]
-	Field total:Int
-	Field preloader:TPixmapPreloader
+	Field p_map:ArrayIntMap<PreloadData> = New ArrayIntMap<PreloadData>
 	
 	Method IsLoaded:Bool(file_id:Int)
-		If file_id-1>data.Length-1 Then Return False
-		Return (data[file_id-1] <> Null)
-	End
-		
-	Method SetPreloader:Void(m:TPixmapPreloader)
 	
-		preloader = m
+		Local f:PreloadData = p_map.Get(file_id)
+		If f Then Return CheckIsLoadedHTML(f.data)
+		
+		Return False
 		
 	End
-	
-	Method AllocatePreLoad:Void(size:Int)
-		data = New HTMLImage[size]
-		load_complete = New Bool[size]
-		w = New Int[size]
-		h = New Int[size]
-		total = size
-	End
+		
 	
 	Method PreLoadData:Void(f$, id:Int)
 		''we can do this with buffers, when available
@@ -212,9 +211,14 @@ Class PreloadManager Implements IPreloadManager
 		If id<1 Then Return
 		
 		f = FixDataPath(f)
-		f=f.Replace("monkey://","") 'for the html5 '' why am i doing this?
-		data[id-1] = LoadImageDataHTML(f, id)
-	
+		f=f.Split("//")[1] 'for the html5-- native class doesn't use monkey:// prefix
+		
+		Local d:PreloadData = New PreloadData
+		d.id = id
+		d.data = LoadImageDataHTML(f, id)
+		
+		p_map.Set( id, d )
+		
 	End
 	
 	Method SetPixmapFromID:Void(pixmap:TPixmap, id:Int, f$)
@@ -223,43 +227,34 @@ Class PreloadManager Implements IPreloadManager
 		If p
 			
 			If id>0
-				p.pixels = data[id-1]
 				
-				Local info:Int[] = GetHTMLImageInfo(p.pixels)
-				p.width = info[0]
-				p.height = info[1]
+				Local d:PreloadData = p_map.Get(id)
+				
+				If d ''load_complete moved to tpixmap
+									
+					''set pixels, width, height
+					p.pixels = d.data			
+					Local info:Int[] = GetHTMLImageInfo(p.pixels)
+					p.width = info[0]
+					p.height = info[1]
 
+				endif
 				''clear buffer if need be here
 			
 			
-			''NOT ALLOWED in HTML5, MUST PRELOAD	
+			''NO DIRECT LOADING NOT ALLOWED in HTML5, MUST PRELOAD	
 			'
-				'Local info:Int[2]
-				'p.pixels = LoadImageDataHTML(f, id)
-				'p.width = info[0]
-				'p.height = info[1]
+
 			Endif
 			
 		Endif
 		
 	End
 
-	Method Update:Void()
-		''update sync events here
-		For Local i:Int=0 To total-1
-			'If data[i] Then Print "i "+i+" :"+Int(CheckIsLoaded(data[i]))
-			If data[i]
-				If CheckIsLoaded(data[i])  And Not load_complete[i]
-					''callback
-					load_complete[i]=True
-					preloader.IncLoader()	
-				Endif
-
-			Endif
-		Next	
-	End
 	
 End
+
+
 
 
 

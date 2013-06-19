@@ -1100,6 +1100,10 @@ Function PreLoadPixmap:Int(fs:String[])
 	Return TPixmap.PreLoadPixmap(fs)
 End
 
+Function PreLoadPixmap:Int(fs:String)
+	Return TPixmap.PreLoadPixmap([fs])
+End
+
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=ProjectedX">Online Help</a>
 #End 

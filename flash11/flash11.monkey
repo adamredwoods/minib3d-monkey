@@ -353,6 +353,8 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
  					Endif
 				Endif 
 			Endif
+			
+			shader.Update()
 		
 'Print ent.classname+" "+Int(effect.depth_test)+" "+Int(effect.depth_write)+" "+effect.blend	
 	

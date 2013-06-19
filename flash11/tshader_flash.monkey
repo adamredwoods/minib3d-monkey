@@ -455,8 +455,7 @@ Class OneLightOneTexShader Extends TShaderFlash
 			"m44 vt1, va0, vc0~nmov v0, va1~nmov v1, va2~n"+
 			
 			
-			''pointlight1
-			'"mov vt0, va3~n"+
+			''pointlight1 into vt0
 			"m44 vt3, va3.xyz, vc8~nnrm vt3.xyz, vt3.xyz~n"+
 			"mov vt0.x, vc12.w~nmov vt0.y, vc13.w~nmov vt0.z, vc14.w~nm44 vt4, va0, vc4~nsub vt0, vt0.xyz, vt4.xyz~nnrm vt0.xyz, vt0.xyz~n"+
 			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nsat vt0.xyz, vt0.xyz~n"+
@@ -466,15 +465,12 @@ Class OneLightOneTexShader Extends TShaderFlash
 			'"mov v2, vt0.xyz~n"+
 			'' base color
 			"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag = 1111 or rgba
-			"mul vt3, vc16, vt3~n"+ 
-			"mul vt3, vt3, vc22~n"+ ''light color
-'' problem is that va1 is all 0's so it blacks everything out.			
+			"mul vt3, vc16, vt3~n"+
+			''light color
+			"mul vt3, vt3, vc22~n"+ 			
 			
-			''light*color
+			''final_light*final_color
 			"mul v0, vt3, vt0.xyz~n"+
-			'"mov v0, va1~n"+
-			''preserve alpha
-			'"mov v0.w, vc16.w~n"+
 			
 			"mov op, vt1~n"+
 			"~n"

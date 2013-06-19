@@ -77,7 +77,7 @@ Class TText Extends TSprite Final
 		TTexture.useGlobalResizeSmooth = False ''dont smooth on resize
 		'TTexture.ClearTextureFilters() ''no mip map on fonts
 		
-		Local pixmap:TPixmap = TPixmap.LoadPixmap( tt.font_file)
+		Local pixmap:TPixmap = TPixmap.LoadPixmap( tt.font_file).Copy()
 		tt.orig_width = pixmap.width; tt.orig_height = pixmap.height
 		
 		If pixmap.height = 0 Then Print"Font file not found."; Return tt
@@ -117,6 +117,7 @@ Class TText Extends TSprite Final
 		Endif
 		
 		tt.EntityFX 1+32
+		
 		
 		Return tt
 		

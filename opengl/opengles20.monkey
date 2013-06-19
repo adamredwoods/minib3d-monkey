@@ -49,8 +49,7 @@ Const VBO_MIN_TRIS=1
 Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
 Const USE_GL20 = 4 	' future use for opengl 2.0 support
-'Const MAX_TEXTURES = 4 ''set by shader
-'Const MAX_LIGHTS = 3 ''set by shader
+
 
 Function SetRender(flags:Int=0)
 
@@ -131,7 +130,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		If Not CheckWebGLContext Then Error "** WebGL Context not found. Please upgrade or check browser options. ~n~n"
 		
 		Local s:String = glGetString(GL_VERSION)
-If DEBUG Then Print s	
+		If DEBUG Then Print s	
 	
 		webgl = s.Split(" ")[0]
 		
@@ -166,6 +165,7 @@ If DEBUG Then Print s
 		TRender.alpha_pass = 0
 		last_shader = -1
 		cam_matrix_upload=0
+		last_tex_count= -1
 		
 		ResetLights()
 		last_effect.SetNull() ''forces next state to set
@@ -256,7 +256,8 @@ If DEBUG Then Print s
 		For surf = Eachin temp_list
 
 			'If GetGLError() Then Print "*render start"
-
+			ccc+=1
+			
 			''draw alpha surfaces last in second loop
 			''also catch surfaces with no vertex
 			If surf.no_verts=0 Then Continue
@@ -467,7 +468,11 @@ If DEBUG Then Print s
 			''
 			
 			If shader.u.flags<>-1 Then glUniform1f( shader.u.flags, effect.fx  )
+			
+			If effect.use_vertex_colors<0 Then effect.use_vertex_colors=0
 			If shader.u.colorflag<>-1 Then glUniform1f( shader.u.colorflag, Float(effect.use_vertex_colors) )
+			
+			If effect.use_full_bright<0 Then effect.use_full_bright=0
 			If shader.u.lightflag<>-1 Then glUniform1f( shader.u.lightflag, Float(1.0-effect.use_full_bright) )
 
 			If shader.u.ambient_color<>-1 Then glUniform4fv( shader.u.ambient_color, 1, effect.ambient ) ''ambient = 0 to provide fading
@@ -515,12 +520,12 @@ If DEBUG Then Print s
 				Endif
 			
 				If effect.use_depth_test<>last_effect.use_depth_test
-					If effect.use_depth_test=1 Then glEnable(GL_DEPTH_TEST) Else glDisable(GL_DEPTH_TEST)
-					
+					If effect.use_depth_test=0 Then glDisable(GL_DEPTH_TEST) Else glEnable(GL_DEPTH_TEST)
+
 				Endif
 				If effect.use_depth_write<>last_effect.use_depth_write
-					If effect.use_depth_write=1 Then glDepthMask(True) Else glDepthMask(False)
-					
+					If effect.use_depth_write=0 Then glDepthMask(False) Else glDepthMask(True)
+
 				Endif
 				If effect.use_alpha_test>0
 					If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )		
@@ -557,8 +562,9 @@ If DEBUG Then Print s
 				Endif
 				
 				
+				''If DEBUG And GetGLError() Then Print "*effects"
 				
-			Endif
+			Endif ''end skip state---
 			
 
 
@@ -570,17 +576,25 @@ If DEBUG Then Print s
 				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
 
+			If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
+			
+			'' -- we are always sending over a texture in opengl2.0 basic shader
+			If tex_count<>0 And (last_tex_count=0 Or last_tex_count=-1)
+				'glEnable(GL_TEXTURE_2D)
+			Elseif tex_count=0 And (last_tex_count>0 Or last_tex_count=-1)
+				'glDisable(GL_TEXTURE_2D)
+			Endif
+			
 			
 			''disable any extra textures from last pass
 			If tex_count < last_tex_count 
 				For Local i:Int = tex_count To shader.MAX_TEXTURES-1
-				
 					glActiveTexture(GL_TEXTURE0+i)
 					glBindTexture(GL_TEXTURE_2D, 0)
-
 				Next
 			Endif
-
+	
+	
 
 			For Local ix=0 To tex_count-1			
 				
@@ -621,35 +635,36 @@ If DEBUG Then Print s
 	
 	
 					''preserve texture states--------------------------------------
-					If ((surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
-					    (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix]))
+					''if two texture layers use the same texture, don't skip (checking ix=0 first texture layer)
+					'If ((surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
+					 '   (ent.brush.tex[ix] And last_texture = ent.brush.tex[ix])) And ix=0
+					If (texture = last_texture) And ix=0
 						
 						'' skip texture Bind
-						
-					Else		
+			
+					Else
 						'' do texture bind
 					
-						If ent.brush.tex[ix] Then last_texture = ent.brush.tex[ix] Else last_texture = surf.brush.tex[ix]
+						'If surf.brush.tex[ix] Then last_texture = surf.brush.tex[ix] Else last_texture = ent.brush.tex[ix]
+						last_texture = texture
 						
 						glActiveTexture(GL_TEXTURE0+ix)
-						'glClientActiveTexture(GL_TEXTURE0+ix)
-				
+						'glClientActiveTexture(GL_TEXTURE0+ix)				
 						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
-						
+				
 						If shader.u.texture[ix] <>-1 Then glUniform1i(shader.u.texture[ix], ix)
 					
 					Endif ''end preserve texture states---------------------------------
 
-					'glEnable(GL_TEXTURE_2D)
 					
 					
 					''assuming sprites with same surfaces are identical, preserve states---------
-					If Not skip_sprite_state
+					If (Not skip_sprite_state) And texture.width <>0
 					
 					
-					' masked texture flag
+					' 
 					If tex_flags&2<>0
-						'If shader.base_color<>-1 Then glUniform4fv( shader.base_color, 1, [red,green,blue,0.0] )			
+						'If shader.u.base_color<>-1 Then glUniform4fv( shader.u.base_color, 1, [1.0,1.0,1.0,1.0] )			
 					Else
 						'
 					Endif
@@ -772,7 +787,8 @@ If DEBUG Then Print s
 				
 				'glDisable(GL_TEXTURE_2D)
 				
-				glActiveTexture(GL_TEXTURE0)			
+				glActiveTexture(GL_TEXTURE0)
+				'glBindTexture(GL_TEXTURE_2D, 0)			
 				If shader.u.texcoords0 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords0)
 				If shader.u.texcoords1 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords1)
 				
@@ -783,7 +799,6 @@ If DEBUG Then Print s
 			last_tex_count = tex_count
 			
 			'' turn on textures
-			'If tex_count > 0 Then tex_count = 1
 			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
 			
 			If DEBUG And GetGLError() Then Print "*tex2"			
@@ -1117,6 +1132,8 @@ If DEBUG Then Print s
 		Local width=tex.pixmap.width
 		Local height=tex.pixmap.height
 	
+		If width=0 Or height=0 Then Return tex
+		
 		If Not tex.gltex[0]
 			tex.gltex[0] = glCreateTexture()
 		Elseif tex.pixmap.bind

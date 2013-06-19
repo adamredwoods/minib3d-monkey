@@ -395,7 +395,7 @@ Public
 						' if not then the texture created above (supplied as param below) will be returned
 						tex[tex_no]=TTexture.LoadTexture(te_file,te_flags,tex[tex_no])
 						
-						If tex[tex_no] And DEBUGMODEL Then Print  "-Load Texture:"+te_file
+						If tex[tex_no] And DEBUGMODEL Then Print  "-Load Texture:"+tex_no+" "+te_file+" blend:"+te_blend+" coords:"+te_coords
 											
 						tex_no=tex_no+1
 						tex=tex.Resize(tex_no+1) ' resize array +1
@@ -448,12 +448,14 @@ Public
 								brush[brush_no].no_texs -=1
 							Endif
 			
+							If DEBUGMODEL Then Print "brush:"+(brush_no)+" tex:"+b_tex_id
+							
 						Next
 		
 						brush_no=brush_no+1
 						brush=brush.Resize(brush_no+1) ' resize array +1
 						
-						If DEBUGMODEL Then Print "brush rgb:"+b_red+" "+b_green+" "+b_blue+"  blend:"+b_blend+" fx:"+b_fx+" no_texs:"+b_no_texs
+						If DEBUGMODEL Then Print "brush:"+(brush_no-1)+" rgb:"+b_red+" "+b_green+" "+b_blue+"  blend:"+b_blend+" fx:"+b_fx+" no_texs:"+b_no_texs
 						
 						new_tag=file.ReadTag()
 				
@@ -538,6 +540,7 @@ Public
 				Case MESH
 						
 					m_brush_id=file.ReadInt()
+'If DEBUGMODEL Then Print "mesh brush id:"+m_brush_id
 					
 					mesh=New TMesh
 					mesh.classname="Model"
@@ -612,16 +615,18 @@ Public
 						Endif
 						
 						If v_flags&2
-							v_r=file.ReadFloat()*255.0 ' *255 as VertexColor requires 0-255 values
-							v_g=file.ReadFloat()*255.0
-							v_b=file.ReadFloat()*255.0
+							v_r=file.ReadFloat()'*255.0 ' *255 as surf.VertexColor() requires 0-255 values
+							v_g=file.ReadFloat()'*255.0
+							v_b=file.ReadFloat()'*255.0
 							v_a=file.ReadFloat()
 						Endif
 						
 						v_id=v_surf.AddVertex(v_x,v_y,v_z)
-						v_surf.VertexColor(v_id,v_r,v_g,v_b,v_a)
+						v_surf.VertexColorFloat(v_id,v_r,v_g,v_b,v_a)
 						v_surf.VertexNormal(v_id,v_nx,v_ny,v_nz)
 						
+			'Print "vert color "+v_id+" "+v_r+" "+v_g+" "+v_b+" "+v_a		
+			
 						'read tex coords...
 						For Local j=0 To v_tc_sets-1 ' texture coords per vertex - 1 for simple uv, 8 max
 							For Local k=1 To v_tc_size ' components per set - 2 for simple uv, 4 max
@@ -665,7 +670,8 @@ Public
 						
 					
 					Endif
-	
+					
+					
 					tr_sz=12
 						
 					new_tag=file.ReadTag()
@@ -711,7 +717,7 @@ Public
 					
 						If vert_lookup[tr_vid0]=0 Or vert_surf_lookup[tr_vid0]<>mesh.no_surfs
 							vid0=surf.AddVertex(v0.x,v0.y,-v0.z)
-							surf.VertexColor(vid0,v0.r,v0.g,v0.b,v0.a)
+							surf.VertexColorFloat(vid0,v0.r,v0.g,v0.b,v0.a)
 							surf.VertexNormal(vid0,v0.nx,v0.ny,v0.nz)
 							surf.VertexTexCoords(vid0,v0.u0,v0.v0,0.0,0)
 							surf.VertexTexCoords(vid0,v0.u1,v0.v1,0.0,1)
@@ -724,7 +730,7 @@ Public
 						
 						If vert_lookup[tr_vid1]=0 Or vert_surf_lookup[tr_vid1]<>mesh.no_surfs
 							vid1=surf.AddVertex(v1.x,v1.y,-v1.z)
-							surf.VertexColor(vid1,v1.r,v1.g,v1.b,v1.a)
+							surf.VertexColorFloat(vid1,v1.r,v1.g,v1.b,v1.a)
 							surf.VertexNormal(vid1,v1.nx,v1.ny,v1.nz)
 							surf.VertexTexCoords(vid1,v1.u0,v1.v0,0.0,0)
 							surf.VertexTexCoords(vid1,v1.u1,v1.v1,0.0,1)
@@ -737,7 +743,7 @@ Public
 						
 						If vert_lookup[tr_vid2]=0 Or vert_surf_lookup[tr_vid2]<>mesh.no_surfs
 							vid2=surf.AddVertex(v2.x,v2.y,-v2.z)
-							surf.VertexColor(vid2,v2.r,v2.g,v2.b,v2.a)
+							surf.VertexColorFloat(vid2,v2.r,v2.g,v2.b,v2.a)
 							surf.VertexNormal(vid2,v2.nx,v2.ny,v2.nz)
 							surf.VertexTexCoords(vid2,v2.u0,v2.v0,0.0,0)
 							surf.VertexTexCoords(vid2,v2.u1,v2.v1,0.0,1)
@@ -790,6 +796,8 @@ Public
 						totaltris+=1
 					Next
 					'Wend
+					
+					If DEBUGMODEL Then Print "painting ent:"+m_brush_id+" surf:"+tr_brush_id
 					
 					If m_brush_id<>-1 Then mesh.PaintEntity(brush[m_brush_id])
 					If tr_brush_id<>-1 Then surf.PaintSurface(brush[tr_brush_id])
@@ -1123,12 +1131,18 @@ Public
 		
 		
 		''clean up buffers
-		For Local surf:TSurface = Eachin mesh.surf_list
-			surf.CropSurfaceBuffers()
-			If mesh.anim_surf[surf.surf_id] Then mesh.anim_surf[surf.surf_id].CropSurfaceBuffers()
+		For Local e:TEntity = Eachin root_ent.GetChildren(True)
+
+			Local m:TMesh = TMesh(e)
+			If Not m Then continue
+		
+			For Local surf:TSurface = Eachin m.surf_list
+				surf.CropSurfaceBuffers()
+				If m.anim_surf[surf.surf_id] Then m.anim_surf[surf.surf_id].CropSurfaceBuffers()
+			Next
+
 		Next
-		
-		
+	
 		
 		Return TMesh(root_ent)
 	

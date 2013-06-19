@@ -26,7 +26,7 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 	Function Init()
 	
 		If Not manager Then manager = New TPixmapXNA
-		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadXNA)
 	
 	End
 	
@@ -84,6 +84,7 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 		'If ratiow<1.0 And ratioh<1.0 Then enlarge = 1
 			
 		Local newpix:TPixmapXNA = TPixmapXNA(CreatePixmap(neww, newh))
+		If neww<1 Or newh<1 Then Return newpix
 		
 		Local rgb:Int[5], yi:Float=0, xx:Int, yy:Int, r:Int, g:Int, b:Int, a:Int
 
@@ -148,6 +149,7 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 		Local ratioh:Float = height/Float(newh)
 			
 		Local newpix:TPixmapXNA = TPixmapXNA(CreatePixmap(neww, newh))
+		If neww<1 Or newh<1 Then Return newpix
 		
 		Local rgb:Int[5], yi:Float=0, xx:Int, yy:Int, red:Int, green:Int, blue:Int, alpha:Int
 		
@@ -268,19 +270,24 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 End
 
 
-Class PreloadManager Implements IPreloadManager
+Class PreloadData
+	Field data:DataBuffer
+	Field w:Int=0, h:Int=0
+	Field id:int
+End
+
+
+Class PreloadXNA Implements IPreloadManager
+
+	Field p_map:ArrayIntMap<PreloadData> = New ArrayIntMap<PreloadData>
 	
-	Field data:DataBuffer[]
-	Field w:Int[], h:Int[]
-	Field total:Int
-	Field preloader:TPixmapPreloader
-	
-	Method AllocatePreLoad:Void(size:Int)
-		data = New DataBuffer[size]
-		w = New Int[size]
-		h = New Int[size]
-		total = size
+	Method IsLoaded:Bool(file_id:Int)
+		Local f:PreloadData = p_map.Get(file_id)
+		If f Then Return (f.w<>0)
+		
+		Return False
 	End
+	
 	
 	Method PreLoadData:Void(f$, id:Int)
 		''we can do this with buffers, when available
@@ -290,13 +297,15 @@ Class PreloadManager Implements IPreloadManager
 		Local info:Int[2]
 		
 		f = FixDataPath(f)
-		data[id-1] = New DataBuffer()
-		LoadImageData(data[id-1], f, info)
-		w[id-1] = info[0]
-		h[id-1] = info[1]
+
+		Local d:PreloadData = New PreloadData
+		d.id = id
+		d.data = New DataBuffer
+		LoadImageData(d.data, f, info)	
+		d.w = info[0]
+		d.h = info[1]
 		
-		''callback
-		preloader.IncLoader()
+		If d.data Then p_map.Set(id, d)
 		
 	End
 	
@@ -306,51 +315,65 @@ Class PreloadManager Implements IPreloadManager
 		If p
 			
 			If id>0
-				p.pixels = data[id-1]
-				p.width = w[id-1]
-				p.height = h[id-1]
+				Local d:PreloadData = p_map.Get(id)
+				
+				If d ''load_complete moved to tpixmap
+									
+					''set pixels, width, height
+					p.pixels = d.data
+					p.width = d.w
+					p.height = d.h
+
+				endif
 				''clear buffer if need be here
 				
 			Else
+		
+				'' load directly
 				Local info:Int[2]
 				f = FixDataPath(f)
-				p.pixels = New DataBuffer()
-				LoadImageData(p.pixels,f, info)
-				
+				p.pixels =  New DataBuffer
+				LoadImageData(p.pixels, f, info)	
 				p.width = info[0]
 				p.height = info[1]
+				
 			Endif
 			
 		Endif
 		
 	End
 	
-	Method SetPreloader:Void(m:TPixmapPreloader)
-	
-		preloader = m
-		
-	End
-	
-	Method Update:Void()
-		''update sync events here
-	End
-	
-''todo later....
-#rem	
-	Method FromDataBuffer:Void(buf:DataBuffer, info[])
-		
-		If Not buf Then Return
-		
-		''move data from buf to pixels
-		pixels = New DataBuffer(buf.Length())
-		ConvertDataToPixmap( buf, pixels, info)
-	
-		''free it
-		buf.Discard()
-		
-''Print "pixmapgl size "+info[0]+" "+info[1]
+End
 
-	End
-#end
+
+Class ArrayIntMap<T>
 	
+	Field data:T[]
+	Field length:Int
+	
+	Method New()
+		data = New T[32]
+		length = 31
+	End
+	
+	Method Length:Int()
+		Return length+1
+	End
+	
+	Method Clear:Void()
+		data = New T[32]
+		length = 31
+	End
+
+	Method Get:T(id:Int)
+		If id<length Then Return data[id]
+	End
+	
+	Method Set:Void(id:Int, obj:T)
+		While id>=length
+			length = length+32
+			data = data.Resize(length+1)
+		Wend
+		data[id] = obj
+	End
 End

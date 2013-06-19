@@ -65,7 +65,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	Function Init()
 		
 		If Not manager Then manager = New TPixmapGL
-		If Not preloader Then preloader = New TPixmapPreloader(New PreloadManager)
+		If Not preloader Then preloader = New TPixmapPreloader(New PreloadGL)
 	
 	End
 	
@@ -74,8 +74,6 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	
 		Local p:TPixmapGL = New TPixmapGL
 		
-		Local info:Int[3]
-	
 		'p.FromDataBuffer( preloader.GetDataBuffer(f) , info )
 		preloader.GetPixmapPreLoad(p, f)
 		
@@ -83,7 +81,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		
 		If p.height Then p.pitch = GetBufferLength(p.pixels)/4.0 / p.height
 		
-		If Not p.width And Not p.height Then Dprint "Image Not Found: "+f
+		If p.width=0 and p.height=0 Then Dprint "Image Not Found: "+f
 
 		Return p
 		
@@ -125,6 +123,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 
 		'If ratiow<1.0 Or ratioh<1.0 Then enlarge = 1
 		Local newpix:TPixmapGL = TPixmapGL(CreatePixmap(neww, newh))
+		If neww<1 Or newh<1 Then Return newpix
 
 		Local rgb:Int[5]
 		For Local iy = 0 Until newh
@@ -188,6 +187,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		Local ratioh:Float = height/Float(newh)
 			
 		Local newpix:TPixmapGL = TPixmapGL(CreatePixmap(neww, newh))
+		If neww<1 Or newh<1 Then Return newpix
 		
 		Local rgb:Int[5], yi:Float=0, xx:Int, yy:Int, red:Int, green:Int, blue:Int, alpha:Int
 		
@@ -313,25 +313,24 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 End
 
 
+Class PreloadData
+	Field data:DataBuffer
+	Field w:Int=0, h:Int=0
+	Field id:int
+End
 
 
-Class PreloadManager Implements IPreloadManager
-	
-	Field data:DataBuffer[]
-	Field w:Int[], h:Int[]
-	Field total:Int
-	Field preloader:TPixmapPreloader
+Class PreloadGL Implements IPreloadManager
+
+	Field p_map:ArrayIntMap<PreloadData> = New ArrayIntMap<PreloadData>
 	
 	Method IsLoaded:Bool(file_id:Int)
-		Return (data[file_id-1] <> Null)
+		Local f:PreloadData = p_map.Get(file_id)
+		If f Then Return (f.w<>0)
+		
+		Return False
 	End
 	
-	Method AllocatePreLoad:Void(size:Int)
-		data = New DataBuffer[size]
-		w = New Int[size]
-		h = New Int[size]
-		total = size
-	End
 	
 	Method PreLoadData:Void(f$, id:Int)
 		''we can do this with buffers, when available
@@ -344,12 +343,14 @@ Class PreloadManager Implements IPreloadManager
 #If TARGET<>"ios"		
 		f = FixDataPath(f)
 #Endif
-		data[id-1] = LoadImageData(f, info)
-		w[id-1] = info[0]
-		h[id-1] = info[1]
+
+		Local d:PreloadData = New PreloadData
+		d.id = id
+		d.data = LoadImageData(f, info)	
+		d.w = info[0]
+		d.h = info[1]
 		
-		''callback
-		preloader.IncLoader()
+		If d.data Then p_map.Set(id, d)
 		
 	End
 	
@@ -359,12 +360,21 @@ Class PreloadManager Implements IPreloadManager
 		If p
 			
 			If id>0
-				p.pixels = data[id-1]
-				p.width = w[id-1]
-				p.height = h[id-1]
+				Local d:PreloadData = p_map.Get(id)
+				
+				If d ''load_complete moved to tpixmap
+									
+					''set pixels, width, height
+					p.pixels = d.data
+					p.width = d.w
+					p.height = d.h
+
+				endif
 				''clear buffer if need be here
 				
 			Else
+		
+				'' load directly
 				Local info:Int[2]
 '' ugh....
 #If TARGET<>"ios"
@@ -373,42 +383,48 @@ Class PreloadManager Implements IPreloadManager
 				p.pixels = LoadImageData(f, info)
 				p.width = info[0]
 				p.height = info[1]
+				
 			Endif
 			
 		Endif
 		
 	End
-	
-	Method SetPreloader:Void(m:TPixmapPreloader)
-	
-		preloader = m
 		
-	End
-	
-	Method Update:Void()
-		''update sync events here
-	End
-	
-''todo later....
-#rem	
-	Method FromDataBuffer:Void(buf:DataBuffer, info[])
-		
-		If Not buf Then Return
-		
-		''move data from buf to pixels
-		pixels = New DataBuffer(buf.Length())
-		ConvertDataToPixmap( buf, pixels, info)
-	
-		''free it
-		buf.Discard()
-		
-''Print "pixmapgl size "+info[0]+" "+info[1]
-
-	End
-#end
-	
 End
 
 
 
 #Endif
+
+
+Class ArrayIntMap<T>
+	
+	Field data:T[]
+	Field length:Int
+	
+	Method New()
+		data = New T[32]
+		length = 31
+	End
+	
+	Method Length:Int()
+		Return length+1
+	End
+	
+	Method Clear:Void()
+		data = New T[32]
+		length = 31
+	End
+
+	Method Get:T(id:Int)
+		If id<length Then Return data[id]
+	End
+	
+	Method Set:Void(id:Int, obj:T)
+		While id>=length
+			length = length+32
+			data = data.Resize(length+1)
+		Wend
+		data[id] = obj
+	End
+End

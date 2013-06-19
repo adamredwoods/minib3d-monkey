@@ -178,10 +178,10 @@ Public
 	
 	End
 	
-	Method PaintSurface(tex:TTexture)
+	Method PaintSurface(tex:TTexture, index:Int=0)
 		If brush=Null Then brush=New TBrush
-		brush.no_texs=1
-		brush.tex[0] = tex
+		brush.no_texs = Max(brush.no_texs,index+1)
+		brush.tex[index] = tex
 		
 	End
 	
@@ -335,7 +335,7 @@ Public
 	End 
 	
 	Method VertexColorFloat(vid,r#,g#,b#,a#=1.0)
-	
+
 		vert_data.PokeColor(vid,r,g,b,a)
 		
 		' mesh state has changed - update reset flags
@@ -857,7 +857,7 @@ Public
 	
 	Method ToString$()
 		For Local i:Int=0 To no_verts-1
-			Print "v:"+i+" "+GetVertexCoords(i)
+			Print "v:"+i+" "+GetVertexCoords(i)+" red:"+vert_data.VertexRed(i)
 		Next
 	End
 	

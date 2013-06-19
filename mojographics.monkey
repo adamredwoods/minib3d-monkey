@@ -418,7 +418,7 @@ Public
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
 		
-
+		
 		p0 = mat.TransformPoint(x,-h-y,zdepth)		
 		p1 = mat.TransformPoint(x,-y,zdepth)		
 		p2 = mat.TransformPoint(x+w,-y,zdepth)		

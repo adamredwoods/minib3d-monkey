@@ -315,8 +315,7 @@ Class TRender
 		
 		
 			If mesh.Alpha() Then mesh.alpha_order=1.0 ' test for alpha in surface
-'If mesh Then Print mesh.no_surfs
-'If mesh.GetSurface(3) And mesh.GetSurface(3).brush.tex[0] Then Print "trender "+mesh.GetSurface(3).brush.tex[0].width
+
 		
 			TRender.render.Render(mesh,camera2D)
 		Next
@@ -405,7 +404,7 @@ Class TRender
 					
 						''alpha entities are drawn last, sorted, without depth test
 						
-						mesh.alpha_order=cam.EntityDistanceSquared(mesh)+0.000001 ''+0.000001 to keep it not zero
+						mesh.alpha_order=cam.EntityDistanceSquared(mesh)
 						render_alpha_list.AddLast(mesh)
 
 					Else
@@ -630,7 +629,7 @@ Class EffectState
 				
 			' if surface contains alpha info, enable blending
 			Local enable_blend:Int=0
-			If ent.alpha_order<>0.0
+			If ent.using_alpha = true
 				
 				If ent.brush.alpha<1.0
 					''the entire entity
@@ -648,6 +647,7 @@ Class EffectState
 					use_depth_test = 1
 					use_depth_write = 1
 				Endif
+				
 			Else
 				enable_blend=0
 				
@@ -674,9 +674,7 @@ Class EffectState
 
 			' fx flag 2 - vertex colors ***todo*** disable all lights?
 			If fx&2
-				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-				'glEnable(GL_COLOR_MATERIAL)
-				use_vertex_colors = 1		
+				use_vertex_colors = 1	
 				red=1.0; green=1.0; blue=1.0; alpha=1.0
 			Endif
 			
@@ -718,7 +716,7 @@ Class EffectState
 		
 			' material color + specular
 
-			ambient=[ambient_red,ambient_green,ambient_blue,1.0]
+			ambient=[ambient_red,ambient_green,ambient_blue,0.0]
 
 			'mat_ambient=[red,green,blue,alpha]
 			diffuse=[red,green,blue,alpha]

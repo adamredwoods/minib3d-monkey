@@ -54,7 +54,8 @@ Class TEntity
 	Field hide:Bool =False
 	Field order%,alpha_order#
 	Field auto_fade%,fade_near#,fade_far#,fade_alpha#
-
+	Field using_alpha:Bool = False
+	
 	Field cull_radius#
 
 	Field brush:TBrush=New TBrush
@@ -1009,6 +1010,15 @@ Class TEntity
 	'' paint hex color
 	Method PaintEntity(color:Int)
 		EntityColor( color )
+	End
+	
+	Method PaintEntity(r:Int,g:Int,b:Int,a:Float = -1.0)
+		EntityColor( r,g,b,a )
+	End
+	
+	'' paint by pixmap file
+	Method PaintEntity(pixmap$, frame:Int=0, index:Int=0, texflag:Int=9)
+		EntityTexture( TTexture.LoadTexture(pixmap, texflag), frame, index)
 	End
 	
 	Method EntityOrder(order_no:int)
