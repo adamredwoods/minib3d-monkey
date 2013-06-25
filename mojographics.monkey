@@ -63,10 +63,10 @@ Private
 	Field lastBlend:Int=-1
 	Field fontImage:Image
 	Field fontFile:String
+	
+	Global firstTimeRun:Bool = false
 
 	Function SetDevice:Void()
-	
-		Local first:Bool=False
 		
 		If Not _device
 		
@@ -85,13 +85,15 @@ Private
 		mojo.graphics.BeginRender() ''trick to get html5 to work
 		''GetGraphicsDevice() ''trick for xna to work
 
-		_device.InitFont()
+		If firstTimeRun Then _device.InitFont() ''don't load font first time, to avoid the file not found error.	
+		firstTimeRun = true
 		
 	End
 	
 	Method InitFont:Void()
 
 		If fontImage And fontImage.Width()>0 Then Return
+		
 		'' consider embedding font as base64?
 		fontFile = FixDataPath("mojo_font.png")
 		fontImage = LoadImage( fontFile,96,Image.XPadding )
@@ -182,6 +184,7 @@ Public
 	End
 	
 	Method LoadSurface:Surface( path$ )
+	
 		Local msurf:MojoSurface = MojoSurface.PreLoad(path, mesh, _device)
 
 		Return FlashFix(msurf)
@@ -235,8 +238,8 @@ Public
 	
 	Method SetMatrix( ix#,iy#,jx#,jy#,tx#,ty# )
 		mat.grid[0][0] = ix
-		mat.grid[0][1] = iy
-		mat.grid[1][0] = jx
+		mat.grid[1][0] = iy
+		mat.grid[0][1] = jx
 		mat.grid[1][1] = jy
 		mat.grid[3][0] = tx
 		mat.grid[3][1] = -ty
@@ -283,9 +286,9 @@ Public
 		Check(Null)
 
 		Local p0:Float[]
-		p0 = mat.TransformPoint(x1,-y1,zdepth)
+		p0 = Transform2D(mat,x1,-y1,zdepth)
 		x1=p0[0]; y1=p0[1]		
-		p0 = mat.TransformPoint(x2,-y2,zdepth)
+		p0 = Transform2D(mat,x2,-y2,zdepth)
 		x2=p0[0]; y2=p0[1]	
 		
 		Local px# = (y1-y2)
@@ -320,7 +323,7 @@ Public
 		If w<0.0 Then w=-w
 		If h<0.0 Then h=-h
 		Local seg:Int = (w+h)*0.2
-		If seg<12 Then seg=12
+		If seg<14 Then seg=14
 		
 		Local deg#=0.0, deginc# = 360.0/seg
 		Local verts#[seg*6+1]
@@ -350,9 +353,9 @@ Public
 		
 		
 		For Local i:Int=0 To verts.Length-7 Step 6
-			p0 = mat.TransformPoint(verts[i+0],-verts[i+1],zdepth)		
-			p1 = mat.TransformPoint(verts[i+2],-verts[i+3],zdepth)		
-			p2 = mat.TransformPoint(verts[i+4],-verts[i+5],zdepth)		
+			p0 = Transform2D(mat,verts[i+0],-verts[i+1],zdepth)		
+			p1 = Transform2D(mat,verts[i+2],-verts[i+3],zdepth)		
+			p2 = Transform2D(mat,verts[i+4],-verts[i+5],zdepth)		
 
 			Local v0%=solid[layer].AddVertex(p0[0],p0[1],p0[2])
 			Local v1%=solid[layer].AddVertex(p1[0],p1[1],p1[2])
@@ -372,12 +375,6 @@ Public
 	''need to order these layers
 	Method DrawSurface2( surface:Surface,x#,y#,srcx%,srcy%,srcw%,srch% )
 		
-		'' we do our tex binding here, if all loading is done.
-		'If MojoSurface.isLoading
-			'MojoSurface.UpdateLoad(mesh, _device)
-			'Return 0
-		'End
-		
 		Local s:MojoSurface = MojoSurface(surface)
 		If Not s Then Return
 		
@@ -391,15 +388,9 @@ Public
 		Local upos# = srcx*xstep
 		Local vpos# = srcy*ystep
 
-		Local v:Int[] = AddQuad(solid[layer], x,y,srcw,srch, upos, vpos, upos+xstep*srcw, vpos+ystep*srch)
+		AddQuad(solid[layer], x,y,srcw,srch, upos, vpos, upos+xstep*srcw, vpos+ystep*srch)
 		'Local v:Int[] = AddQuad(solid[layer], x,y,srcw,srch, 0.0, 0.0, 1.0,1.0)
 		
-		#rem
-		solid[layer].VertexTexCoords(v[0],upos,vpos+ystep*srch)
-		solid[layer].VertexTexCoords(v[1],upos,vpos)
-		solid[layer].VertexTexCoords(v[2],upos+xstep*srcw,vpos)
-		solid[layer].VertexTexCoords(v[3],upos+xstep*srcw,vpos+ystep*srch)
-		#end
 		
 	End
 	
@@ -414,16 +405,15 @@ Public
 	End
 
 
-	Method AddQuad:Int[](s:TSurface, x#,y#,w#,h#, u#=0.0, v#=0.0, uw#=1.0, vh#=1.0)
+	Method AddQuad:Void(s:TSurface, x#,y#,w#,h#, u#=0.0, v#=0.0, uw#=1.0, vh#=1.0)
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
 		
 		
-		p0 = mat.TransformPoint(x,-h-y,zdepth)		
-		p1 = mat.TransformPoint(x,-y,zdepth)		
-		p2 = mat.TransformPoint(x+w,-y,zdepth)		
-		p3 = mat.TransformPoint(x+w,-h-y,zdepth)
-
+		p0 = Transform2D(mat,x,-h-y,zdepth)		
+		p1 = Transform2D(mat,x,-y,zdepth)		
+		p2 = Transform2D(mat,x+w,-y,zdepth)		
+		p3 = Transform2D(mat,x+w,-h-y,zdepth)
 		
 		Local v0%=s.AddVertex(p0[0],p0[1],p0[2], u, vh) ''v0
 		Local v1%=s.AddVertex(p1[0],p1[1],p1[2], u, v)
@@ -442,10 +432,14 @@ Public
 		'' make sure to reset
 		s.reset_vbo=-1
 		
-		Return [v0,v1,v2,v3]
+		'Return [v0,v1,v2,v3]
 	End
 	
 	
+End
+
+Function Transform2D:Float[](mat:Matrix, x#, y#, z#)
+	Return [ mat.grid[0][0]*x + mat.grid[1][0]*y + mat.grid[3][0], mat.grid[0][1]*x + mat.grid[1][1]*y + mat.grid[3][1], z ]
 End
 
 
