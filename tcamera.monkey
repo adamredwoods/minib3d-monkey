@@ -15,6 +15,7 @@ Class TCamera Extends TEntity
 	Field cam_link:list.Node<TCamera>
 
 	Field vx:Int,vy:Int,vwidth:Int,vheight:Int
+	Field viewport:Int[4]
 	Field cls_r#=0.0,cls_g#=0.0,cls_b#=0.0
 	Field cls_color:Bool=True,cls_zbuffer:Bool=True
 	
@@ -37,7 +38,6 @@ Class TCamera Extends TEntity
 	Field proj_mat:Matrix =New Matrix'Float[16]
 	Field projview_mat:Matrix = New Matrix
 	Field view_mat:Matrix ''will point to mod_mat
-	Field viewport:Int[4]
 	
 	Global projected_x#
 	Global projected_y#
@@ -97,6 +97,7 @@ Public
 		cam.fog_b=fog_b
 		cam.fog_range_near=fog_range_near
 		cam.fog_range_far=fog_range_far
+		cam.viewport = viewport[..]
 		
 
 		cam.draw2D = draw2D
@@ -451,7 +452,6 @@ Public
 		'Local jx#=0 'TGlobal.j[TGlobal.jitter][0]
 		'Local jy#=0 'TGlobal.j[TGlobal.jitter][1]	
 		'If TGlobal.aa=False Then jx=0;jy=0
-
 		
 		accPerspective(fov_y,range_near,range_far,0,0)
 
