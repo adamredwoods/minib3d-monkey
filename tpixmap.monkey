@@ -57,7 +57,6 @@ Class TPixmap
 
 	
 	Function LoadPixmap:TPixmap(f$)
-		f=FixDataPath(f)
 		Return manager.LoadPixmap(f)
 	End
 
@@ -200,6 +199,7 @@ Class TPixmapPreloader
 					f.loading = True
 					Exit ''one at a time
 				Else
+'Print "loaded? "+f.id+" "+Int(manager.IsLoaded( f.id ))
 					If manager.IsLoaded( f.id ) '' is file loaded? if not, nothing is done
 'Print "finish "+f.file+" "+f.id
 						start_stack.RemoveEach(f)
@@ -219,9 +219,9 @@ Class TPixmapPreloader
 	End
 	
 	Method GetPixmapPreLoad:Void(p:TPixmap, file$)
-		
+	
 		Local id:Int = GetID(file)
-		If manager.IsLoaded(id) Then manager.SetPixmapFromID(p, id, file)
+		manager.SetPixmapFromID(p, id, file)
 	
 	End
 	

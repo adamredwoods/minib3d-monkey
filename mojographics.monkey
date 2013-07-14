@@ -6,7 +6,7 @@ Import minib3d
 
 Extern
 
-#If TARGET="html5" Or TARGET="flash"
+#If TARGET="html5" Or TARGET="flash" Or TARGET = "win8"
 	'' YIKES! is this a hack or what? this empty class is tucked in TPixmaphtml5 native code
 	Class Surface_ Extends Surface = "EmptyNullClass"
 	End
@@ -62,7 +62,7 @@ Private
 	Field lastSurface:MojoSurface
 	Field lastBlend:Int=-1
 	Field fontImage:Image
-	Field fontFile:String
+	Field fontFile:String = "mojo_font.png"
 	
 	Global firstTimeRun:Bool = false
 
@@ -85,7 +85,11 @@ Private
 		mojo.graphics.BeginRender() ''trick to get html5 to work
 		''GetGraphicsDevice() ''trick for xna to work
 
-		If firstTimeRun Then _device.InitFont() ''don't load font first time, to avoid the file not found error.	
+		If firstTimeRun
+			_device.InitFont() ''don't load font first time, to avoid the file not found error.	
+		Else
+			PreLoadPixmap(_device.fontFile)
+		Endif
 		firstTimeRun = true
 		
 	End
@@ -95,7 +99,7 @@ Private
 		If fontImage And fontImage.Width()>0 Then Return
 		
 		'' consider embedding font as base64?
-		fontFile = FixDataPath("mojo_font.png")
+		
 		fontImage = LoadImage( fontFile,96,Image.XPadding )
 		
 		If fontImage And fontImage.Width()>0
@@ -119,7 +123,7 @@ Public
 	
 	Method NewLayer:Void()
 		
-		If mesh = Null Then return
+		If mesh = Null Then Return
 		
 		layer+=1
 		If layer>MAXLAYERS Then layer=0
@@ -513,11 +517,10 @@ Class MojoSurface Extends Surface_
 
 	
 	Method Discard()
-		tex.FreeTexture()
+		If tex Then tex.FreeTexture()
 		'surf.FreeSurface()
 		tex=Null
 		'surf=Null
-		
 	End
 
 	Method Width() Property
