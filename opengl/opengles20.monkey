@@ -107,6 +107,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	Private
 	
 	Global _useMojo:Bool = False
+	Global _usePerPixelLighting:Int = 0
 	
 	Public
 	
@@ -212,7 +213,8 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		Local shader:TShaderGLSL
 		shader = TShaderGLSL(TShader.g_shader)
 		
-		If Not shader.u Then Return
+		
+		
 		If Not shader.active Then Return '' a brush shader can be deactive, but a global shader cannot
 		
 		''set shader brush if one
@@ -338,9 +340,20 @@ Class OpenglES20 Extends TRender Implements IShader2D
 'Print " shader:"+shader.name
 			''enable shader and check for last_state
 			
-				
+			effect.UpdateEffect( surf, ent, cam )
+			
+			'' need to get tex count to set shader
+			Local tex_count:Int =ent.brush.no_texs
+			If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
+			If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
 			
 			''SHADER ACTIVATION---------------------------------
+			If FullShader(shader) <> Null
+				shader = FullShader.GetShader(_usePerPixelLighting, 1, tex_count)
+			Endif
+			
+			If Not shader.u Then Continue
+			
 			If shader.shader_id<>last_shader
 			
 				glUseProgram(shader.shader_id)
@@ -355,7 +368,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			shader.Update()
 			
 			
-			effect.UpdateEffect( surf, ent, cam )
+			
 			
 		
 			'' *** update buffers ***
@@ -570,7 +583,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 
 			' ***** textures *****
 			
-			Local tex_count:Int =ent.brush.no_texs
+			'Local tex_count:Int =ent.brush.no_texs
 			
 			'If surf.brush<>Null
 				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
@@ -913,9 +926,11 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		width = DeviceWidth()
 		height = DeviceHeight()
 		
-		If Not (flags & DISABLE_VBO)
+		If Not (flags & RENDERFLAG_DISABLEVBO)
 			vbo_enabled=True 'THardwareInfo.VBOSupport
 		Endif
+		
+		_usePerPixelLighting = ((flags & RENDERFLAG_PERPIXELLIGHTING) > 0)
 		
 		
 		EnableStates()

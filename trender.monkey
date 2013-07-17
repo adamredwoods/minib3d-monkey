@@ -20,7 +20,8 @@ Interface IRenderUpdate
 	Method Update( cam:TCamera )
 End
 
-
+Const RENDERFLAG_DISABLEVBO:Int = 1
+Const RENDERFLAG_PERPIXELLIGHTING:Int = 2
 
 Class TRender
 
@@ -234,6 +235,8 @@ Class TRender
 	
 	
 	Function  RenderWorld:Void()
+
+		'Print "begin renderworld"
 		
 		''confirm rendering context
 		If TRender.render = Null Or Not TRender.render.ContextReady() Then Return
@@ -354,7 +357,7 @@ Class TRender
 			
 		Next
 
-		
+		'Print "cam:"+cam.name
 		
 		render_list.Clear()
 		render_alpha_list.Clear()
