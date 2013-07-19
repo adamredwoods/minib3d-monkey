@@ -951,7 +951,7 @@ Public
 
 					bo_bone.classname="Bone"
 					bo_bone.name=n_name
-					bo_bone.px=n_px  '' bone rest_mat takes care of original positions
+					'bo_bone.px=n_px  '' bone rest_mat takes care of original positions
 					'bo_bone.py=n_py
 					'bo_bone.pz=n_pz
 					'bo_bone.sx=n_sx
