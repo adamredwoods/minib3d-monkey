@@ -155,7 +155,7 @@ Class TPixmapPreloader
 		'manager.Update()
 		
 		'' check for new files to add to stack against
-		If file[0] <> old_file[0] And file[file.Length()-1] <> old_file[old_file.Length()-1]
+		If (file[0] <> old_file[0]) Or (file[file.Length()-1] <> old_file[old_file.Length()-1])
 		
 			'' add to stack
 			For Local f:String = Eachin file
