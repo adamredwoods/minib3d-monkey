@@ -30,6 +30,14 @@ Const FXFLAG_FORCE_ALPHA% = 32
 Const FXFLAG_DISABLE_DEPTH% = 64 
 Const FXFLAG_ALPHA_TESTING% = 128 ''enables alpha testing+depth enable for sprites
 
+
+Const ANIMATE_NONE%=0
+Const ANIMATE_REPEAT%=1
+Const ANIMATE_PINGPONG%=2
+Const ANIMATE_ONCE%=3
+Const ANIMATE_BONES%=4
+
+
 Class TEntity
 	
 	Const inverse_255:Float = 1.0/255.0

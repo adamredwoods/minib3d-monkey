@@ -144,11 +144,11 @@ Class MultiShader Extends TShaderGLSL
 	"attribute vec2 aTexcoords0, aTexcoords1;attribute vec3 aVertcoords;attribute vec3 aNormals;attribute vec4 aColors;uniform mat4 pMatrix, vMatrix, mMatrix;"+
 	"/*light*/ uniform float lightType[2];uniform mat4 lightMatrix[2];uniform vec3 lightSpot[2]; /*x=outercutoff,y=innercutoff,z=spot exponent*/ "+
 	"/*color*/ uniform vec4 basecolor; uniform float colorflag, lightflag; "+
-	"/*texture*/ uniform vec2 texPosition[5],  texScale[5]; uniform vec2 texRotation[5]; uniform float texflag; uniform highp int texfxNormal[2];"+
-	"uniform vec3 scaleInv; uniform int fogflag; uniform vec2 fogRange; "+
+	"/*texture*/ uniform vec2 texPosition[5],  texScale[5]; uniform vec2 texRotation[5]; uniform float texflag; uniform float texfxNormal[2];"+
+	"uniform vec3 scaleInv; uniform int fogflag; uniform vec2 fogRange; uniform float vertCoordSet[5];"+
 	"varying vec2 texcoord[4]; varying vec4 normal; varying vec4 vertcolor;"+
 	"varying vec4 lightVec, halfVec; varying float fogBlend; varying vec3 nmLight;"+
-	"const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const float LOG2 = 1.442695; ~n"
+	"const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const float LOG2 = 1.442695;const vec2 one_zero = vec2(1.0,0.0); ~n"
 	
 	Global VERTP1:String = "void main() {"+
 	"vec4 lightPos[5]; vec4 vertVec = all_ones; lightPos[0] = vec4(lightMatrix[0][3][0],lightMatrix[0][3][1],lightMatrix[0][3][2],1.0); vec4 specular = all_zeros;"+
@@ -186,15 +186,17 @@ Class MultiShader Extends TShaderGLSL
 		
 		If i=0 Return "texcoord[0].xy = all_zeros.xy; "
 		
-		Local str$ = "texcoord[0].xy = aTexcoords0.xy; vec2 scale; float cosang; float sinang; vec2 pos;"
+		Local str$ = "vec2 scale; float cosang; float sinang; vec2 pos;"
 		str += "/*NORMAL MAPPING ROTATION*/"+
 		"/*-- tangent in aColors, cross to find bitangent*/"+
-		"if ((texflag > 0.0) && (texfxNormal[0] > 0)) {	vec3 tangent = normalize(mMatrix*aColors).xyz;	vec3 bitangent = normalize( cross(  normal.xyz, tangent.xyz ));	mat3 nmMat = mat3( tangent.x, bitangent.x, normal.x,tangent.y, bitangent.y, normal.y,tangent.z, bitangent.z, normal.z);"+
+		"if ((texflag > 0.0) && (texfxNormal[0] > 0.0)) {	vec3 tangent = normalize(mMatrix*aColors).xyz;	vec3 bitangent = normalize( cross(  normal.xyz, tangent.xyz ));	mat3 nmMat = mat3( tangent.x, bitangent.x, normal.x,tangent.y, bitangent.y, normal.y,tangent.z, bitangent.z, normal.z);"+
 		"	nmLight = nmMat * nmLight;	}"
 				
 		For Local j:Int = 0 To i-1
-			str += "scale = texScale["+j+"]; cosang = texRotation["+j+"].x; sinang = texRotation["+j+"].y; pos = texPosition["+j+"]/scale;"+
-			"(texcoord["+j+"]).x = ((aTexcoords0.x + pos.x) * cosang - (aTexcoords0.y + pos.y) * sinang)*scale.x;(texcoord["+j+"]).y = ((aTexcoords0.x + pos.x) * sinang + (aTexcoords0.y + pos.y) * cosang)*scale.y;"
+			str += "texcoord["+j+"].xy = mix(aTexcoords0.xy, aTexcoords1.xy, vertCoordSet["+j+"]);"
+			str += "scale = texScale["+j+"]; cosang = texRotation["+j+"].x; sinang = texRotation["+j+"].y; pos = texPosition["+j+"]/scale.xy;"+
+			"(texcoord["+j+"]).x = ((texcoord["+j+"].x + pos.x) * cosang - (texcoord["+j+"].y + pos.y) * sinang)*scale.x;"+
+			"(texcoord["+j+"]).y = ((texcoord["+j+"].x + pos.x) * sinang + (texcoord["+j+"].y + pos.y) * cosang)*scale.y;"
 		
 		next
 			
@@ -211,34 +213,43 @@ Class MultiShader Extends TShaderGLSL
 	Global Vert_Lighting0$ = "lightVec = LightFunction0( all_ones, normal.xyz, specular );"
 		
 	
+	''''''''''''''''''''''
+	''''''''''''''''''''''
+	'' fragment shader
 	
 	
 	Global FRAGP0:String = "#ifdef GL_ES ~nprecision mediump float; ~n~n#endif ~n"+
 	"varying vec2 texcoord[4]; varying vec4 normal;varying vec4 vertcolor;varying vec4 lightVec, halfVec; /*using z component for light att  ;spotlight coefficient packed into halfvec.w*/"+
 	"varying float fogBlend;varying vec3 nmLight;uniform mat4 mMatrix;"+
-	"/*texture*/ uniform float texflag; uniform sampler2D uTexture[5];uniform vec2 texBlend[5];uniform highp int texfxNormal[2];"+
+	"/*texture*/ uniform float texflag; uniform sampler2D uTexture[5];uniform vec2 texBlend[5];uniform float texfxNormal[2];"+
 	"/*light*/uniform float lightflag;"
 	
 	
 	Global FRAGP1:String = "/*material*/"+
 	"uniform vec4 ambientcolor;uniform float flags;uniform float alphaflag; uniform vec4 fogColor;"+
-	"const vec4 all_ones = vec4(1.0,1.0,1.0,1.0);const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);"+
+	"const vec2 one_zero = vec2(1.0,0.0);const vec4 all_zeros = vec4(0.0,0.0,0.0,0.0);"+
 	
 	"vec4 BlendFunction(const float blend, const vec4 texture, const vec4 finalcolor, const vec4 vertcolorx) {"+
-	"vec4 color = all_zeros;	"+
-	"if (blend ==1.0) {color.xyz = mix(finalcolor.xyz, texture.xyz, texture.w );color.w = vertcolorx.w;	return color;"+
-	"} else if (blend ==2.0) {color = (vertcolorx * texture * finalcolor); 	return color;"+
-	"} else if(blend==3.0) {	vec4 mod = (vertcolorx * texture); color = vec4( mod.xyz, texture.w*vertcolorx.w); return finalcolor+color;"+
-	"} else if(blend==4.0) {	vec4 mod = (vertcolorx * texture); color = vec4( mod.xyz, texture.w*vertcolorx.w); return finalcolor+color;"+
+	"vec4 color = one_zero.yyyy;	"+
+	"if (blend ==1.0) {color.xyz = mix(finalcolor.xyz, texture.xyz, texture.w );color.w = vertcolorx.a;	return color;"+
+	"} else if (blend ==2.0) { color = (vertcolorx * texture * finalcolor); 	return color;"+
+	"} else if(blend==3.0) {	color = (vertcolorx * texture); return finalcolor+color;"+
+	"} else if(blend==4.0) {	color = (vertcolorx * texture); return finalcolor+color;"+
 	"} return (texture);}"
-	
-	
+#rem	
+	"vec4 BlendFunction(const float blend, const vec4 texture, const vec4 finalcolor, const vec4 vertcolorx) {"+
+	"vec4 color = one_zero.yyyy;	vec4 mod = (vertcolorx * texture);"+
+	" color = mix( mix(vec4(finalcolor.xyz,vertcolorx.w), vec4(texture.xyz,vertcolorx.w), texture.w ), (mod * finalcolor), blend-1.0);"+
+	"  color = mix( color, mod+finalcolor, blend-2.0);"+
+	'"} return color;}"
+	" return color; } "
+#end
 	
 	Global FRAGP2:String = "void main () {"+
-	" vec4 finalcolor = all_ones;vec4 ambient = vec4(ambientcolor.xyz,0.0);vec4 light = all_ones;vec4 specular = all_zeros;"+
-	"bool usenormalmap = (texflag > 0.0) && (texfxNormal[0] > 0); /*fixes webgl angle bug*/~n"+
+	" vec4 finalcolor = one_zero.xxxx;vec4 ambient = vec4(ambientcolor.xyz,0.0);vec4 light = one_zero.xxxx;vec4 specular = one_zero.yyyy;"+
+	"bool usenormalmap = (texflag > 0.0) && (texfxNormal[0] > 0.0); /*fixes webgl angle bug*/~n"+
 	"vec3 N = (( usenormalmap  ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : normalize(normal.xyz));"+
-	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : all_ones ; vec4 texture = all_ones;"
+	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : one_zero.xxxx ; vec4 texture = one_zero.xxxx;"
 	
 	#rem
 	"if (texflag<1.0) {	finalcolor = vec4(vertcolor.xyz, vertcolor.w);	} else {"+
@@ -255,16 +266,14 @@ Class MultiShader Extends TShaderGLSL
 	Method Frag_Texture:String(i:Int)
 		Local str$, clr$
 		
-		If i=0 Then str= "finalcolor = vec4(vertcolor.xyz, vertcolor.w);"
+		If i=0 Then str= "finalcolor = vertcolor;"
 		
-		If i=1 Then str = "if (!usenormalmap) { texture = texture2D(uTexture[0], (texcoord[0]).xy); if(texture.a<alphaflag) {discard;};"+
-		"finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor); }"
+		If i>0 Then str = "if (!usenormalmap) { texture = texture2D(uTexture[0], (texcoord[0]).xy); if(texture.a<alphaflag) {discard;}"+
+		"finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor); } "
 		
 		For Local j:Int = 1 To i-1
 			str += "texture = texture2D(uTexture["+j+"], (texcoord["+j+"]).xy);"
-			'If j=0 Then str += "if(texture.a<alphaflag) {discard;}; "
-			'If j=0 Then clr = "vertcolor" Else clr="all_ones"
-			str += " finalcolor = BlendFunction(texBlend["+j+"].x, texture, finalcolor, all_ones ); "
+			str += " finalcolor = BlendFunction(texBlend["+j+"].x, texture, finalcolor, vec4(1,1,1, vertcolor.w) ); "
 		Next
 		
 		Return str
@@ -279,27 +288,27 @@ Class MultiShader Extends TShaderGLSL
 	"const int i=0; /*do per light, webgl restriction*/"+
 	"float lambertTerm = 0.0; vec4 shine4 = vec4(shininess,shininess,shininess,shininess);vec3 lightPos= lightMatrix[i][3].xyz;"+
 	"float spotlight = 1.0;float dist = 0.0;float d=1.0;"+
-	"if (lightType[i] == 1.0) {lightPos= all_zeros.xyz;dist = lightAtt[i].w-0.0001;	"+	
+	"if (lightType[i] == 1.0) {lightPos= one_zero.yyy; dist = lightAtt[i].w-0.0001;	"+	
 		"} else if (lightType[i] == 2.0) {dist = distance(lightPos.xyz , lightVec.xyz);"+
 		"} else if (lightType[i] ==3.0) {dist = distance(lightPos.xyz , lightVec.xyz);"+
 			"mat3 lightmat = mat3(lightMatrix[i][0].xyz, lightMatrix[i][1].xyz, lightMatrix[i][2].xyz);vec3 lightDir = normalize(lightmat * LIGHTUNIT ).xyz;"+
 			"vec3 lightV = lightPos.xyz - lightVec.xyz; spotlight = max(-dot(normalize(lightV), lightDir), 0.0);"+
 			"float spotlightFade = clamp((lightSpot[i].x - spotlight) / (lightSpot[i].x - lightSpot[i].y), 0.0, 1.0);spotlight = pow(spotlight * spotlightFade, lightSpot[i].z);};	"+	
-	"vec3 L = ( (texflag > 0.0) && (texfxNormal[0] > 0) ) ? nmLight : normalize(lightPos.xyz - lightVec.xyz); vec3 N = norm; float NdotL = dot(N,L);"+
+	"vec3 L = ( (texflag > 0.0) && (texfxNormal[0] > 0.0) ) ? nmLight : normalize(lightPos.xyz - lightVec.xyz); vec3 N = norm; float NdotL = dot(N,L);"+
 	"if (NdotL > 0.0) {	if (dist > 0.0 && dist < lightAtt[i].w*10.0) {"+
 	"if (lightType[i] >1.0) d = (spotlight ) / (  lightAtt[i].x + (lightAtt[i].y* dist)  ) ;"+	
 	"lambertTerm = clamp(NdotL * d  , 0.0, 1.0) ;"+
 	"if (shininess > 0.0) {	specular = pow( max(dot(halfVec.xyz, N) , 0.0), 100.0  ) *  d * shine4;	}}}"+
 	"return (lightColor[i] * lambertTerm  );}"
 	
-	Global Frag_VertexLighting0$ = "vec4 LightFunction0 (const vec4 lightcolor, const vec3 norm, inout vec4 specular ) {return lightVec;} "
+	Global Frag_VertexLighting0$ = "vec4 LightFunction0 (const vec4 lightcolor, const vec3 norm, const vec4 specular ) {return lightVec;} "
 	Global Frag_LightVars$ = "uniform mat4 lightMatrix[2];uniform float lightType[2];uniform vec3 lightSpot[2];"
 	
 
 	'Global init_id:Int=0		
 	Global global_uniforms:ShaderUniforms
 	
-	Method New(i:Int, num_lights:Int=1, num_texs:Int=0)
+	Method New(i:Int, num_lights:Int=1, num_texs:Int=0, debug:Bool=false)
 	
 		MAX_TEXTURES = 4
 		MAX_LIGHTS = 1
@@ -316,6 +325,8 @@ Class MultiShader Extends TShaderGLSL
 			VP = VERTP0+VERTP1+VERTP2+Vert_Texture(num_texs)+VERTP3+"}~n"
 			FP = FRAGP0+LightVars+Frag_LightVars+FRAGP1+LightingEquation0+FRAGP2+Frag_Texture(num_texs)+FRAGP3
 		Endif
+		
+		If debug Then Print VP+"~n"+FP
 		
 		If( shader_id=0 And CompileShader(VP,GL_VERTEX_SHADER) And CompileShader(FP,GL_FRAGMENT_SHADER) )
 			LinkShader()

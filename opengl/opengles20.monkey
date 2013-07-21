@@ -346,7 +346,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			Local tex_count:Int =ent.brush.no_texs
 			If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
-			
+		
 			''SHADER ACTIVATION---------------------------------
 			If FullShader(shader) <> Null
 				shader = FullShader.GetShader(_usePerPixelLighting, 1, tex_count)
@@ -357,10 +357,9 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			If shader.shader_id<>last_shader
 			
 				glUseProgram(shader.shader_id)
-				last_shader = shader.shader_id
 			
 				'Print shader.name+" "+(shader.MAX_LIGHTS)
-								
+						
 			Endif
 		
 			'' Update additional uniforms for current shader
@@ -494,6 +493,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			
 			If Not skip_sprite_state
 				
+				''TODO
 				If effect.use_flatshade
 					'glShadeModel(GL_FLAT)
 				Else
@@ -548,21 +548,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				
 				
 				
-				''shader light info, for all lights
-				For Local li:Int = 0 To shader.MAX_LIGHTS-1
-					If light[li]
-						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
-						light[li].mat.ToArray(t_array)
-						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, t_array  )
-						If shader.u.light_att[li]<>-1 Then glUniform4fv( shader.u.light_att[li], 1,[ light[li].const_att,light[li].lin_att,light[li].quad_att,light[li].actual_range ]  )
-						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ light[li].red, light[li].green, light[li].blue, 1.0 ]  )
-						If shader.u.light_spot[li]<>-1 Then glUniform3fv( shader.u.light_spot[li], 1,[ Cos(light[li].outer_ang), Cos(light[li].inner_ang), light[li].spot_exp ]  )
-					Else
-						''nullify other lights
-						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], 0.0 )
-						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ 0.0, 0.0, 0.0, 1.0 ]  )
-					Endif	
-				Next
+
 				
 				
 					
@@ -586,18 +572,19 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			'Local tex_count:Int =ent.brush.no_texs
 			
 			'If surf.brush<>Null
-				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
+				'If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
 
-			If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
+			'If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
 			
-			'' -- we are always sending over a texture in opengl2.0 basic shader
+			'' -- we are always sending over a texture in opengl2.0 basic shader --not anymore
 			If tex_count<>0 And (last_tex_count=0 Or last_tex_count=-1)
 				'glEnable(GL_TEXTURE_2D)
 			Elseif tex_count=0 And (last_tex_count>0 Or last_tex_count=-1)
 				'glDisable(GL_TEXTURE_2D)
 			Endif
 			
+
 			
 			''disable any extra textures from last pass
 			If tex_count < last_tex_count 
@@ -611,7 +598,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 
 			For Local ix=0 To tex_count-1			
 				
-				Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#,tex_v_scale#
+				Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#=1.0,tex_v_scale#=1.0
 				Local tex_u_pos#,tex_v_pos#,tex_ang#,tex_cube_mode,frame, tex_smooth
 				
 				If surf.brush.tex[ix]<>Null Or ent.brush.tex[ix]<>Null
@@ -645,7 +632,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 						frame=surf.brush.tex[ix].tex_frame
 						tex_smooth = surf.brush.tex[ix].tex_smooth		
 					Endif
-	
+
 	
 					''preserve texture states--------------------------------------
 					''if two texture layers use the same texture, don't skip (checking ix=0 first texture layer)
@@ -660,7 +647,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 					
 						'If surf.brush.tex[ix] Then last_texture = surf.brush.tex[ix] Else last_texture = ent.brush.tex[ix]
 						last_texture = texture
-						
+					
 						glActiveTexture(GL_TEXTURE0+ix)
 						'glClientActiveTexture(GL_TEXTURE0+ix)				
 						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
@@ -743,18 +730,20 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			
 
 					
-					If shader.u.texcoords0<>-1 Then glEnableVertexAttribArray(shader.u.texcoords0)
-					If shader.u.texcoords1<>-1 Then glEnableVertexAttribArray(shader.u.texcoords1)
+					'If shader.u.texcoords0<>-1 Then glEnableVertexAttribArray(shader.u.texcoords0)
+					'If shader.u.texcoords1<>-1 Then glEnableVertexAttribArray(shader.u.texcoords1)
 					
 					If vbo
 						If tex_coords=0 And shader.u.texcoords0<>-1
+							glEnableVertexAttribArray(shader.u.texcoords0)
 							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 							'glTexCoordPointer(2,GL_FLOAT,0,0)
 							glVertexAttribPointer( shader.u.texcoords0, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET )
 						Elseif shader.u.texcoords1<>-1
+							glEnableVertexAttribArray(shader.u.texcoords1)
 							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 							'glTexCoordPointer(2,GL_FLOAT,0,0)
-							glVertexAttribPointer( shader.u.texcoords1, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET )
+							glVertexAttribPointer( shader.u.texcoords1, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET +VertexDataBuffer.ELEMENT2 )
 						Endif
 					Else
 						''for android api 8
@@ -782,9 +771,10 @@ Class OpenglES20 Extends TRender Implements IShader2D
 					If shader.u.tex_rotation[ix] <>-1 Then glUniform2f(shader.u.tex_rotation[ix], Cos(tex_ang), Sin(tex_ang)) '' *DEGREESTORAD,tex_ang*DEGREESTORAD); 					
 					If shader.u.tex_scale[ix] <>-1 Then glUniform2f(shader.u.tex_scale[ix], tex_u_scale, tex_v_scale)
 					If shader.u.tex_blend[ix] <>-1 Then glUniform2f(shader.u.tex_blend[ix], tex_blend, tex_blend)
-					If shader.u.texfx_normal[ix] <>-1 Then glUniform1i(shader.u.texfx_normal[ix], (tex_flags & 1024))
-			
-					If DEBUG And GetGLError() Then Print "*tex"					
+					If ix=0 And shader.u.texfx_normal[ix] <>-1 Then glUniform1f(shader.u.texfx_normal[ix], Float(Int((tex_flags & 1024)>0)) )
+					If shader.u.vertCoordSet[ix] <>-1 Then glUniform1f(shader.u.vertCoordSet[ix], Float(tex_coords))
+					
+					If DEBUG And GetGLError() Then Print "*tex "+ix					
 			
 					
 				Endif ''end if tex[ix]
@@ -809,7 +799,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				
 			Endif
 
-			last_tex_count = tex_count
+			
 			
 			'' turn on textures
 			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
@@ -817,7 +807,24 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			If DEBUG And GetGLError() Then Print "*tex2"			
 			
 			
-			
+			''light
+			If last_shader <> shader.shader_id
+				''shader light info, for all lights
+				For Local li:Int = 0 To shader.MAX_LIGHTS-1
+					If light[li]
+						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
+						light[li].mat.ToArray(t_array)
+						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, t_array  )
+						If shader.u.light_att[li]<>-1 Then glUniform4fv( shader.u.light_att[li], 1,[ light[li].const_att,light[li].lin_att,light[li].quad_att,light[li].actual_range ]  )
+						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ light[li].red, light[li].green, light[li].blue, 1.0 ]  )
+						If shader.u.light_spot[li]<>-1 Then glUniform3fv( shader.u.light_spot[li], 1,[ Cos(light[li].outer_ang), Cos(light[li].inner_ang), light[li].spot_exp ]  )
+					Else
+						''nullify other lights
+						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], 0.0 )
+						If shader.u.light_color[li]<>-1 Then glUniform4fv( shader.u.light_color[li], 1,[ 0.0, 0.0, 0.0, 1.0 ]  )
+					Endif	
+				Next
+			Endif
 			
 			
 			''matrices
@@ -873,8 +880,9 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	
 			'' *** cleanup ***
 			
+			last_tex_count = tex_count
 			last_effect.Overwrite(effect)
-			
+			last_shader = shader.shader_id
 
 		Next ''end non-alpha loop
 		
