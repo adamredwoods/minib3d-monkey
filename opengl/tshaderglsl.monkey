@@ -70,7 +70,7 @@ Class ShaderUniforms
 	Field tex_rotation:Int[9]
 	Field tex_blend:Int[9]
 	Field texfx_normal:Int[] = [-1,-1,-1,-1,-1,-1,-1,-1,-1,-1]
-	
+	Field vertCoordSet:Int[9]
 	
 	Method Link:Int(shader_id:Int)
 		
@@ -108,6 +108,7 @@ Class ShaderUniforms
 		fogflag = glGetUniformLocation(shader_id, "fogflag")
 		alphaflag = glGetUniformLocation(shader_id, "alphaflag")
 		
+		
 		''shadows.... todo
 		
 		lightpMatrix = glGetUniformLocation(shader_id, "lightpMatrix")
@@ -121,6 +122,7 @@ Class ShaderUniforms
 			tex_rotation[i] = glGetUniformLocation(shader_id, "texRotation["+i+"]")
 			tex_blend[i] = glGetUniformLocation(shader_id, "texBlend["+i+"]")
 			''texfx_normal[i] = glGetUniformLocation(shader_id, "texfxNormal["+i+"]")
+			vertCoordSet[i] = glGetUniformLocation(shader_id, "vertCoordSet["+i+"]")
 		Next
 		
 		texfx_normal[0] = glGetUniformLocation(shader_id, "texfxNormal[0]")
