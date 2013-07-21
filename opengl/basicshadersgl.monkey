@@ -268,13 +268,17 @@ Class MultiShader Extends TShaderGLSL
 		
 		If i=0 Then str= "finalcolor = vertcolor;"
 		
-		If i>0 Then str = "if (!usenormalmap) { texture = texture2D(uTexture[0], (texcoord[0]).xy); if(texture.a<alphaflag) {discard;}"+
-		"finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor); } "
+		If i>0
 		
-		For Local j:Int = 1 To i-1
-			str += "texture = texture2D(uTexture["+j+"], (texcoord["+j+"]).xy);"
-			str += " finalcolor = BlendFunction(texBlend["+j+"].x, texture, finalcolor, vec4(1,1,1, vertcolor.w) ); "
-		Next
+			str = "if (!usenormalmap) { texture = texture2D(uTexture[0], (texcoord[0]).xy); "+
+			"finalcolor = BlendFunction(texBlend[0].x, texture, finalcolor, vertcolor); }"+
+			" if(!usenormalmap && (texture.a<alphaflag)) {discard;} /* fix for tegra3 */"
+			
+			For Local j:Int = 1 To i-1
+				str += "texture = texture2D(uTexture["+j+"], (texcoord["+j+"]).xy);"
+				str += " finalcolor = BlendFunction(texBlend["+j+"].x, texture, finalcolor, vec4(1,1,1, vertcolor.w) ); "
+			Next
+		endif
 		
 		Return str
 	End
