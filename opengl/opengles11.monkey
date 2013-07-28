@@ -215,7 +215,7 @@ Class OpenglES11 Extends TRender
 			
 			Local vbo:Int=False
 			
-			If surf.no_tris>=VBO_MIN_TRIS And vbo_enabled
+			If surf.no_tris>=VBO_MIN_TRIS or vbo_enabled
 				vbo=True
 			Else
 				' if surf no longer has required no of tris then free vbo
@@ -341,12 +341,15 @@ Class OpenglES11 Extends TRender
 			
 			
 			' fx flag 2 - vertex colors ***todo*** disable all lights?
+			
 			If effect.use_vertex_colors = 1
 				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
 				'glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[1.0,1.0,1.0,1.0])
 				'glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE,[1.0,1.0,1.0,1.0])
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
+				glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.ambient)
+				glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
 				
 				glEnable(GL_COLOR_MATERIAL) ' needs to go after glMaterial()
 				glEnableClientState(GL_COLOR_ARRAY)
@@ -358,11 +361,14 @@ Class OpenglES11 Extends TRender
 				glDisable(GL_COLOR_MATERIAL)
 				glDisableClientState(GL_COLOR_ARRAY)
 				'glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[0.0,0.0,0.0,1.0])
-				glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,effect.diffuse)
+				'glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,effect.diffuse)
+				glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.diffuse)
 				glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
+
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
-				
+				'glEnable(GL_COLOR_MATERIAL)
+				'glDisable(GL_COLOR_MATERIAL)
 			Endif
 			
 			
@@ -1259,7 +1265,7 @@ Class OpenglES11 Extends TRender
 			glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT)
 		Else
 			If cam.cls_color=True
-				glClear(GL_COLOR_BUFFER_BIT)
+				glClear(GL_COLOR_BUFFER_BIT) 
 			Else
 				If cam.cls_zbuffer=True
 					glDepthMask(True)
