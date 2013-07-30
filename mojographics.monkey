@@ -416,7 +416,6 @@ Public
 	Method AddQuad:Void(s:TSurface, x#,y#,w#,h#, u#=0.0, v#=0.0, uw#=1.0, vh#=1.0)
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
-		Local v0%,v1%,v2%,v3%
 		
 		p0 = Transform2D(mat,x,-h-y,zdepth)		
 		p1 = Transform2D(mat,x,-y,zdepth)		
