@@ -129,7 +129,9 @@ Public
 		If layer>MAXLAYERS Then layer=0
 		If Not solid[layer] Then solid[layer] = mesh.CreateSurface() Else mesh.AddSurface(solid[layer])
 		
-		solid[layer].ClearSurface()
+		'solid[layer].ClearSurface() ''gives a 8 frame speedup
+		solid[layer].no_verts =0
+		solid[layer].no_tris =0
 		solid[layer].brush.fx = FXFLAG_FORCE_ALPHA| FXFLAG_FULLBRIGHT | FXFLAG_VERTEXCOLORS
 		mesh.brush.blend = 0
 
@@ -156,7 +158,9 @@ Public
 		mesh.no_surfs=1
 		mesh.surf_list.Clear()
 		mesh.surf_list.AddLast(solid[0])
-		solid[0].ClearSurface()
+		'solid[0].ClearSurface()
+		solid[0].no_verts =0
+		solid[0].no_tris =0
 		
 		layer=0
 		lastBlend=0
@@ -412,13 +416,14 @@ Public
 	Method AddQuad:Void(s:TSurface, x#,y#,w#,h#, u#=0.0, v#=0.0, uw#=1.0, vh#=1.0)
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
-		
+		Local v0%,v1%,v2%,v3%
 		
 		p0 = Transform2D(mat,x,-h-y,zdepth)		
 		p1 = Transform2D(mat,x,-y,zdepth)		
 		p2 = Transform2D(mat,x+w,-y,zdepth)		
 		p3 = Transform2D(mat,x+w,-h-y,zdepth)
 		
+
 		Local v0%=s.AddVertex(p0[0],p0[1],p0[2], u, vh) ''v0
 		Local v1%=s.AddVertex(p1[0],p1[1],p1[2], u, v)
 		Local v2%=s.AddVertex(p2[0],p2[1],p2[2], uw, v)
@@ -428,7 +433,7 @@ Public
 		s.VertexColor(v1, colorr,colorg,colorb,colora)
 		s.VertexColor(v2, colorr,colorg,colorb,colora)
 		s.VertexColor(v3, colorr,colorg,colorb,colora)
-		
+
 		s.AddTriangle(v0,v1,v2)
 		s.AddTriangle(v0,v2,v3)
 
@@ -436,7 +441,6 @@ Public
 		'' make sure to reset
 		s.reset_vbo=-1
 		
-		'Return [v0,v1,v2,v3]
 	End
 	
 	
