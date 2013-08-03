@@ -341,14 +341,13 @@ Class OpenglES11 Extends TRender
 			
 			
 			' fx flag 2 - vertex colors ***todo*** disable all lights?
+			glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.ambient)
 			
 			If effect.use_vertex_colors = 1
 				'glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE)
-				'glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[1.0,1.0,1.0,1.0])
-				'glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT_AND_DIFFUSE,[1.0,1.0,1.0,1.0])
+
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
-				glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.ambient)
 				glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
 				
 				glEnable(GL_COLOR_MATERIAL) ' needs to go after glMaterial()
@@ -356,24 +355,16 @@ Class OpenglES11 Extends TRender
 				
 			Else
 			
-				
-				glColor4f(effect.red,effect.green,effect.blue, effect.alpha)
-				glDisable(GL_COLOR_MATERIAL)
 				glDisableClientState(GL_COLOR_ARRAY)
-				'glMaterialfv(GL_FRONT_AND_BACK,GL_EMISSION,[0.0,0.0,0.0,1.0])
-				'glMaterialfv(GL_FRONT_AND_BACK,GL_DIFFUSE,effect.diffuse)
-				glLightModelfv(GL_LIGHT_MODEL_AMBIENT,effect.diffuse)
+				glColor4f(effect.red,effect.green,effect.blue, effect.alpha)
+				
 				glMaterialfv(GL_FRONT_AND_BACK,GL_AMBIENT,effect.ambient)
-
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SPECULAR,effect.specular)
 				glMaterialfv(GL_FRONT_AND_BACK,GL_SHININESS,effect.shininess)
-				'glEnable(GL_COLOR_MATERIAL)
-				'glDisable(GL_COLOR_MATERIAL)
+				glEnable(GL_COLOR_MATERIAL)
+
 			Endif
 			
-			
-			
-
 
 
 			If effect.use_full_bright<>last_effect.use_full_bright
