@@ -7,6 +7,7 @@ Import minib3d
 Import minib3d.monkeyutility
 Import minib3d.monkeybuffer
 Import mojo.data
+Import minib3d.math.arrayintmap
 
 'Alias DataBuffer = databuffer.DataBuffer
 
@@ -81,7 +82,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		
 		If p.height Then p.pitch = GetBufferLength(p.pixels)/4.0 / p.height
 		
-		If p.width=0 and p.height=0 Then Dprint "Image Not Found: "+f
+		If p.width=0 Then Dprint "Image Not Found: "+f
 
 		Return p
 		
@@ -316,7 +317,8 @@ End
 Class PreloadData
 	Field data:DataBuffer
 	Field w:Int=0, h:Int=0
-	Field id:int
+	Field id:Int
+	Field loaded:Bool = false
 End
 
 
@@ -325,10 +327,12 @@ Class PreloadGL Implements IPreloadManager
 	Field p_map:ArrayIntMap<PreloadData> = New ArrayIntMap<PreloadData>
 	
 	Method IsLoaded:Bool(file_id:Int)
+	
 		Local f:PreloadData = p_map.Get(file_id)
-		If f Then Return (f.w<>0)
+		If f Then Return (f.loaded)
 		
 		Return False
+		
 	End
 	
 	
@@ -350,7 +354,10 @@ Class PreloadGL Implements IPreloadManager
 		d.w = info[0]
 		d.h = info[1]
 		
-		If d.data Then p_map.Set(id, d)
+		d.loaded = True
+		If (Not d.data) Then d.w = 0; d.h=0 ''file not found
+		
+		p_map.Set(id, d)
 		
 	End
 	
@@ -384,6 +391,8 @@ Class PreloadGL Implements IPreloadManager
 				p.width = info[0]
 				p.height = info[1]
 				
+				If (Not p.pixels) Then p.width=0
+				
 			Endif
 			
 		Endif
@@ -395,36 +404,3 @@ End
 
 
 #Endif
-
-
-Class ArrayIntMap<T>
-	
-	Field data:T[]
-	Field length:Int
-	
-	Method New()
-		data = New T[32]
-		length = 31
-	End
-	
-	Method Length:Int()
-		Return length+1
-	End
-	
-	Method Clear:Void()
-		data = New T[32]
-		length = 31
-	End
-
-	Method Get:T(id:Int)
-		If id<length Then Return data[id]
-	End
-	
-	Method Set:Void(id:Int, obj:T)
-		While id>=length
-			length = length+32
-			data = data.Resize(length+1)
-		Wend
-		data[id] = obj
-	End
-End
