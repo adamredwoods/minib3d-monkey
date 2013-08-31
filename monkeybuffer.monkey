@@ -4,16 +4,29 @@
 
 Import mojo.data
 Import minib3d.math.vector
+Import brl.databuffer
+
+''
+'' Flash11 and Android need special attention
+''
 
 #If TARGET="flash"
 
 Import minib3d.flash11.flash11_driver
 
+#Else If TARGET = "android"
+
+Import "opengl/minib3d_android.java"
+
+Extern
+
+	Function _PokeFloatArray:Void( buf:DataBuffer, start:Int, arr:Float[], len:int ) = "BufferHelper.pokeFloatArray"
+	Function _PokeShortArray:Void( buf:DataBuffer, start:Int, arr:Int[], len:int ) = "BufferHelper.pokeShortArray"
+	
+Public
+
 #endif
 
-'#If TARGET="html5" Or TARGET="glfw" Or TARGET="mingw" Or TARGET="ios" Or TARGET="android" Or TARGET="xna" Or TARGET="flash"
-
-Import brl.databuffer
 
 Function CreateDataBuffer:DataBuffer(i:Int)
 	Return New DataBuffer(i)
@@ -23,7 +36,6 @@ Function GetBufferLength:Int(buf:DataBuffer)
 End
 
 
-'#endif
 
 
 
@@ -42,7 +54,7 @@ Class Vertex
 		u0=0.0;v0=0.0;u1=0.0;v1=0.0
 		w0=0.0;w1=0.0
 	End
-	
+		
 	Method GetVertex:Void(vid:Int, src:VertexDataBuffer)
 
 		Local data:Float[] = src.GetFloatArray(vid)
@@ -57,6 +69,7 @@ Class Vertex
 		Local data:Float[] = [x,y,z,0.0,nx,ny,nz,0.0,r,g,b,a,u0,v0,u1,v1]
 		src.PokeFloatArray(vid, data)
 	End
+
 
 End
 
@@ -104,25 +117,44 @@ Class VertexDataBuffer
 	End
 	
 	Method PokeVertCoords(i:Int,x#,y#,z#)
+#If TARGET="android"
+	
+		_PokeFloatArray( buf,i*16+0,[x,y,z], 3)
+		
+#Else
 		Local index = i*SIZE+POS_OFFSET
 		buf.PokeFloat(index,x )
 		buf.PokeFloat(index+ELEMENT1,y )
 		buf.PokeFloat(index+ELEMENT2,z )
+#Endif
+
 	End
 	
 	Method PokeNormals(i:Int,x#,y#,z#)
+#If TARGET="android"
+	
+		_PokeFloatArray( buf,i*16+4,[x,y,z], 3)
+		
+#Else
 		Local index = i*SIZE+NORMAL_OFFSET
 		buf.PokeFloat(index,x )
 		buf.PokeFloat(index+ELEMENT1,y )
 		buf.PokeFloat(index+ELEMENT2,z )
+#Endif
 	End
 	
 	Method PokeTexCoords(i:Int,s0#,t0#, s1#, t1#)
+#If TARGET="android"
+	
+		_PokeFloatArray( buf,i*16+12,[s0,t0,s1,t1], 4)
+		
+#Else
 		Local index = i*SIZE+TEXCOORDS_OFFSET
 		buf.PokeFloat(index,s0 )
 		buf.PokeFloat(index+ELEMENT1,t0 )
 		buf.PokeFloat(index+ELEMENT2,s1 )
 		buf.PokeFloat(index+ELEMENT3,t1 )
+#Endif
 	End
 	
 	Method PokeTexCoords0(i:Int,s0#,t0#)
@@ -138,11 +170,17 @@ Class VertexDataBuffer
 	End
 	
 	Method PokeColor(i:Int, r#,g#,b#, a#)
+#If TARGET="android"
+	
+		_PokeFloatArray( buf,i*16+8,[r,g,b,a], 4)
+		
+#Else
 		Local index = i*SIZE+COLOR_OFFSET
 		buf.PokeFloat(index,r)
 		buf.PokeFloat(index+ELEMENT1,g)
 		buf.PokeFloat(index+ELEMENT2,b)
 		buf.PokeFloat(index+ELEMENT3,a)
+#endif
 	End
 	
 	Method VertexX#(vid:Int)
@@ -205,10 +243,19 @@ Class VertexDataBuffer
 		If coord_set=1 Then Return buf.PeekFloat(vid*SIZE+TEXCOORDS_OFFSET + ELEMENT3 )
 	End 
 	
-	Method PokeFloatArray:Void(i:Int, arr:Float[])
-		For Local v:Int=0 To arr.Length()-1
+	''** make sure to flip posz and normalz
+	Method PokeFloatArray:Void(i:Int, arr:Float[], len:Int=-1)
+		If len=-1 Then len = arr.Length()
+		
+#If TARGET="android"
+
+			_PokeFloatArray( buf,i*16,arr,len)
+
+#Else
+		For Local v:Int=0 To len-1
 			buf.PokeFloat(i*SIZE+v*FLOATSIZE,arr[v])
 		Next
+#Endif
 	End
 	
 	Method GetFloatArray:Float[](vid:Int)
@@ -313,11 +360,18 @@ Class FloatBuffer
 	End
 	
 	Method PokeVertCoords:Void(i:Int,v0:Float, v1:Float, v2:Float)
+
+#If TARGET="android"
+	
+		_PokeFloatArray( buf,i*3,[v0,v1,v2], 3)
 		
+#Else		
+
 		Local i3% = i*12
 		buf.PokeFloat(i3,v0)
 		buf.PokeFloat(i3+4,v1)
 		buf.PokeFloat(i3+8,v2)
+#Endif
 		
 	End
 	
@@ -365,10 +419,18 @@ Class ShortBuffer
 		Return b
 	End
 	
-	Method Poke:Void(i:Int, arr:Int[])
-		For Local v:Int=0 To arr.Length()-1
+	Method Poke:Void(i:Int, arr:Int[], len:Int=-1)
+		If len=-1 Then len = arr.Length()
+		
+#If TARGET="android"
+	
+		_PokeShortArray( buf,i,arr, len)
+		
+#Else
+		For Local v:Int=0 To len-1
 			buf.PokeShort((i+v)*SIZE,arr[v])
 		Next
+#endif
 	End
 	
 	Method Poke:Void(i:Int,v:Int)

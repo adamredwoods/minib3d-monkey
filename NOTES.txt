@@ -1,4 +1,27 @@
 ****************************************
+minib3d v0.40
+
+- updated collisions: added Div Spheres for better collision shape and control
+- collision bug fixes, accuracy
+- collision debug tools: mesh.col_tree.DebugSphereTree(), mesh.col_tree.DebugNodeTree(node_level)
+- added TrisRendered()
+- Android vertex buffer optimizations for MojoEmulation
+- some TEntity commands chainable
+
+****************************************
+minib3d v0.39
+
+- OpenGLES2.0 multi-shader. Now uses dynamic shader matrix for default shader, should speed up in some places.
+- B3D model bone bug fix
+- mojo speedup
+- bug fixes
+
+****************************************
+minib3d v0.38
+
+- PreLoader change to use stack; enables more flexibility with PreLoadPixmap() anywhere, anytime.
+
+****************************************
 minib3d v0.37
 
 - unified EffectState: internal change that simplifies the current render state for all targets

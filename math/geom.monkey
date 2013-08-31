@@ -219,6 +219,10 @@ Class Box
 		Return New Vector( (a.x+b.x)*0.5,(a.y+b.y)*0.5,(a.z+b.z)*0.5 )
 	End
 	
+	Method Center:Vector()
+		Return New Vector( (a.x+b.x)*0.5,(a.y+b.y)*0.5,(a.z+b.z)*0.5 )
+	End
+	
 	Method Corner:Vector( n:Int )
 		Local q:Vector, w:Vector, e:Vector
 		If n&1 Then q=b Else q=a
@@ -286,6 +290,10 @@ Class Box
 	Method Expand( n:Vector )
 		a.x-=n.x; a.y-=n.y; a.z-=n.z; b.x+=n.x; b.y+=n.y; b.z+=n.z
 	End
+	
+	Method Scale( n:Vector )
+		a.x*=n.x; a.y*=n.y; a.z*=n.z; b.x*=n.x; b.y*=n.y; b.z*=n.z
+	end
 	
 	Method Width:Float()
 		Return b.x-a.x

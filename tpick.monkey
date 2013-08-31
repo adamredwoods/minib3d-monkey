@@ -19,6 +19,8 @@ Class TPick
 	Global picked_ent:TEntity
 	Global picked_surface:Int = -1
 	Global picked_triangle:Int
+	Global picked_pos:Vector
+	Global picked_norm:Vector
 	
 	Global mat:Matrix=New Matrix
 	Global tform:TransformMat = New TransformMat()
@@ -157,6 +159,11 @@ Class TPick
 	End 
 
 
+	Private
+	
+	Global col_obj:CollisionObject = New CollisionObject()
+	Global col_info:CollisionInfo = New CollisionInfo()
+	
 	Global vec_a:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_b:Vector =New Vector(0.0,0.0,0.0)
 	Global vec_radius:Vector =New Vector(0.0,0.0,0.0)
@@ -168,64 +175,67 @@ Class TPick
 			
 	Global vec_v:Vector =New Vector(0.0,0.0,0.0)
 	
+	Global nullVec:Vector = New Vector()
+	
+	Public
 	
 	' requires two absolute positional values
-	Function Pick:TEntity(ax:Float,ay:Float,az:Float,bx:Float,by:Float,bz:Float,radius:Float=0.0)
+	Function Pick:TEntity(ax:Float,ay:Float,az:Float,bx:Float,by:Float,bz:Float,s_radius:Float=0.0)
 		
 		mat.LoadIdentity()
 		
 		picked_ent=Null
-		picked_time=1.0
+		picked_time=999999999999.0
 		Local pick:Int =False
 		
-		Local col_obj:CollisionObject = New CollisionObject()
+		''reset
+		col_obj.Clear()
+		col_info.ClearHitPlanes()
+		col_info.Clear()
 		
-		Local line:Line = New Line(ax,ay,az,bx-ax,by-ay,bz-az)
-		'Local ray:Vector = New Vector((line.d.x-ax),(line.d.y-ay),(line.d.z-az)).Normalize()
-		Local ray:Vector = New Vector((line.d.x),(line.d.y),(line.d.z)).Normalize()	
 		Local cen:Vector = New Vector(0,0,0)
 		
 		''coll ray info setup for pick
-		Local col_info:CollisionInfo = New CollisionInfo()
-		col_info.dir = ray
-		col_info.coll_line = line
-		col_info.radius = radius
-		col_info.radii = New Vector(radius,radius,radius)
-		col_info.y_scale = 1.0
+		'Local col_info:CollisionInfo = New CollisionInfo()	
 
-	
+		col_info.UpdateRay(New Vector(ax,ay,az), New Vector(bx,by,bz), New Vector(s_radius,s_radius,s_radius) )
+		col_obj.time = picked_time
+
 		For Local ent:TEntity=Eachin ent_list
 		
 			If ent.pick_mode=0 Or ent.Hidden()=True Then Continue
-			
-			''early sphere rejection
-			'If ent.collision
-				
-				If ent.collision.radius_x=0.0 Then CollisionInfo.UpdateSourceSphere(ent)
-				
-				Local rad:Float = ent.collision.radius_x + radius
 
+				
+			'If ent.collision.radius_x=0.0 Then col_info.UpdateSourceSphere(ent)
+			col_info.UpdateDestShape(ent)
+		
 
-				'' rad * largest entity global scale
-				rad = rad*Max(Max(ent.gsx,ent.gsy),ent.gsz)
-				If rad<0 Then rad=-rad
-	
-				cen.Update(ent.mat.grid[3][0] - ax, ent.mat.grid[3][1] - ay,-ent.mat.grid[3][2] - az)
+			'' rad * largest entity global scale
+			Local rad:Float = ent.collision.radius_x + s_radius ''**** has dst_radius already been scaled???
+			rad = rad*Max(Max(Abs(ent.gsx),Abs(ent.gsy)),Abs(ent.gsz))
+			'If rad<0 Then rad=-rad
 
-				If Not col_obj.RaySphereTest(ray,cen, rad) Then Continue
+			cen.Update(ent.mat.grid[3][0] - ax, ent.mat.grid[3][1] - ay,-ent.mat.grid[3][2] - az)
+
+			If col_obj.RaySphereTest(col_info.dir, cen, rad) > 0
+'Print ent.classname+" hit"
 				
+				col_info.CollisionSetup(ent, ent.pick_mode, col_obj, nullVec)
+				pick = col_info.CollisionDetect(col_obj)
+
+		
+				If pick And col_obj.col_time<picked_time
+					picked_ent=ent
+					picked_time = col_obj.col_time
+					picked_pos = col_obj.col_coords
+					picked_norm = col_obj.col_normal
+					
+					col_info.RegisterHitPlane ( col_obj.col_coords, col_obj.normal)
+					
+					'Exit ''do we need to run through the list? yes for multiple objects, but we don't have that capability yet
+				Endif
 				
-			'Endif
-			
-			col_info.CollisionSetup(ent, ent.pick_mode, col_obj)
-			pick = col_info.CollisionDetect(col_obj)
-	
-			
-			If pick And col_obj.col_time<picked_time
-				picked_ent=ent
-				
-				'Exit ''do we need to run through the list? yes for multiple objects, but we don't have that capability yet
-			Endif
+			endif
 			
 		Next
 		
@@ -233,13 +243,13 @@ Class TPick
 
 		If picked_ent<>Null
 
-			picked_x=col_obj.col_coords.x
-			picked_y=col_obj.col_coords.y
-			picked_z=col_obj.col_coords.z
+			picked_x=picked_pos.x 'col_obj.col_coords.x
+			picked_y=picked_pos.y 'col_obj.col_coords.y
+			picked_z=picked_pos.z 'col_obj.col_coords.z
 			
-			picked_nx=col_obj.col_normal.x
-			picked_ny=col_obj.col_normal.y
-			picked_nz=col_obj.col_normal.z
+			picked_nx=picked_norm.x 'col_obj.col_normal.x
+			picked_ny=picked_norm.y 'col_obj.col_normal.y
+			picked_nz=picked_norm.z 'col_obj.col_normal.z
 	
 			picked_time=col_obj.col_time
 			
@@ -252,8 +262,7 @@ Class TPick
 			picked_triangle=col_obj.index 
 	
 		Endif
-		
-		col_obj = Null
+
 		
 		Return picked_ent
 

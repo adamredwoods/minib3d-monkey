@@ -117,7 +117,7 @@ Class TText Extends TSprite Final
 		Endif
 		
 		tt.EntityFX 1+32
-		
+		tt.SetText(str)
 		
 		Return tt
 		

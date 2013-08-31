@@ -458,7 +458,7 @@ Class OneLightOneTexShader Extends TShaderFlash
 			''pointlight1 into vt0
 			"m44 vt3, va3.xyz, vc8~nnrm vt3.xyz, vt3.xyz~n"+
 			"mov vt0.x, vc12.w~nmov vt0.y, vc13.w~nmov vt0.z, vc14.w~nm44 vt4, va0, vc4~nsub vt0, vt0.xyz, vt4.xyz~nnrm vt0.xyz, vt0.xyz~n"+
-			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nsat vt0.xyz, vt0.xyz~n"+
+			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nabs vt0.xyz, vt0.xyz~nsat vt0.xyz, vt0.xyz~n"+
 			
 			''ambient light
 			"max vt0.xyz, vt0.xyz, vc17.xyz~n"+

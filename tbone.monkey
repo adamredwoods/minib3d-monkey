@@ -35,6 +35,7 @@ Class TBone Extends TEntity
 Private
 	
 	Global new_mat:Matrix = New Matrix ' temp use
+	Global t_mat:Matrix = New Matrix ' temp use
 	Global t_quat:Quaternion = New Quaternion ' temp use
 
 Public
@@ -179,14 +180,11 @@ Public
 		px=x; py=y; pz=z
 		
 		''use rest matrix
-		Local t_mat:Matrix = New Matrix
 		t_mat.Overwrite(rest_mat)
 		t_mat.Multiply(loc_mat)
 		
 		t_mat.grid[3][0] = (x+rest_mat.grid[3][0]); t_mat.grid[3][1] = (y+rest_mat.grid[3][1]); t_mat.grid[3][2] = (z+rest_mat.grid[3][2]);
 		
-		
-		'loc_mat.Overwrite(t_mat) 'retain new local mat
 	
 		'If Not glob Then UpdateMatrix(t_mat) Else UpdateMatrixGlobal(t_mat, 0, [x,y,z])
 		UpdateMatrix(t_mat)
@@ -204,14 +202,11 @@ Public
 		rx=-x; ry=y; rz=z
 		
 		''use rest matrix
-		Local t_mat:Matrix = New Matrix
 		t_mat.Overwrite(rest_mat)
 		t_mat.grid[3][0] = (px+rest_mat.grid[3][0]); t_mat.grid[3][1] = (py+rest_mat.grid[3][1]); t_mat.grid[3][2] = (pz+rest_mat.grid[3][2]);
 		
 		t_mat.Rotate(x,y,z)
 		
-		'loc_mat.Overwrite(t_mat) 'retain new local mat
-
 		
 		'If Not glob Then UpdateMatrix(t_mat) Else UpdateMatrixGlobal(t_mat, 1, t_mat.ToArray() )
 		UpdateMatrix(t_mat)
@@ -227,15 +222,12 @@ Public
 		sx=x; sy=y; sz=z
 		
 		''use rest matrix
-		Local t_mat:Matrix = New Matrix
 		t_mat.Overwrite(rest_mat)
 		't_mat.Multiply(loc_mat)
 		
 		t_mat.grid[3][0] = (px+rest_mat.grid[3][0]); t_mat.grid[3][1] = (py+rest_mat.grid[3][1]); t_mat.grid[3][2] = (pz+rest_mat.grid[3][2]);
 		t_mat.Rotate(rx,ry,rz)	
 		t_mat.Scale(x,y,z)	
-		'loc_mat.Overwrite(t_mat) 'retain new local mat
-
 		
 		'If Not glob
 			UpdateMatrix(t_mat)

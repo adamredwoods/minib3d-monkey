@@ -268,6 +268,34 @@ Public
 	
 	End 
 	
+	''pos, normal, color, texcoords
+	''make sure to flip z
+	Method AddVertex:Int(data:Float[], len:Int=-1)
+		
+		If len=-1 Then len = data.Length()
+		
+		Local total:Int = len Shr 4 ''/16
+		Local vid:Int = no_verts
+		no_verts=no_verts+total
+
+		' resize arrays/databuffers	
+		If no_verts>=vert_array_size
+
+			Repeat
+				vert_array_size=vert_array_size +512
+			Until vert_array_size>no_verts
+			
+			Local vas=vert_array_size
+			
+			vert_data= CopyDataBuffer(vert_data, VertexDataBuffer.Create(vas) )
+
+	
+		Endif
+
+		vert_data.PokeFloatArray(vid, data, len)
+		Return vid+(total-1)
+	End
+	
 	Method AddTriangle(v0,v1,v2)
 	
 		no_tris=no_tris+1
@@ -289,11 +317,51 @@ Public
 		Local v0i=(no_tris*3)-3
 		Local v1i=(no_tris*3)-2
 		Local v2i=(no_tris*3)-1	
-	
+		
+		'' swap verts around for correct rendering order
 		'tris.Poke(v0i,v2)
 		'tris.Poke(v1i,v1)
 		'tris.Poke(v2i,v0)
 		tris.Poke(v0i,[v2,v1,v0])
+
+		' mesh shape has changed - update reset flag
+		'reset_vbo = reset_vbo|1|2|16
+		reset_vbo = -1 '' reset the whole vbo
+		
+		Return no_tris
+	
+	End 
+	
+	Method AddTriangle(arr:Int[], len=-1)
+	
+		If len=-1 Then len = arr.Length()
+		
+		Local t0:Int = (no_tris)*3
+		no_tris=no_tris+len/3
+		
+		' resize array
+		
+		If no_tris>=tri_array_size
+		
+			Repeat
+				tri_array_size=tri_array_size +512 ''because we're copying buffers, this may be faster, and use CropBuffers()
+			Until tri_array_size>no_tris
+		
+			Local tas=tri_array_size
+		
+			tris=CopyShortBuffer(tris, ShortBuffer.Create(tas*3) )
+		
+		Endif
+		
+		'' swap verts around for correct rendering order
+		Local temp:Int
+		For Local t:Int = 0 To len-1 Step 3
+			temp = arr[t]
+			arr[t] = arr[t+2]
+			arr[t+2] = temp
+		next
+		
+		tris.Poke( t0, arr, len )
 
 		' mesh shape has changed - update reset flag
 		'reset_vbo = reset_vbo|1|2|16
@@ -853,7 +921,14 @@ Public
 	''** make sure to flip posz and normalz
 	Method SetVertex:Void(vid:Int, v:Vertex)
 		v.SetVertex(vid, vert_data)
+		reset_vbo = reset_vbo|(1+2+4+8)
 	End
+	
+	Method SetVertex:Void(vid:Int, data:Float[])
+		vert_data.PokeFloatArray(vid, data)
+		reset_vbo = reset_vbo|(1+2+4+8)
+	End
+
 	
 	Method ToString$()
 		For Local i:Int=0 To no_verts-1

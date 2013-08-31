@@ -81,12 +81,16 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 		surf.tris=ShortBuffer.Create(12)
 		surf.tri_array_size=5
 
-		surf.AddVertex(-1,-1,0, 0, 1)
-		surf.AddVertex(-1, 1,0, 0, 0)
-		surf.AddVertex( 1, 1,0, 1, 0)
-		surf.AddVertex( 1,-1,0, 1, 1)
-		surf.AddTriangle(0,1,2)
-		surf.AddTriangle(0,2,3)
+		'surf.AddVertex(-1,-1,0, 0, 1)
+		'surf.AddVertex(-1, 1,0, 0, 0)
+		'surf.AddVertex( 1, 1,0, 1, 0)
+		'surf.AddVertex( 1,-1,0, 1, 1)
+		surf.AddVertex( [ -1,-1,0,0.0, 1.0,1.0,1.0,0.0,  1,1,1,1, 0.0,1.0,0.0,1.0,
+						-1,1,0,0.0, 1.0,1.0,1.0,0.0,  1,1,1,1, 0.0,0.0,0.0,0.0,
+						1,1,0,0.0, 1.0,1.0,1.0,0.0,  1,1,1,1, 1.0,0.0,1.0,0.0,
+						1,-1,0,0.0, 1.0,1.0,1.0,0.0,  1,1,1,1, 1.0,1.0,1.0,1.0 ])
+		surf.AddTriangle([0,1,2, 0,2,3])
+		'surf.AddTriangle(0,2,3)
 		
 		'surf.CropSurfaceBuffers() ''set inital size to 16
 		
@@ -156,8 +160,9 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 		brush.tex[0].v_pos=y
 	End
 	
-	Method ScaleEntity(x#, y#, z#, glob:Int=0)
+	Method ScaleEntity:TEntity(x#, y#, z#, glob:Int=0)
 		ScaleSprite(x,y)
+		Return self
 	End
 	
 	Method HandleSprite(h_x#,h_y#)
@@ -227,14 +232,16 @@ End
 '' - may have to add a check that camera position <> origin position. If so, move origin out a touch from camera
 
 Class TBatchSpriteMesh Extends TMesh Implements IRenderUpdate
-
+	
+	Const SQRT2:Float = 1.4142135623
+	
 	Field surf:TSurface 
 	Field free_stack:IntStack ''list of available vertex
 	Field num_sprites =0
 	Field sprite_list:List<TBatchSprite>
 	'Field mat_sp:Matrix = New Matrix
 	Field test_sphere:TMesh
-	
+
 	
 	Function Create:TBatchSpriteMesh(parent_ent:TEntity=Null)
 	
@@ -299,10 +306,11 @@ Class TBatchSpriteMesh Extends TMesh Implements IRenderUpdate
 		TBatchSprite.max_y2=-999999999.0
 		TBatchSprite.min_z2=999999999.0
 		TBatchSprite.max_z2=-999999999.0
+		
 
 		For Local ent:TBatchSprite = Eachin sprite_list
 			
-			IRenderUpdate(ent).Update(cam)
+			ent.Update(cam)
 
 		Next
 		
@@ -352,9 +360,10 @@ Class TBatchSpriteMesh Extends TMesh Implements IRenderUpdate
 				Endif
 			Endif
 			
-			cull_radius=cull_radius * 0.5
-			Local crs#=cull_radius*cull_radius
-			cull_radius= Sqrt(crs+crs+crs)		
+
+			'Local crs#=cull_radius*cull_radius
+			cull_radius= cull_radius*SQRT2* 0.5
+			cull_radius= cull_radius*SQRT2		
 			
 			
 			center_x=min_x+(width)*0.5
@@ -423,7 +432,7 @@ Class TBatchSprite Extends TSprite
 				parent_link.Remove()
 				parent=Null
 			Endif
-			mat=Null
+			
 			brush=Null
 			
 		End
@@ -486,8 +495,9 @@ Class TBatchSprite Extends TSprite
 		End
 		
 		''method overload
-		Method EntityBlend(blend%)
+		Method EntityBlend:TEntity(blend%)
 			mainsprite[batch_id].EntityBlend(blend)
+			Return self
 		End
 		
 		Method EntityFX(fx%)
@@ -558,7 +568,7 @@ Class TBatchSprite Extends TSprite
 			Endif
 
 			''get vertex id
-			Local v:Int, v0:Int
+			Local v:Int, v0:Int, r:Float=1.0,g:Float=1.0,b:Float=1.0,a:Float=1.0
 			
 			If mesh.free_stack.IsEmpty()
 				
@@ -566,15 +576,18 @@ Class TBatchSprite Extends TSprite
 				v = (mesh.num_sprites-1) * 4 '4 vertex per quad
 				'v = (mesh.num_sprites-1) * 3 '3 vertex per sprite
 				
-				mesh.surf.AddVertex(-1,-1,0, 0, 1) ''v0
-				mesh.surf.AddVertex(-1, 1,0, 0, 0)
-				mesh.surf.AddVertex( 1, 1,0, 1, 0)
-				mesh.surf.AddVertex( 1,-1,0, 1, 1)
-				'mesh.surf.AddVertex(-1,-3,0, 0, 2) ''v0
-				'mesh.surf.AddVertex(-1, -1,0, 0, 0)
-				'mesh.surf.AddVertex( 3, -1,0, 2, 0)
-				mesh.surf.AddTriangle(0+v,1+v,2+v)
-				mesh.surf.AddTriangle(0+v,2+v,3+v)
+				'mesh.surf.AddVertex(-1,-1,0, 0, 1) ''v0
+				'mesh.surf.AddVertex(-1, 1,0, 0, 0)
+				'mesh.surf.AddVertex( 1, 1,0, 1, 0)
+				'mesh.surf.AddVertex( 1,-1,0, 1, 1)
+				mesh.surf.AddVertex( [ -1,-1,0,0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 0.0,1.0,0.0,1.0,
+										-1,1,0,0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 0.0,0.0,0.0,0.0,
+										1,1,0,0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 1.0,0.0,1.0,0.0,
+										1,-1,0,0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 1.0,1.0,1.0,1.0 ])
+
+
+				mesh.surf.AddTriangle([0+v,1+v,2+v, 0+v,2+v,3+v])
+				'mesh.surf.AddTriangle(0+v,2+v,3+v)
 				''v isnt guarateed to be v0, but seems to match up
 
 				''since vbo expands, make sure to reset so we dont use subbuffer
@@ -686,26 +699,19 @@ Class TBatchSprite Extends TSprite
 			'p3 = mat_sp.TransformPoint(1.0,-1.0,0.0)
 			p3 = [m00 - m10 + o[0] , m01 - m11 + o[1], -m02 + m12 - o[2]]
 			
-			'3 point sprite trick (does not work for all conditions, animated sprites)
-			'p0 = [-m00 + -(m10+m10+m10) + o[0] , -m01 + -(m11+m11+m11) + o[1], m02 + m12+m12+m12 - o[2]]				
-			'p1 = [-m00 + m10 + o[0] , -m01 + m11 + o[1], m02 - m12 - o[2]]	
-			'p2 = [m00+m00+m00 + m10 + o[0] , m01+m01+m01 + m11 + o[1], -(m02+m02+m02) - m12 - o[2]]			
-			'p3 = [0.0,0.0,0.0]
-			
-			mainsprite[batch_id].surf.VertexCoords(vertex_id+0,p0[0],p0[1],p0[2])
-			mainsprite[batch_id].surf.VertexCoords(vertex_id+1,p1[0],p1[1],p1[2])
-			mainsprite[batch_id].surf.VertexCoords(vertex_id+2,p2[0],p2[1],p2[2])
-			mainsprite[batch_id].surf.VertexCoords(vertex_id+3,p3[0],p3[1],p3[2])
+
 			
 			Local r# = brush.red'*brush.alpha
 			Local g# = brush.green'*brush.alpha
 			Local b# = brush.blue'*brush.alpha
 			Local a# = brush.alpha '*0.5
 		
-			mainsprite[batch_id].surf.VertexColorFloat(vertex_id+0, r,g,b,a)
-			mainsprite[batch_id].surf.VertexColorFloat(vertex_id+1, r,g,b,a)
-			mainsprite[batch_id].surf.VertexColorFloat(vertex_id+2, r,g,b,a)
-			mainsprite[batch_id].surf.VertexColorFloat(vertex_id+3, r,g,b,a)
+			
+			''pos, normal,color,uv
+			mainsprite[batch_id].surf.SetVertex(vertex_id+0, [ p0[0],p0[1],-p0[2],0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 0.0,1.0,0.0,1.0,
+																p1[0],p1[1],-p1[2],0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 0.0,0.0,0.0,0.0,
+																p2[0],p2[1],-p2[2],0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 1.0,0.0,1.0,0.0,
+																p3[0],p3[1],-p3[2],0.0, 1.0,1.0,1.0,0.0,  r,g,b,a, 1.0,1.0,1.0,1.0 ])
 						
 			''determine our own bounds
 			

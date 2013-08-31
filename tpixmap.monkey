@@ -98,7 +98,7 @@ Class TPixmap
 	
 	Method ClearBind:Void()
 		bind=0
-	end
+	End
 End
 
 

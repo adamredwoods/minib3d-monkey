@@ -14,14 +14,16 @@ Import minib3d
 
 
 
+Const RENDERFLAG_DISABLEVBO:Int = 1
+Const RENDERFLAG_PERPIXELLIGHTING:Int = 2
+
+
 '' Interface IRenderUpdate
 '' -- used for sprites and sprite batching, forces TRender to call Update when in camera view.
 Interface IRenderUpdate
 	Method Update( cam:TCamera )
 End
 
-Const RENDERFLAG_DISABLEVBO:Int = 1
-Const RENDERFLAG_PERPIXELLIGHTING:Int = 2
 
 Class TRender
 
@@ -47,6 +49,8 @@ Class TRender
 	Global shader2D:IShader2D = New BlankShader
 	Global camera2D:TCamera = New TCamera '' do not add to cam_list
 	Global draw_list:List<TMesh> = New List<TMesh> ''immediate mode drawing for overlay, text
+	
+	Global tris_rendered:int
 	
 	Private
 	
@@ -236,7 +240,8 @@ Class TRender
 	
 	Function  RenderWorld:Void()
 
-		'Print "begin renderworld"
+'Print "begin renderworld"
+		tris_rendered=0
 		
 		''confirm rendering context
 		If TRender.render = Null Or Not TRender.render.ContextReady() Then Return
@@ -289,6 +294,8 @@ Class TRender
 		
 		'camera2D.CameraClsMode(False,False) ''moved this to the end of method to allow mojo CLS
 		
+		''*** for mojoemulation ***
+		MojoEmulationDevice._quadCache.FlushCache()
 		
 		alpha_pass=1
 		Local wireframeIsEnabled:= wireframe
@@ -321,6 +328,8 @@ Class TRender
 
 		
 			TRender.render.Render(mesh,camera2D)
+			tris_rendered += mesh.total_tris
+			
 		Next
 		
 		wireframe = wireframeIsEnabled
@@ -415,6 +424,7 @@ Class TRender
 						TRender.render.Render(mesh,cam)
 						'mesh.alpha_order=-cam.EntityDistanceSquared(mesh)
 						'render_list.AddLast(mesh)
+						tris_rendered += mesh.total_tris
 	
 					Endif
 					
@@ -444,6 +454,8 @@ Class TRender
 			TRender.render.Render(mesh,cam)
 			
 			wireframe = wireFrameIsEnabled
+			
+			tris_rendered += mesh.total_tris
 
 		Next
 		
@@ -516,6 +528,8 @@ Class TRender
 	Method RenderWorldFinish:Void()
 		''optional
 	End
+	
+
 	
 End
 

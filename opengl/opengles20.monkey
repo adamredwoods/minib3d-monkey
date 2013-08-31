@@ -108,6 +108,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	
 	Global _useMojo:Bool = False
 	Global _usePerPixelLighting:Int = 0
+	Global _nullTexture:TTexture
 	
 	Public
 	
@@ -350,6 +351,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			''SHADER ACTIVATION---------------------------------
 			If FullShader(shader) <> Null
 				shader = FullShader.GetShader(_usePerPixelLighting, 1, tex_count)
+				If effect.use_full_bright>0 Then shader = FullShader.fastbrightshader
 			Endif
 			
 			If Not shader.u Then Continue
@@ -552,7 +554,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				
 				
 					
-				If cam.fog_mode >0 And effect.use_fog
+				If effect.use_fog>0
 					If shader.u.fogflag<> -1 Then glUniform1i( shader.u.fogflag, cam.fog_mode )
 					If shader.u.fog_color<> -1 Then glUniform4fv( shader.u.fog_color, 1, [cam.fog_r,cam.fog_g,cam.fog_b,1.0])
 					If shader.u.fog_range<> -1 Then glUniform2fv( shader.u.fog_range, 1, [cam.fog_range_near,cam.fog_range_far])
@@ -632,8 +634,10 @@ Class OpenglES20 Extends TRender Implements IShader2D
 						frame=surf.brush.tex[ix].tex_frame
 						tex_smooth = surf.brush.tex[ix].tex_smooth		
 					Endif
-
-	
+					
+					''handles missing textures, to prevent shader errors
+					If texture.width=0 Then texture = _nullTexture
+					
 					''preserve texture states--------------------------------------
 					''if two texture layers use the same texture, don't skip (checking ix=0 first texture layer)
 					'If ((surf.brush.tex[ix] And last_texture = surf.brush.tex[ix]) Or
@@ -653,7 +657,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
 				
 						If shader.u.texture[ix] <>-1 Then glUniform1i(shader.u.texture[ix], ix)
-					
+
 					Endif ''end preserve texture states---------------------------------
 
 					
@@ -955,7 +959,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 
 		TShader.LoadDefaultShader(New FullShader)	
 
-		
+		_nullTexture = CreateTexture(1,1)
 		
 		If glGetError()<>GL_NO_ERROR Then Return 0
 		

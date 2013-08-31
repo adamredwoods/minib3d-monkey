@@ -4,6 +4,7 @@ Import minib3d.trender
 Import minib3d.flash11.tpixmap_flash
 Import minib3d.flash11.flash11_driver
 Import minib3d.flash11.tshader_flash
+Import minib3d.math.arrayintmap
 
 #rem
 	
@@ -63,7 +64,9 @@ Class TexData
 	Field frame:Int[8]
 	Field tex_smooth:Int[8]
 	
-	Field uv_clamp:int
+	Field uv_clamp:Int
+	
+	Global null_tex:TTexture
 	
 	Method UpdateTexture(surf:TSurface, ent:TEntity)
 	
@@ -122,6 +125,8 @@ Class TexData
 					Else
 						uv_clamp = 0
 					Endif
+					
+					If texture[ix].width =0 Then texture[ix] = null_tex
 					
 				Endif
 			Next
@@ -293,7 +298,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			Endif
 			
 					
-'Print "***classname: "+ent.classname+" : "+name			
+'Print "***classname: "+ent.classname+" : "+name+" cam:"+cam.name		
 'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
 'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_state)
 'Print "   mesh.anim:"+mesh.anim
@@ -357,7 +362,8 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			shader.Update()
 		
 'Print ent.classname+" "+Int(effect.depth_test)+" "+Int(effect.depth_write)+" "+effect.blend	
-	
+
+					
 			If skip_state=false
 				
 				'' ** depth state **
@@ -370,7 +376,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			
 				
 				If effect.use_backface_culling=0
-					driver.SetCulling(DRIVER_NONE)
+					driver.SetCulling(DRIVER_NONE) ''need to light both sides
 				Else
 					driver.SetCulling(DRIVER_FRONT) '' minib3d is -z, which is opposite flash
 				Endif
@@ -588,19 +594,21 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			'' set agal program constants
 			
 			'' ** entity matrix **
-			temp_cam.Overwrite( cam.projview_mat )
+			temp_cam.Overwrite( cam.projview_mat ) ''temp camera
 			
 			If mesh.is_sprite=False
 				temp_cam.Multiply4(ent.mat)
 
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.m_matrix, AGALMatrix(ent.mat) )
 				temp_mat.Overwrite(ent.mat)
+				'' INVERSE OR INVERSE4????
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.n_matrix, AGALMatrix(temp_mat.Inverse().Transpose()) )
 			Else
 				temp_cam.Multiply4(TSprite(mesh).mat_sp)
 				
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.m_matrix, AGALMatrix(TSprite(mesh).mat_sp) )
 				temp_mat.Overwrite(TSprite(mesh).mat_sp)
+				'' INVERSE OR INVERSE4????
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.n_matrix, AGALMatrix(temp_mat.Inverse().Transpose()) )
 			Endif
 			
@@ -640,7 +648,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			If TRender.render.wireframe
 				
 				''** needs special shader
-				
+			
 			Else
 				If vbo	
 					
@@ -681,7 +689,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 	Method RenderWorldFinish:Void()
 
 		driver.PresentToDevice()
-		driver.Clear(0,0,0,0)
+		driver.Clear(0.0,0.0,0.0,0.0, 1.0, 0, DRIVER_CLEAR_ALL)
 
 	End
 	
@@ -709,6 +717,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 		
 		'' set my error side-stepping for AGAL programs
 		null_tex = CreateTexture(1,1,2) ''do i need to make this white?
+		TexData.null_tex = null_tex
 		
 		'If Not (flags & DISABLE_VBO)
 			vbo_enabled=True
@@ -744,7 +753,7 @@ Print "..Context Success"
 		TShader.LoadDefaultShader( New MultiShader )
 		
 		FlashMiniB3D(TRender.render).ForceFlashTransparency(GetGraphicsDevice())
-			
+		driver.Clear(0.0,0.0,0.0,0.0, 1.0, 0, DRIVER_CLEAR_ALL)
 		
 		render_init = True
 		
@@ -1106,10 +1115,12 @@ Return 0
 
 	Method UpdateCamera(cam:TCamera)
 		
+		If cam.Hidden Then Return
 		
 		' viewport
-		'glViewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
-		driver.SetScissorRectangle(cam.vx,cam.vy,cam.vwidth,cam.vheight)
+		'TRender.height-h-y
+		driver.SetScissorRectangle(cam.vx,-(cam.vy-render.height+cam.vheight),cam.vwidth,cam.vheight)
+		'driver.SetScissorRectangle(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 		
 		''load VP of MVP matrix
 
@@ -1121,17 +1132,25 @@ Return 0
 		
 
 		' clear buffers
+		'' ** this clears the whole buffer in flash11
 		If cam.cls_color=True And cam.cls_zbuffer=True
-		
-			driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_ALL)
+			
+			driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,0.0, 1.0, 0, DRIVER_CLEAR_DEPTH)
+			DrawClearQuad(cam,cam.cls_r,cam.cls_g,cam.cls_b) ''** clear quad will set the alpha to 1.0, which is not what we want
+			
+			
+			
+			'driver.SetDepthTest(True, DRIVER_ALWAYS)
+			'driver.Clear(0.0,0.0,0.0,0.0, 1.0, 0, DRIVER_CLEAR_DEPTH)
 			
 		Else
+
 			If cam.cls_color=True
-				driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_COLOR)
-				
+				'driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_COLOR)
+				DrawClearQuad(cam,cam.cls_r,cam.cls_g,cam.cls_b)
 			ElseIf cam.cls_zbuffer=True
 				'driver.SetDepthTest(True, driver.LESS_EQUAL)
-				driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b,1.0, 1.0, 0, DRIVER_CLEAR_DEPTH)
+				driver.Clear(cam.cls_r,cam.cls_g,cam.cls_b ,0.0, 1.0, 0, DRIVER_CLEAR_DEPTH)
 			Endif
 		Endif
 
@@ -1179,6 +1198,40 @@ Return 0
 
 	End 
 
+Private
+	Global fastQuad:TMesh
+
+	Method DrawClearQuad:Void(cam:TCamera,r:float,g:float,b:float)
+
+		If fastQuad = Null
+			fastQuad = CreateSprite()
+			fastQuad.RemoveFromRenderList
+			fastQuad.ScaleEntity(render.width,render.height,1.0)
+			fastQuad.PositionEntity(0,0,1.99999)
+			fastQuad.EntityFX(1+8+32+64)
+			'fastQuad.alpha_order=1.0
+			fastQuad.classname="fastQuad"
+			IRenderUpdate(fastQuad).Update(camera2D)
+		Endif
+		
+		TRender.render.Reset()
+		SetShader2D()
+		fastQuad.EntityColorFloat(r,g,b)
+		
+		alpha_pass=1
+		Local wireframeIsEnabled:Int = wireframe
+		wireframe = False
+		'camera2D.SetPixelCamera
+		'camera2D.Update(camera2D)
+		driver.SetColorMask(True,True,True,False)
+		FlashMiniB3D.render.Render(fastQuad,camera2D)
+		driver.SetColorMask(True,True,True,True)
+		wireframe = wireframeIsEnabled
+		TRender.render.Finish()
+		TRender.render.Reset()
+		'cam.Update(cam)
+	End
+Public	
 	
 	Method SetShader2D:Void()
 		If Not shader2d_
@@ -1187,7 +1240,7 @@ Return 0
 		'TShader.SetShader(shader2d_)
 		
 		shader2d_ = TShaderFlash(TShader.DefaultShader())
-	end
+	End
 	
 	Method ForceFlashTransparency:Void(g:GraphicsDevice)
 		driver.ForceDeviceTransparency(g )
@@ -1203,36 +1256,4 @@ Function AGALMatrix:Float[](m:Matrix)
 		 m.grid[0][2], m.grid[1][2], m.grid[2][2], m.grid[3][2],
 		 m.grid[0][3], m.grid[1][3], m.grid[2][3], m.grid[3][3] ]
 
-End
-
-Class ArrayIntMap<T>
-	
-	Field data:T[]
-	Field length:Int
-	
-	Method New()
-		data = New T[32]
-		length = 31
-	End
-	
-	Method Length:Int()
-		Return length+1
-	End
-	
-	Method Clear:Void()
-		data = New T[32]
-		length = 31
-	End
-
-	Method Get:T(id:Int)
-		If id<length Then Return data[id]
-	End
-	
-	Method Set:Void(id:Int, obj:T)
-		While id>=length
-			length = length+32
-			data = data.Resize(length+1)
-		Wend
-		data[id] = obj
-	End
 End

@@ -37,6 +37,8 @@ Import mojo
 		Import minib3d.xna
 	#Elseif TARGET="flash"
 		Import minib3d.flash11
+	#Elseif TARGET="win8" Or TARGET="winphone8"
+		Import minib3d.d3d11
 	#endif
 #endif
 

@@ -17,6 +17,7 @@ Class TMesh Extends TEntity
 
 	Field no_surfs:Int=0
 	Field surf_list:List<TSurface>= New List<TSurface>
+	Field total_tris:Int=0
 	
 	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id 
 	
@@ -176,7 +177,8 @@ Class TMesh Extends TEntity
 		''dont clear surf_list or will clear all entities
 		'Print "free mesh "+classname		
 		
-		anim_surf = New TSurface[0]
+		''dont clear anim mesh for vertex animation, as it is shared
+		If anim<>2 Then anim_surf = New TSurface[0]
 		
 		bones = New TBone[0]
 		
@@ -298,6 +300,12 @@ Class TMesh Extends TEntity
 		col_tree.reset_col_tree=True
 
 		Return surf
+		
+	End
+	
+	Method RemoveFromRenderList:Void()
+		
+		entity_link.Remove()
 		
 	End
 
@@ -1683,7 +1691,10 @@ Class TMesh Extends TEntity
 		' scaling is not done here (since it can change per frame)
 		' more accurately a CullBox than CullRadius
 		If reset_bounds=True Or reset=true
-	
+		
+			''can i sneak this in here?
+			total_tris = GetTotalTris()
+			
 			reset_bounds=False
 	
 			min_x=999999999.0
@@ -1735,7 +1746,8 @@ Class TMesh Extends TEntity
 				cull_radius=cull_radius * 0.5
 				Local crs#=cull_radius*cull_radius
 				cull_radius= Sqrt(crs+crs+crs) ''need the cube corners to be in the sphere
-
+				'cull_radius= Sqrt(cull_radius+cull_radius)
+				
 			Endif
 			
 			' mesh centre
@@ -1746,6 +1758,16 @@ Class TMesh Extends TEntity
 		Endif
 
 	End 
+
+	Method GetTotalTris:Int()
+		
+		Local t:Int=0
+		For Local s:TSurface = Eachin surf_list
+			t=t+s.no_tris
+		Next
+		Return t
+		
+	End
 
 	' returns true if mesh is to be drawn with alpha, i.e alpha<1.0.
 	' this func is also used to see whether entity should be manually depth sorted (if alpha=true then yes).
@@ -2056,6 +2078,16 @@ Class TMesh Extends TEntity
 		'Print "TMesh update"
 		
 	'End
+	
+	
+	Method CreateSphereTree:Void ( idiv:Int, sz:Float=1.0 )
+		col_tree.CreateSphereTree( Self, idiv, sz)
+	End
+	
+	'' alpha 0.0-1.0
+	Method DebugSphereTree:Void (alpha:Float=0.1)
+		col_tree.DebugSphereTree(Self,alpha)
+	End
 	
 	
 End

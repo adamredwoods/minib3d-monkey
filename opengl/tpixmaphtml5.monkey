@@ -6,6 +6,7 @@ Import minib3d
 Import minib3d.monkeyutility
 Import minib3d.monkeybuffer
 Import mojo.data
+Import minib3d.math.arrayintmap
 
 #If TARGET="html5"
 	'' set pixels to int, 

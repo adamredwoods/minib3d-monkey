@@ -41,6 +41,7 @@ Const ANIMATE_BONES%=4
 Class TEntity
 	
 	Const inverse_255:Float = 1.0/255.0
+	Const SQRT2:Float = 1.4142135623
 
 	Global entity_list:EntityList<TEntity> = New EntityList<TEntity>
 
@@ -83,7 +84,7 @@ Class TEntity
 	Field anim_update:Int
 	
 	
-	Field no_collisions:Int
+	'Field no_collisions:Int
 	Field collision:TCollision = New TCollision
 	Field collision_pair:TCollisionPair = New TCollisionPair
 	Field pick_mode%,obscurer%
@@ -267,14 +268,18 @@ Class TEntity
 	
 	
 	' Entity movement
-
-	Method PositionEntity(e:TEntity)
-		
-		PositionEntity(e.X,e.Y,e.Z,True)
-		
+	Method Position:TEntity (x#,y#,z#,glob:Int=False)
+		PositionEntity(x,y,z,glob)
+		Return self
 	End
 
-	Method PositionEntity(x#,y#,z#,glob=False)
+	Method PositionEntity:TEntity(e:TEntity)
+		
+		PositionEntity(e.X,e.Y,e.Z,True)
+		Return self
+	End
+
+	Method PositionEntity:TEntity(x#,y#,z#,glob=False)
 		
 		''negate z for opengl
 		z=-z
@@ -314,7 +319,7 @@ Class TEntity
 		Endif
 
 		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(x,y,z,glob); Return self
 					
 		px=x
 		py=y
@@ -332,19 +337,21 @@ Class TEntity
 		Endif
 		
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
-
+		
+		Return self
 	End 
 		
-	Method MoveEntity(mx#,my#,mz#)
+	Method MoveEntity:TEntity(mx#,my#,mz#)
 		
 		'temp_mat.Overwrite(mat)
 		'temp_mat.grid[3][0]=0.0; temp_mat.grid[3][1]=0.0;temp_mat.grid[3][2]=0.0
 		Local n:Float[] = mat.TransformPoint(mx,my,-mz)
 		PositionEntity(n[0], n[1], -n[2], True) ''-pz because we change it before storing it
-
+		Return Self
+		
 	End 
 
-	Method TranslateEntity(tx#,ty#,tz#,glob=False)
+	Method TranslateEntity:TEntity(tx#,ty#,tz#,glob=False)
 		
 		'Local tx#=x
 		'Local ty#=y
@@ -371,7 +378,7 @@ Class TEntity
 		
 		
 		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return
+		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return self
 		
 
 		If parent<>Null
@@ -387,16 +394,22 @@ Class TEntity
 		Endif
 		
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
-
+		
+		Return self
 	End 
 	
-	Method ScaleEntity(e:TEntity)
-		
-		ScaleEntity(e.EntityScaleX,e.EntityScaleY,e.EntityScaleZ,True)
-		
+	Method Scale:TEntity (x#,y#,z#,glob:Int=False)
+		ScaleEntity(x,y,z,glob)
+		Return self
 	End
 	
-	Method ScaleEntity(x#,y#,z#,glob=False)
+	Method ScaleEntity:TEntity(e:TEntity)
+		
+		ScaleEntity(e.EntityScaleX,e.EntityScaleY,e.EntityScaleZ,True)
+		Return self
+	End
+	
+	Method ScaleEntity:TEntity(x#,y#,z#,glob=False)
 		
 		sx=x
 		sy=y
@@ -405,9 +418,9 @@ Class TEntity
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
 
-			sx = sx/parent.gsx
-			sy = sy/parent.gsy
-			sz = sz/parent.gsz
+			sx = sx/parent.gsx'*parent.gsx
+			sy = sy/parent.gsy'*parent.gsy
+			sz = sz/parent.gsz'*parent.gsz
 	
 		Endif
 		
@@ -431,21 +444,25 @@ Class TEntity
 			UpdateMatRot(True)
 		Endif
 		
-		If collision.radius_x Or collision.box_x Then collision.ScaleCollision(gsx,gsy,gsz)
+		'If collision.radius_x Or collision.box_x Then collision.ScaleCollision(gsx,gsy,gsz) ''NO!
 		
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
-
+		Return Self
+		
 	End 
 	
-	
+	Method Rotate:TEntity (x#,y#,z#,glob:Int=False)
+		RotateEntity(x,y,z,glob)
+		Return self
+	End	
 
-	Method RotateEntity(e:TEntity)
+	Method RotateEntity:TEntity(e:TEntity)
 		
 		RotateEntity(e.rx, e.ry, e.rz, True)
-		
+		Return self
 	End
 
-	Method RotateEntity(x#,y#,z#,glob=False)
+	Method RotateEntity:TEntity(x#,y#,z#,glob=False)
 		
 		rx=-x
 		ry=y
@@ -461,7 +478,7 @@ Class TEntity
 		Endif
 		
 		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz, glob); Return
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz, glob); Return self
 		
 		If parent<>Null
 		
@@ -475,10 +492,11 @@ Class TEntity
 		Endif
 		
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
-
+		Return Self
+		
 	End 
 
-	Method TurnEntity(x#,y#,z#,glob=False)
+	Method TurnEntity:TEntity(x#,y#,z#,glob=False)
 
 		' conv glob to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
@@ -490,7 +508,7 @@ Class TEntity
 		rz=rz+z
 		
 		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz,glob); Return
+		If TBone(Self) <> Null Then TBone(Self).RotateBone(rx,ry,rz,glob); Return self
 		
 
 		If parent<>Null
@@ -505,7 +523,7 @@ Class TEntity
 		Endif
 		
 		If child_list.IsEmpty()<>True Then UpdateChildren(Self)
-
+		Return self
 	End 
 	
 	
@@ -836,46 +854,49 @@ Class TEntity
 		
 	' Entity control
 	
-	Method EntityColor(r#,g#,b#,a#=-1.0)
+	Method EntityColor:TEntity(r#,g#,b#,a#=-1.0)
 	
 		brush.red  =r * inverse_255
 		brush.green=g * inverse_255
 		brush.blue =b * inverse_255
 		
 		If a>=0.0 Then brush.alpha = a
-	
+		Return Self
+		
 	End 
 	
-	Method EntityColorFloat(r#,g#,b#, a#=-1.0)
+	Method EntityColorFloat:TEntity(r#,g#,b#, a#=-1.0)
 	
 		brush.red  =r
 		brush.green=g
 		brush.blue =b
 		
 		If a>=0.0 Then brush.alpha = a
-	
+		Return Self
+		
 	End
 	
-	Method EntityColor( color:Int )
+	Method EntityColor:TEntity( color:Int )
 		
 		EntityColor( (color & $00ff0000) Shr 16, (color & $00ff00) Shr 8 , color & $0000ff )
+		Return Self
 		
 	End
 	
-	Method EntityAlpha(a#)
+	Method EntityAlpha:TEntity(a#)
 	
 		brush.alpha=a
-			
+		Return self
 	End 
 	
-	Method EntityShininess(s#)
+	Method EntityShininess:TEntity(s#)
 	
 		brush.shine=s
-	
+		Return self
 	End 
 	
 	''EntityTexture()
-	Method EntityTexture(texture:TTexture,frame=0,index=0)
+	Method EntityTexture:TEntity(texture:TTexture,frame=0,index=0)
 	
 		brush.tex[index]=texture
 		
@@ -892,7 +913,8 @@ Class TEntity
 			brush.tex[index].u_pos = x*texture.frame_ustep
 			brush.tex[index].v_pos = y*texture.frame_vstep
 		Endif
-	
+		Return Self
+		
 	End 
 	
 	
@@ -924,7 +946,7 @@ Class TEntity
 	End
 	
 	
-	Method EntityBlend(blend_no%)
+	Method EntityBlend:TEntity(blend_no%)
 	
 		brush.blend=blend_no
 		
@@ -938,7 +960,7 @@ Class TEntity
 			Next
 			
 		Endif
-		
+		Return self
 	End 
 	
 	
@@ -974,7 +996,7 @@ Class TEntity
 	End 
 	
 	''explain the difference between this and PaintMesh()
-	Method PaintEntity(bru:TBrush)
+	Method PaintEntity:TEntity(bru:TBrush)
 
 		If TShader(bru) = bru
 			
@@ -988,11 +1010,12 @@ Class TEntity
 			brush = bru.Copy()
 			
 		Endif
-
+		Return Self
+		
 	End 
 	
 	'' does not paint with a copy
-	Method PaintEntityGlobal(bru:TBrush)
+	Method PaintEntityGlobal:TEntity(bru:TBrush)
 
 		If TShader(bru) = bru
 		
@@ -1006,30 +1029,31 @@ Class TEntity
 			brush = bru
 			
 		Endif
-
+		
+		Return self
 		
 	End
 	
 	'' paint texture on entity
-	Method PaintEntity(tex:TTexture, frame:Int=0, index:Int=0)
-		EntityTexture(tex,frame,index)
+	Method PaintEntity:TEntity(tex:TTexture, frame:Int=0, index:Int=0)
+		Return EntityTexture(tex,frame,index)
 	End
 	
 	'' paint hex color
-	Method PaintEntity(color:Int)
-		EntityColor( color )
+	Method PaintEntity:TEntity(color:Int)
+		Return EntityColor( color )
 	End
 	
-	Method PaintEntity(r:Int,g:Int,b:Int,a:Float = -1.0)
-		EntityColor( r,g,b,a )
+	Method PaintEntity:TEntity(r:Int,g:Int,b:Int,a:Float = -1.0)
+		Return EntityColor( r,g,b,a )
 	End
 	
 	'' paint by pixmap file
-	Method PaintEntity(pixmap$, frame:Int=0, index:Int=0, texflag:Int=9)
-		EntityTexture( TTexture.LoadTexture(pixmap, texflag), frame, index)
+	Method PaintEntity:TEntity(pixmap$, frame:Int=0, index:Int=0, texflag:Int=9)
+		Return EntityTexture( TTexture.LoadTexture(pixmap, texflag), frame, index)
 	End
 	
-	Method EntityOrder(order_no:int)
+	Method EntityOrder:TEntity(order_no:Int)
 	
 		order=order_no
 
@@ -1050,19 +1074,22 @@ Class TEntity
 			brush.fx |= 64
 		Endif
 
+		Return self
 		
 	End 
 	
-	Method ShowEntity()
+	Method ShowEntity:TEntity()
 	
 		hide=False
+		Return Self
 		
 	End 
 
-	Method HideEntity()
+	Method HideEntity:TEntity()
 
 		hide=True
-
+		Return Self
+		
 	End 
 
 	Method Hidden:Bool()
@@ -1085,7 +1112,7 @@ Class TEntity
 	
 	End 
 	
-	Method EntityParent(parent_ent:TEntity,glob:Bool=True)
+	Method EntityParent:TEntity(parent_ent:TEntity,glob:Bool=True)
 
 		'' remove old parent
 
@@ -1149,7 +1176,8 @@ Class TEntity
 			Endif
 			
 		Endif
-
+		
+		Return self
 	End 
 		
 	Method AddParent(parent_ent:TEntity)
@@ -1567,35 +1595,37 @@ Class TEntity
 	
 	Method ResetEntity()
 	
-		no_collisions=0
-		collision.impact=collision.impact[..0]
-		collision.SetOldPosition(Self, EntityX(True),EntityY(True),EntityZ(True))
+		ResetCollisions()
 
 	
 	End 
 	
 	Method ResetCollisions()
 	
-		no_collisions=0
-		collision.impact=collision.impact[..0]
+		collision.ClearImpact()
 		collision.SetOldPosition(Self, EntityX(True),EntityY(True),EntityZ(True))
 	
 	End 
 	
-	Method EntityRadius(rx#=0.0,ry#=0.0)
+	Method EntityRadius:Int(rx#=0.0,ry#=0.0)
+	
+		'' do not do scale here
+		'' guarantee that sphere covers all polys! so, use max of extents
 		
 		If rx=0.0
-			''don't pull from cull radius, that makes a cube, instead sphere around the whole thing
+			''don't pull from cull radius, that makes a sphere inside cube, instead sphere around the whole cube
 			Local m:TMesh = TMesh(Self)
 			If m
-				If Not cull_radius Then m.GetBounds()
+				If cull_radius=0.0 Then m.GetBounds()
+				
 				Local c:Float
-				'c = Max(Max((m.max_x-m.min_x),(m.max_y-m.min_y)),(m.max_z-m.min_z))
 				c = Max(Max(Abs(m.max_x), Abs(m.max_y)),Abs(m.max_z))
 				c = Max(Max(Max(c,Abs(m.min_x)),Abs(m.min_y)),Abs(m.min_z))
-				rx = c*Max(Max(gsx,gsy),gsz)
-				
-				If rx<0.0 Then rx=-rx
+
+				''rx = (c*Max(Max(gsx,gsy),gsz)) ''NO! SCALE IS DONE AT COLLSION TIME
+				rx = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
+				rx = Sqrt(rx*rx+c*c) ''corner of cube
+'Print rx
 
 			Else
 				rx=1.0
@@ -1604,10 +1634,14 @@ Class TEntity
 	
 		collision.radius_x=rx
 		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
-	
+		
+		Return collision.radius_x
+		
 	End 
 	
 	Method EntityBox(x#=0.0,y#=0.0,z#=0.0,w#=0.0,h#=0.0,d#=0.0)
+		
+		'' do not do scale here
 		
 		If x=0.0 And w=0.0 And d=0.0
 			'' pull from GetBounds
@@ -1615,12 +1649,14 @@ Class TEntity
 			If TMesh(Self)
 				Local m:TMesh = TMesh(Self)
 				If Not cull_radius Then m.GetBounds()
-				x=m.min_x*gsx
-				y=m.min_y*gsy
-				z=m.min_z*gsz
-				w=Abs((m.max_x-m.min_x)*gsx)
-				h=Abs((m.max_y-m.min_y)*gsy)
-				d=Abs((m.max_z-m.min_z)*gsz)
+				x=m.min_x'*gsx ''NO! SCALE IS DONE AT COLLSION TIME
+				y=m.min_y'*gsy
+				z=m.min_z'*gsz
+				w=Abs((m.max_x-m.min_x))'*gsx)
+				h=Abs((m.max_y-m.min_y))'*gsy)
+				d=Abs((m.max_z-m.min_z))'*gsz)
+				
+				'Print x+" "+y+" "+z+" "+w+" "+h+" "+d
 			Endif
 
 		Endif
@@ -1716,13 +1752,13 @@ Class TEntity
 
 	Method CountCollisions()
 	
-		Return no_collisions
+		Return collision.no_collisions
 	
 	End 
 	
 	Method CollisionX#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].x
 		
@@ -1732,7 +1768,7 @@ Class TEntity
 	
 	Method CollisionY#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].y
 		
@@ -1742,7 +1778,7 @@ Class TEntity
 	
 	Method CollisionZ#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].z
 		
@@ -1752,7 +1788,7 @@ Class TEntity
 
 	Method CollisionNX#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].nx
 		
@@ -1762,7 +1798,7 @@ Class TEntity
 	
 	Method CollisionNY#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].ny
 		
@@ -1772,7 +1808,7 @@ Class TEntity
 	
 	Method CollisionNZ#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].nz
 		
@@ -1782,7 +1818,7 @@ Class TEntity
 	
 	Method CollisionTime#(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].time
 		
@@ -1792,7 +1828,7 @@ Class TEntity
 	
 	Method CollisionEntity:TEntity(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].ent
 		
@@ -1802,7 +1838,7 @@ Class TEntity
 	
 	Method CollisionSurface:TSurface(index:Int=1)
 
-		If index>0 And index<=no_collisions And TMesh(Self)
+		If index>0 And index<=collision.no_collisions And TMesh(Self)
 
 			Return TMesh(Self).GetSurface(collision.impact[index-1].surf)
 		
@@ -1812,13 +1848,21 @@ Class TEntity
 	
 	Method CollisionTriangle(index:Int=1)
 	
-		If index>0 And index<=no_collisions
+		If index>0 And index<=collision.no_collisions
 		
 			Return collision.impact[index-1].tri
 		
 		Endif
 	
 	End 
+	
+	Method CollisionFlag:Void(i:int)
+		collision.flag = i
+	End
+	
+	Method GetCollisionFlag:int()
+		Return collision.flag
+	End
 	
 	Method GetEntityType:int()
 

@@ -299,6 +299,17 @@ Public
 		
 		Return v2
 	End
+	
+	Method Multiply4:Vector(v1:Vector)
+		'' 3x4 
+		Local v2:Vector = New Vector
+		
+		v2.x = grid[0][0]*v1.x + grid[1][0]*v1.y + grid[2][0]*v1.z + grid[3][0]
+		v2.y = grid[0][1]*v1.x + grid[1][1]*v1.y + grid[2][1]*v1.z + grid[3][1]
+		v2.z = grid[0][2]*v1.x + grid[1][2]*v1.y + grid[2][2]*v1.z + grid[3][2]
+		
+		Return v2
+	End
 
 	Method Translate:Void(x:Float,y:Float,z:Float)
 	

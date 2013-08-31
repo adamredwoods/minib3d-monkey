@@ -40,6 +40,7 @@ Class MojoEmulationDevice Extends GraphicsDevice
 	
 	Global _device:MojoEmulationDevice
 	Global _olddevice:GraphicsDevice
+	Global _quadCache:QuadCache
 	
 	Field mesh:TMesh
 	Field solid:TSurface[MAXLAYERS] ''512 blend layers available
@@ -52,7 +53,8 @@ Class MojoEmulationDevice Extends GraphicsDevice
 
 	
 Private
-
+	
+	Const inverse_255:Float = 1.0/255.0
 	
 	Field vert0:Vertex = New Vertex
 	Field vert1:Vertex = New Vertex
@@ -72,6 +74,7 @@ Private
 		
 			_olddevice = GetGraphicsDevice() ''trick to get flash to work
 			_device = New MojoEmulationDevice
+			_quadCache = New QuadCache()
 			
 #If TARGET="flash"
 			FlashMiniB3D(TRender.render).ForceFlashTransparency(_olddevice)
@@ -132,6 +135,7 @@ Public
 		'solid[layer].ClearSurface() ''gives a 8 frame speedup
 		solid[layer].no_verts =0
 		solid[layer].no_tris =0
+		solid[layer].vbo_dyn=true
 		solid[layer].brush.fx = FXFLAG_FORCE_ALPHA| FXFLAG_FULLBRIGHT | FXFLAG_VERTEXCOLORS
 		mesh.brush.blend = 0
 
@@ -353,27 +357,64 @@ Public
 		
 	End
 	
+	
+	'' implemented drastic android optimizations....
+	'' delete code after commit
+	Global v_cache:Float[]
+	
 	Method DrawPoly( verts#[] )
 	
 		Check(Null)
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
+		Local r#, g#, b#
 		
+		Local tris:Int[(verts.Length()-7)*6*3]
+		local t:Int=0, vt:Int = solid[layer].no_verts
+		'v_cache= New Float[(verts.Length()-7)*6*48]
+		'local t_array:Float[48]
+		
+		r=colorr* inverse_255
+		g=colorg* inverse_255
+		b=colorb* inverse_255
 		
 		For Local i:Int=0 To verts.Length-7 Step 6
 			p0 = Transform2D(mat,verts[i+0],-verts[i+1],zdepth)		
 			p1 = Transform2D(mat,verts[i+2],-verts[i+3],zdepth)		
-			p2 = Transform2D(mat,verts[i+4],-verts[i+5],zdepth)		
+			p2 = Transform2D(mat,verts[i+4],-verts[i+5],zdepth)	
+			
+			'v_cache = v_cache.Resize(v_cache.Length()+48)
+			vt=vt+3
+			'Local j:Int = (vt-3)*16
 
-			Local v0%=solid[layer].AddVertex(p0[0],p0[1],p0[2])
-			Local v1%=solid[layer].AddVertex(p1[0],p1[1],p1[2])
-			Local v2%=solid[layer].AddVertex(p2[0],p2[1],p2[2])
-			solid[layer].AddTriangle(v0,v1,v2)
-			solid[layer].VertexColor(v0, colorr,colorg,colorb,colora)
-			solid[layer].VertexColor(v1, colorr,colorg,colorb,colora)
-			solid[layer].VertexColor(v2, colorr,colorg,colorb,colora)
+			't_array = [ p0[0],p0[1],-p0[2],0.0, 1.0,1.0,1.0,0.0, colorr* inverse_255,colorg* inverse_255,colorb* inverse_255,colora, 0.0, 0.0, 0.0, 0.0,
+			 			'p1[0],p1[1],-p1[2],0.0, 1.0,1.0,1.0,0.0, colorr* inverse_255,colorg* inverse_255,colorb* inverse_255,colora, 0.0, 0.0, 0.0, 0.0,
+			 			'p2[0],p2[1],-p2[2],0.0, 1.0,1.0,1.0,0.0, colorr* inverse_255,colorg* inverse_255,colorb* inverse_255,colora, 0.0, 0.0, 0.0, 0.0 ]
+			'v_cache[j+0] = p0[0]; v_cache[j+1] = p0[1]; v_cache[j+2] = -p0[2];   v_cache[j+4] = 1.0; v_cache[j+5] = 1.0; v_cache[j+6] = 1.0;   v_cache[j+8] = r; v_cache[j+9] = g; v_cache[j+10] = b; v_cache[j+11] = colora;
+			'v_cache[j+16] = p1[0]; v_cache[j+17] = p1[1]; v_cache[j+18] = -p1[2];   v_cache[j+20] = 1.0; v_cache[j+21] = 1.0; v_cache[j+22] = 1.0;   v_cache[j+24] = r; v_cache[j+25] = g; v_cache[j+26] = b; v_cache[j+27] = colora;
+			'v_cache[j+32] = p2[0]; v_cache[j+33] = p2[1]; v_cache[j+34] = -p2[2];   v_cache[j+36] = 1.0; v_cache[j+37] = 1.0; v_cache[j+38] = 1.0;   v_cache[j+40] = r; v_cache[j+41] = g; v_cache[j+42] = b; v_cache[j+43] = colora;
+			
+			'For Local i:Int=0 To 47
+				'v_cache[(vt-3)*16+i] = t_array[i]
+			'Next
+			
+			solid[layer].AddVertex([ p0[0],p0[1],-p0[2],0.0, 1.0,1.0,1.0,0.0, colorr* inverse_255,colorg* inverse_255,colorb* inverse_255,colora, 0.0, 0.0, 0.0, 0.0,
+			 			p1[0],p1[1],-p1[2],0.0, 1.0,1.0,1.0,0.0, colorr* inverse_255,colorg* inverse_255,colorb* inverse_255,colora, 0.0, 0.0, 0.0, 0.0,
+			 			p2[0],p2[1],-p2[2],0.0, 1.0,1.0,1.0,0.0, colorr* inverse_255,colorg* inverse_255,colorb* inverse_255,colora, 0.0, 0.0, 0.0, 0.0 ])
+			
+			'solid[layer].AddTriangle(v2-2,v2-1,v2)
+			
+			''cache triangles
+			'tris=tris.Resize(t+3)
+			tris[t] = vt-3; tris[t+1] = vt-2; tris[t+2] = vt-1
+			t=t+3; 
+			
 			
 		Next
+		
+		'solid[layer].AddVertex(v_cache)
+		solid[layer].AddTriangle(tris)
+		
 	End
 	
 	Method DrawSurface( surface:Surface,x#,y# )
@@ -412,35 +453,37 @@ Public
 		'If ms Then ms.sprite = LoadSprite(path)
 	End
 
+	
 
 	Method AddQuad:Void(s:TSurface, x#,y#,w#,h#, u#=0.0, v#=0.0, uw#=1.0, vh#=1.0)
 		
 		Local p0:Float[], p1:Float[], p2:Float[], p3:Float[]
+		Local r#,g#,b#
 		
 		p0 = Transform2D(mat,x,-h-y,zdepth)		
 		p1 = Transform2D(mat,x,-y,zdepth)		
 		p2 = Transform2D(mat,x+w,-y,zdepth)		
 		p3 = Transform2D(mat,x+w,-h-y,zdepth)
+		r=colorr* inverse_255
+		g=colorg* inverse_255
+		b=colorb* inverse_255
+				
+		'Local v4%=s.AddVertex([p0[0],p0[1],-p0[2],0.0, 1.0,1.0,1.0,0.0, r,g,b,colora, u, vh, u, vh,
+		_quadCache.AddCache(s, [p0[0],p0[1],-p0[2],0.0, 1.0,1.0,1.0,0.0, r,g,b,colora, u, vh, u, vh,
+								 p1[0],p1[1],-p1[2],0.0, 1.0,1.0,1.0,0.0, r,g,b,colora, u, v, u, v,
+								 p2[0],p2[1],-p2[2],0.0, 1.0,1.0,1.0,0.0, r,g,b,colora, uw, v, uw, v,
+								 p3[0],p3[1],-p3[2],0.0, 1.0,1.0,1.0,0.0, r,g,b,colora, uw, vh, uw, vh ] )
+		's.AddTriangle([v4-3,v4-2,v4-1])
+		's.AddTriangle([v4-3,v4-1,v4])
+		's.AddTriangle([v4-3,v4-2,v4-1, v4-3,v4-1,v4])
 		
-
-		Local v0%=s.AddVertex(p0[0],p0[1],p0[2], u, vh) ''v0
-		Local v1%=s.AddVertex(p1[0],p1[1],p1[2], u, v)
-		Local v2%=s.AddVertex(p2[0],p2[1],p2[2], uw, v)
-		Local v3%=s.AddVertex(p3[0],p3[1],p3[2], uw, vh)
-		
-		s.VertexColor(v0, colorr,colorg,colorb,colora)
-		s.VertexColor(v1, colorr,colorg,colorb,colora)
-		s.VertexColor(v2, colorr,colorg,colorb,colora)
-		s.VertexColor(v3, colorr,colorg,colorb,colora)
-
-		s.AddTriangle(v0,v1,v2)
-		s.AddTriangle(v0,v2,v3)
-
 
 		'' make sure to reset
 		s.reset_vbo=-1
 		
 	End
+	
+
 	
 	
 End
@@ -543,4 +586,58 @@ Class MojoSurface Extends Surface_
 		Return true
 	End
 
+End
+
+Class QuadCache
+
+	'' 64 floats per quad, 6 per tri
+	Const Q_CACHEMAX:Int=20
+	field q_cache:Float[1280] ''0-9
+	field q_tri:int[128]
+	field q_num:Int=0 ''number of verts
+	field q_surf:TSurface
+	
+	Method AddCache:Void( s:TSurface, v:Float[] )
+		
+		If (s<>q_surf) Or (q_num>Q_CACHEMAX-1)
+			
+			FlushCache()
+			
+		Endif
+		q_surf = s
+		
+		Local offset:Int = q_num*64
+		For Local i:Int=0 To 63
+			q_cache[offset+i] = v[i]
+		Next
+		
+		q_num+=1
+		
+	End
+	
+	Method FlushCache:Void()
+		
+		If q_num=0 Then Return
+		
+		Local n:Int = q_num
+		Local v4% = q_surf.AddVertex( q_cache, q_num*64 )
+
+		v4 = (v4+1)-(q_num*4)
+
+		
+		Local k:Int=0
+		For Local j:Int =0  To n-1
+			q_tri[k+0] = v4; q_tri[k+1] = v4+1; q_tri[k+2] = v4+2; 
+			q_tri[k+3] = v4; q_tri[k+4] = v4+2; q_tri[k+5] = v4+3; 
+
+			k=k+6
+			v4=v4+4
+		Next
+		q_surf.AddTriangle (q_tri, q_num*6)
+		
+		q_num =0
+		q_surf=null
+		
+	End
+	
 End

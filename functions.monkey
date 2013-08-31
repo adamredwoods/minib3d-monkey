@@ -1331,6 +1331,12 @@ Function TranslateEntity(ent:TEntity,x#,y#,z#,glob=False)
 	ent.TranslateEntity(x,y,z,glob)
 End 
 
+
+Function TrisRendered:Int()
+	Return TRender.tris_rendered
+End
+
+
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=TriangleVertex">Online Help</a>
 #End 
