@@ -203,9 +203,10 @@ Class TColTree
 		'' get positions of each sphere
 		'' may need offsets to center spheres ((div*idiv)-height)/2
 		'' -- also handle if mesh is not centered! (max+min)/2
-		Local offset:Vector = New Vector( ((div*idiv)-width)/2 + (mesh.max_x+mesh.min_x)/2,
-		 	((div*idiv)-height)/2 + (mesh.max_y+mesh.min_y)/2,
-		  	((div*idiv)-depth)/2 + (mesh.max_z+mesh.min_z)/2 )
+		'Local offset:Vector = New Vector( ((div*idiv)-width)/2 + (mesh.max_x+mesh.min_x)/2,
+		' 	((div*idiv)-height)/2 + (mesh.max_y+mesh.min_y)/2,
+		'  	((div*idiv)-depth)/2 + (mesh.max_z+mesh.min_z)/2 )
+		Local offset:Vector = New Vector( mesh.min_x+(div*idiv)*0.5-mesh.center_x, mesh.min_y+(div*idiv)*0.5-mesh.center_y, mesh.min_z+(div*idiv)*0.5+mesh.center_z)
 
 		'Local colobj:CollisionObject = New CollisionObject() ''not really needed
 		Local nullvec:Vector = New Vector(0.0,0.0,0.0)
@@ -267,7 +268,7 @@ Class TColTree
 							Local halfdiv# = div*0.5
 							Local rad# = halfdiv*SQRT2
 							rad = Sqrt(rad*rad + halfdiv*halfdiv) * sz ''cubic!
-Print rad							
+'Print rad							
 							
 							AddDivSphere( total, rad, pos )
 							total +=1
