@@ -1,9 +1,9 @@
 ****************************************
 minib3d v0.40
 
-- updated collisions: added Div Spheres for better collision shape and control
+- updated collisions: added CreateSphereTree() for better collision shape and control
 - collision bug fixes, accuracy
-- collision debug tools: mesh.col_tree.DebugSphereTree(), mesh.col_tree.DebugNodeTree(node_level)
+- collision debug tools: mesh.DebugSphereTree(), mesh.col_tree.DebugNodeTree(node_level)
 - added TrisRendered()
 - Android vertex buffer optimizations for MojoEmulation
 - some TEntity commands chainable

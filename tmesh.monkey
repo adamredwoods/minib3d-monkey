@@ -2080,8 +2080,8 @@ Class TMesh Extends TEntity
 	'End
 	
 	
-	Method CreateSphereTree:Void ( idiv:Int, sz:Float=1.0 )
-		col_tree.CreateSphereTree( Self, idiv, sz)
+	Method CreateSphereTree:Void ( idiv:Int, sz:Float=1.0, thresh:int=0 )
+		col_tree.CreateSphereTree( Self, idiv, sz, thresh)
 	End
 	
 	'' alpha 0.0-1.0

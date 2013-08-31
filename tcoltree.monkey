@@ -175,7 +175,7 @@ Class TColTree
 	End 	
 
 	
-	Method CreateSphereTree:Void ( mesh:TMesh, idiv:Int, sz:Float=1.0 )
+	Method CreateSphereTree:Void ( mesh:TMesh, idiv:Int, sz:Float=1.0, thresh:Int =0 )
 		
 		'' sz is percentage, so 1.0 is normal size
 		
@@ -213,6 +213,7 @@ Class TColTree
 		
 		Local usedTriNode:VecStack = New VecStack
 		
+		
 		Local box:Box = New Box()
 		For Local z:Int = 0 To idiv-1
 			For Local y:Int = 0 To idiv-1
@@ -232,9 +233,12 @@ Class TColTree
 					box.Update( New Vector(px+div-INF, py+div-INF, pz+div-INF))
 'If (box.Overlaps(mesh.col_tree.collider_tree.tree.box))
 	'CreateTestBox( box.a, box.b, mesh)
-'Endif			
+'Endif				
+					mesh.col_tree.collider_tree.ClearTriNodeStack()
+
 					''do we have triangles in our box
-					If (mesh.col_tree.collider_tree.CollideNodeAABB( box, nullvec, null, mesh.col_tree.collider_tree.tree) )
+					If (mesh.col_tree.collider_tree.CollideNodeAABB( box, nullvec, Null, mesh.col_tree.collider_tree.tree) And
+						thresh < mesh.col_tree.collider_tree.GetTriNodeTotal )
 'Print x+" "+y+" "+z+" ... "+px+" "+py+" "+pz+" .. "+total	
 						'Local info:Box = mesh.col_tree.collider_tree.GetTriNodeInfo()
 						
@@ -726,6 +730,18 @@ Class MeshCollider
 		
 		Return box
 	End
+
+
+	Method GetTriNodeTotal:int()
+		Local total:Int=0
+		
+		For Local node:Node = Eachin tri_node_stack
+
+			total += node.triangles.Length()
+
+		Next
+		Return total
+	end
 
 
 
