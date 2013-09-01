@@ -1215,7 +1215,7 @@ starttime = coll_obj.time
 		'coll.col_coords=new_coords
 		
 		Local coll_plane:Plane = New Plane( new_coords,coll.normal )	
-		'coll_plane.d -= COLLISION_EPSILON
+		coll_plane.d -= COLLISION_EPSILON*1.1 '' why are spheres sticking without this?
 
 		
 'Print "coll_time "+coll.time+"  res:"+response+" colnorm:"+coll.normal.ToString+" rad:"+radius
