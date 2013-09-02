@@ -1667,6 +1667,18 @@ Class TEntity
 		collision.box_w=w
 		collision.box_h=h
 		collision.box_d=d
+		
+		
+		''determine sphere radius if none
+		If collision.radius_x = 0.0
+			Local c:Float
+			c = Max(Max(Abs(x), Abs(y)),Abs(z))
+			c = Max(Max(Max(c,Abs(x+w)),Abs(y+h)),Abs(z+d))
+
+			''rx = (c*Max(Max(gsx,gsy),gsz)) ''NO! SCALE IS DONE AT COLLSION TIME
+			rx = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
+			collision.radius_x = Sqrt(rx*rx+c*c)
+		Endif
 
 	End 
 
