@@ -1635,6 +1635,17 @@ Class TEntity
 		collision.radius_x=rx
 		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
 		
+		
+		If collision.box_w=0.0
+			collision.box_x=-collision.radius_x*0.5
+			collision.box_y=-collision.radius_x*0.5
+			collision.box_z=-collision.radius_x*0.5
+			collision.box_w=collision.radius_x
+			collision.box_h=collision.radius_x
+			collision.box_d=collision.radius_x
+		endif
+		
+		
 		Return collision.radius_x
 		
 	End 

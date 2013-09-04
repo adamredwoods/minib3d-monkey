@@ -54,8 +54,7 @@ Class TColTree
 	'' -- could we use an alternate/low-poly mesh?
 	'' -- start with tris index 1 to remove weird null triangles (where index =0)
 	Method CreateMeshTree:MeshCollider(mesh:TMesh, max_tris:Int = MAX_COLL_TRIS )
-	
-
+		
 		' if reset_col_tree flag is true clear tree
 		If reset_col_tree=True
 
@@ -67,7 +66,8 @@ Class TColTree
 		Endif
 
 		If collider_tree=Null
-		
+
+	
 			Local total_verts_count:Int=0
 			Local vindex:Int=0
 			Local triindex:Int =1 ''start at 1 to eliminate null errors
@@ -816,7 +816,7 @@ Class MeshCollider
 				Local miss:Int=0
 				
 				If (tri_box.Overlaps(line_box)) ''check boxes
-				'If( Not curr_coll.TriangleCollide( line,radius,v0,v1,v2 ) ) Then Continue
+				
 'str+= "TRIBOX "+k+"  "	
 				If s_radius.x > 0.0001
 					
@@ -827,7 +827,15 @@ Class MeshCollider
 					'Else
 						If Not coll_obj.SphereTriangle( line, s_radius, v0.Multiply(scalef),v1.Multiply(scalef),v2.Multiply(scalef) ) Then miss=1
 'Print "tri hit  "					
-					''check triangle AABB against source triangle AABB
+						''** experimental speedup ** reduce line_box size to current intersect??
+						'If miss=0
+							'line_box.Clear()
+							'line_box.Update(line.o)
+							'line_box.Update(s_radius)
+							'line_box.Update(tri_box.a)
+							'line_box.Update(tri_box.b)
+						'Endif					
+						
 					
 #rem
 					If src_coll

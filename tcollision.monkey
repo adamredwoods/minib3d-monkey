@@ -74,20 +74,20 @@ Class TCollision
 		
 		If old_px=ent.mat.grid[3][0] And old_py=ent.mat.grid[3][1] And old_pz=-ent.mat.grid[3][2]
 			
-			If type = COLLISION_METHOD_POLYGON Or type = COLLISION_METHOD_BOX
-				If old_rx = ent.rx And old_ry=ent.ry And old_rz = ent.rz
-					Return False
-				Endif
-			Else
-				Return False
-			Endif
-
+			'If type = COLLISION_METHOD_POLYGON Or type = COLLISION_METHOD_BOX
+				'If old_rx = ent.rx And old_ry=ent.ry And old_rz = ent.rz
+					'Return False
+				'Endif
+			'Else
+				'Return False
+			'Endif
+			Return false
 		Endif
 
 		Return True
 	End
 	
-	Method SetOldPosition:Void(ent:TEntity,x#,y#,z#)
+	Method SetOldPosition:Void(ent:TEntity,x#=0,y#=0,z#=0)
 		old_px=ent.mat.grid[3][0]; old_py=ent.mat.grid[3][1]; old_pz=-ent.mat.grid[3][2]
 		old_rz = ent.rz; old_ry = ent.ry; old_rx = ent.rx
 	End
@@ -244,7 +244,7 @@ Class TCollisionPair
 		Endif
 		
 		ent.collision.type=type_no
-		ent.collision.MoveTest(ent) ''reset the old_px values
+		ent.collision.SetOldPosition(ent) ''reset the old_px values
 		
 	End
 	
@@ -473,7 +473,7 @@ Class CollisionInfo
 		
 	
 		coll_line.Update( sv.x, sv.y, sv.z, dv.x-sv.x, dv.y-sv.y, dv.z-sv.z )
-		
+	
 		'dir.Update((coll_line.d.x),(coll_line.d.y),(coll_line.d.z))
 		dir = coll_line.d.Normalize()
 		'td=coll_line.d.Length()
@@ -488,14 +488,15 @@ Class CollisionInfo
 		y_scale=1.0
 		inv_y_scale=1.0
 		y_tform.m.grid[1][1]=1.0 ''mat.j.y = mat.grid[1][1]
-	
-		If( radii.x <> radii.y )
-			y_scale=src_radius/radii.y
-			y_tform.m.grid[1][1]=src_radius/radii.y
-			inv_y_scale=1.0/y_scale
-			sv.y *= y_scale
-			dv.y *= y_scale
-		Endif
+		
+		''** disabled radii.y
+		'If( radii.x <> radii.y )
+			'y_scale=src_radius/radii.y
+			'y_tform.m.grid[1][1]=src_radius/radii.y
+			'inv_y_scale=1.0/y_scale
+			'sv.y *= y_scale
+			'dv.y *= y_scale
+		'Endif
 		
 	End
 	
@@ -606,7 +607,7 @@ Class CollisionInfo
 				col_info.UpdateSourceSphere(ent)
 				
 				' quick check to see if entity is moving, if not, no ray
-				If (ent.collision.MoveTest(ent)=False) And (Not (ent.collision.flag &COLLISION_FLAG_CONTINUOUS)) Then Continue
+				If (ent.collision.MoveTest(ent)=False) Then Continue 'And (Not (ent.collision.flag &COLLISION_FLAG_CONTINUOUS)) Then Continue
 
 				col_info.vec_a.Update(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2]) ''line dest
 				col_info.vec_b.Update(ent.collision.old_px,ent.collision.old_py,ent.collision.old_pz) ''line source
@@ -616,8 +617,9 @@ Class CollisionInfo
 				ent.collision.SetOldPosition(ent, ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2])
 	
 				''make collision line
-				col_info.UpdateRay(col_info.vec_b,col_info.vec_a,col_info.vec_c)
 				col_info.ClearHitPlanes()
+				col_info.UpdateRay(col_info.vec_b,col_info.vec_a,col_info.vec_c)
+				
 
 				If TMesh(ent)
 					col_info.src_divSphere.RotateDivSpheres( ent, col_info)
@@ -786,7 +788,7 @@ starttime = coll_obj.time
 			tform.m.grid[0] = [ent.mat.grid[0][0]*ex,ent.mat.grid[1][0]*ey,-ent.mat.grid[2][0]*ez,  0.0]
 			tform.m.grid[1] = [ent.mat.grid[0][1]*ex,ent.mat.grid[1][1]*ey,-ent.mat.grid[2][1]*ez,  0.0]
 			tform.m.grid[2] = [-ent.mat.grid[0][2]*ex,-ent.mat.grid[1][2]*ey,ent.mat.grid[2][2]*ez,  0.0]
-	
+
 			'renew2 = tform.m.Inverse()
 			renew2.grid[0] = [tform.m.grid[0][0],tform.m.grid[1][0],tform.m.grid[2][0],  0.0]
 			renew2.grid[1] = [tform.m.grid[0][1],tform.m.grid[1][1],tform.m.grid[2][1],  0.0]
@@ -845,7 +847,8 @@ starttime = coll_obj.time
 
 			li.o = tform.m.Multiply(li.o.Add(tf_offset).Add(src_divSphere.offset))
 			li.d = tform.m.Multiply(li.d)
-'Print (li.o.Length())+",,,"			
+'Print (li.o.Length())+",,,"		
+	
 		Else
 
 			tf_offset.Overwrite(ent.mat.grid[3][0],ent.mat.grid[3][1],-ent.mat.grid[3][2] ) ''this is ent2 center
@@ -1199,7 +1202,7 @@ starttime = coll_obj.time
 
 		
 		If( hits>=MAX_HITS  ) Return False
-
+		If (Abs(dv.x-sv.x)<0.00001) And Abs(dv.y-sv.y)<0.00001 And Abs(dv.z-sv.z)<0.00001 Then dv.Overwrite(sv); Return False
 		
 		Local new_coords:Vector=coll.col_coords.Add(coll.normal.Multiply(src_radius+ COLLISION_EPSILON)).Subtract(hitDivOffset)
 		'new_coords = coll.col_coords.Copy() 'coll_line.o.Add(coll_line.d.Multiply(coll.time))	
@@ -1869,7 +1872,7 @@ Public
 		Endif
 		
 		''edge test
-		
+	
 		If out>0 And tf_radius.x 'And Not beneath
 
 
