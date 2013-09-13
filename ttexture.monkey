@@ -18,6 +18,7 @@ Import minib3d.monkeyutility
 Const TEXFLAG_COLOR% = 1
 Const TEXFLAG_ALPHA% = 2
 Const TEXFLAG_MASKED% = 4
+Const TEXFLAG_ALPHA_TESTING% = 4
 Const TEXFLAG_MIPMAP% = 8
 Const TEXFLAG_CLAMPU% = 16
 Const TEXFLAG_CLAMPV% = 32

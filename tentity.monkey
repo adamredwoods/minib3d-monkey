@@ -136,7 +136,7 @@ Class TEntity
 			
 		' add parent, then add to list
 		ent.AddParent(parent_ent)
-		ent.entity_link = entity_list.EntityListAdd(ent)
+		ent.entity_link = entity_list.EntityListAdd( ent )
 	
 		' add to collision entity list
 		If collision.type<>0
@@ -215,30 +215,38 @@ Class TEntity
 	
 	Method FreeEntity()
 	
-		If entity_link Then entity_link.Remove()
 		
 		' remove from collision entity lists
 		If collision.type<>0 collision_pair.ListRemove(Self, collision.type)
 		
 		' remove from pick entity list
-		If pick_mode<>0 Then pick_link.Remove()
+		If pick_mode<>0
+			pick_link.Remove()
+			pick_link = Null
+		endif
 		
 			
 		' free self from parent's child_list
 		If parent<>Null
 			parent_link.Remove()
+			parent_link = null
+		Endif
+		
+		' free children entities
+		For Local ent:TEntity =Eachin child_list
+			ent.FreeEntity()
+			ent=Null
+		Next
+		
+		If entity_link<>Null
+			entity_link.Remove()
+			entity_link=Null
 		Endif
 		
 		parent=Null
 		mat=New Matrix
 		brush=New TBrush
-	
-		' free children entities
-		For Local ent:TEntity =Eachin child_list
-			ent.FreeEntity()
-			ent=Null
-		Next	
-		
+
 		child_list.Clear()
 	End 
 	

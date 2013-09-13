@@ -71,6 +71,7 @@ Public
 		'*** removed bones from entity_list... how will this effect things?
 		'bone.entity_link = entity_list.EntityListAdd(bone)
 		bone.entity_link.Remove()
+		bone.entity_link = Null ''needed after every remove
 		
 		Return bone
 	

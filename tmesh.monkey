@@ -975,15 +975,19 @@ Class TMesh Extends TEntity
 	
 	Method CopyMesh:TMesh(parent_ent:TEntity=Null)
 	
-		Local mesh:TMesh=TMesh.CreateMesh(parent_ent)
+		Local mesh:TMesh=New TMesh()
+		mesh.classname = Self.classname
+		If parent_ent Then mesh.EntityParent(parent_ent)
+		
 		Self.AddMesh(mesh) ''add self TO mesh
 		''remove from entity_list since it will re-add in CopyBaseMeshTo()
-		mesh.entity_link.Remove()
+		'mesh.entity_link.Remove()
+		'mesh.entity_link=Null
 		
 		''copy children
-		For Local ent:TEntity=Eachin child_list
-			ent.CopyEntity(mesh)
-		Next
+		'For Local ent:TEntity=Eachin child_list
+			'ent.CopyEntity(mesh)
+		'Next
 		
 		Self.CopyBaseMeshTo(mesh,parent_ent)
 		
@@ -1517,6 +1521,10 @@ Class TMesh Extends TEntity
 	
 		Return Null
 	
+	End
+	
+	Method GetSurfaceList:List<TSurface>()
+		Return surf_list
 	End 
 	
 	Method FindSurface:TSurface(brush:TBrush)

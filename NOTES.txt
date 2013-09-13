@@ -1,4 +1,13 @@
 ****************************************
+minib3d v0.41
+
+- bug fixes:
+- FreeEntity() now works
+- proper ALPHA_TESTING for textures (kept retro blitz3d "masked textures" although teminology isn't correct)
+- Flash target: alpha testing, better point and directional lights, texture bug fix
+- XNA: multiple cameras fix
+
+****************************************
 minib3d v0.40
 
 - updated collisions: added CreateSphereTree() for better collision shape and control

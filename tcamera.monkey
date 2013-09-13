@@ -37,7 +37,7 @@ Class TCamera Extends TEntity
 	Field mod_mat:Matrix =New Matrix ''this is the view matrix, sorry to confuse, but was this way before me
 	Field proj_mat:Matrix =New Matrix'Float[16]
 	Field projview_mat:Matrix = New Matrix
-	Field view_mat:Matrix ''will point to mod_mat
+	Field view_mat:Matrix = New Matrix''will point to mod_mat
 	
 	Global projected_x#
 	Global projected_y#
@@ -111,6 +111,7 @@ Public
 		Super.FreeEntity() 
 		
 		cam_link.Remove()
+		cam_link = Null
 		
 	End
 

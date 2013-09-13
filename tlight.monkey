@@ -1,9 +1,12 @@
 Import minib3d
 
 
-'' type = 1 direction
+'' type = 1 direction (default)
 '' 2 = point
 '' 3 = spot
+
+''default light matrix point in -zdirection
+
 Class TLight Extends TEntity
 	
 	Const INV255:Float = 1.0/255.0
@@ -34,10 +37,6 @@ Class TLight Extends TEntity
 		
 	End 
 	
-	Method Delete()
-
-	
-	End 
 
 	Method CopyEntity:TEntity(parent_ent:TEntity=Null)
 
@@ -71,6 +70,8 @@ Class TLight Extends TEntity
 		If no_lights>0 Then no_lights=no_lights-1
 		
 		remove_light = True
+		'light_link.Remove()
+		'link_link = null
 		
 	End 
 	

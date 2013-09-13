@@ -427,6 +427,7 @@ Class TBatchSprite Extends TSprite
 			mainsprite[batch_id].num_sprites -=1
 			
 			sprite_link.Remove()
+			sprite_link = null
 			
 			If parent
 				parent_link.Remove()

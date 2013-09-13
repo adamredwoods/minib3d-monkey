@@ -143,6 +143,8 @@ public class XNAGraphicsDevice
         _viewport.Height = height;
 		_viewport.MinDepth = 0.0f;
         _viewport.MaxDepth = 1.0f;
+		
+		_device.Viewport = _viewport;
 	}
 	
 	public float GetShaderVersion() {

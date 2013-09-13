@@ -459,11 +459,11 @@ Class OpenglES11 Extends TRender
 			
 			
 			' textures
-			Local tex_count=0	
+			Local tex_count=effect.num_tex	
 			
-			tex_count=ent.brush.no_texs
+			'tex_count=ent.brush.no_texs
 			'If surf.brush<>Null
-				If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
+				'If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
 			'EndIf
 			
 			
@@ -563,11 +563,9 @@ Class OpenglES11 Extends TRender
 					If Not skip_sprite_state
 					
 					
-					' mask texture (0,0,0)
+					''  this is the alpha-test flag, moved to surface effect
 					If tex_flags&4<>0
-						
-					Else
-						
+
 					Endif
 				
 					' mipmapping texture flag
@@ -1063,9 +1061,9 @@ Class OpenglES11 Extends TRender
 		''retrieve bind flags from stack
 		'If tex.bind_flags <>-1 Then flags = tex.bind_flags Else flags = tex.flags
 		
-		' if mask flag is true, mask pixmap
+		' if mask flag is true, mask pixmap *** WRONG! masking = alphatesting, UGH! ***
 		If flags&4
-			tex.pixmap.MaskPixmap(0,0,0)
+			'tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
 		

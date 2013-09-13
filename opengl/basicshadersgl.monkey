@@ -143,7 +143,7 @@ Class MultiShader Extends TShaderGLSL
 	
 	
 	Global VERTP0:String = "/*generic opengl 2.0 shader*/ ~n"+
-	"#ifdef GL_ES ~n precision mediump float; ~n#endif ~n"+
+	"#ifdef GL_ES ~n precision highp float; ~n#endif ~n"+
 	"attribute vec2 aTexcoords0, aTexcoords1;attribute vec3 aVertcoords;attribute vec3 aNormals;attribute vec4 aColors;uniform mat4 pMatrix, vMatrix, mMatrix;"+
 	"/*light*/ uniform float lightType[2];uniform mat4 lightMatrix[2];uniform vec3 lightSpot[2]; /*x=outercutoff,y=innercutoff,z=spot exponent*/ "+
 	"/*color*/ uniform vec4 basecolor; uniform float colorflag, lightflag; "+
@@ -162,7 +162,8 @@ Class MultiShader Extends TShaderGLSL
 	"/*halfvec specular*/ halfVec = vec4(normalize((lightPos[0].xyz- vertVec.xyz) + -( vMatrix[3].xyz - vertVec.xyz )) , 0.0);"+
     "if (light == 1.0 ) {lightVec.xyz = lightmat * vec3(0.0,0.0,-1.0); nmLight = normalize(-lightVec.xyz);"+
 	"} else if (light == 2.0 ) { lightVec.xyz = vertVec.xyz; nmLight = normalize(lightPos[0].xyz - vertVec.xyz);	"+
-	"} else if (light == 3.0 ) { vec3 lightDir = normalize(lightmat * vec3(0.0,0.0,1.0));lightVec.xyz = vertVec.xyz; nmLight = normalize(lightPos[0].xyz - vertVec.xyz);}"
+	"} else if (light == 3.0 ) { vec3 lightDir = normalize(lightmat * vec3(0.0,0.0,1.0));lightVec.xyz = vertVec.xyz; nmLight = normalize(lightPos[0].xyz - vertVec.xyz);}"+
+	"~n"
 	
 	Global VERTP2:String = ""
 	
@@ -221,7 +222,7 @@ Class MultiShader Extends TShaderGLSL
 	'' fragment shader
 	
 	
-	Global FRAGP0:String = "#ifdef GL_ES ~nprecision mediump float; ~n~n#endif ~n"+
+	Global FRAGP0:String = "#ifdef GL_ES ~nprecision highp float; ~n~n#endif ~n"+
 	"varying vec2 texcoord[4]; varying vec4 normal;varying vec4 vertcolor;varying vec4 lightVec, halfVec; /*using z component for light att  ;spotlight coefficient packed into halfvec.w*/"+
 	"varying float fogBlend;varying vec3 nmLight;uniform mat4 mMatrix;"+
 	"/*texture*/ uniform float texflag; uniform sampler2D uTexture[5];uniform vec2 texBlend[5];uniform float texfxNormal[2];"+
@@ -251,8 +252,9 @@ Class MultiShader Extends TShaderGLSL
 	Global FRAGP2:String = "void main () {"+
 	" vec4 finalcolor = one_zero.xxxx;vec4 ambient = vec4(ambientcolor.xyz,0.0);vec4 light = one_zero.xxxx;vec4 specular = one_zero.yyyy;"+
 	"bool usenormalmap = (texflag > 0.0) && (texfxNormal[0] > 0.0); /*fixes webgl angle bug*/~n"+
-	"vec3 N = (( usenormalmap  ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : normalize(normal.xyz));"+
-	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : one_zero.xxxx ; vec4 texture = one_zero.xxxx;"
+	"vec3 N = (( usenormalmap  ) ? (texture2D(uTexture[0],(texcoord[0]).xy).xyz * 2.0 - 1.0) : (normal.xyz));"+
+	"light = lightflag>0.0 ? LightFunction0( light, N, specular ) : one_zero.xxxx ; vec4 texture = one_zero.xxxx;"+
+	"~n"'+" if (!gl_FrontFacing) { light = light * clamp(dot(lightVec,-normal),0.0,1.0); }~n" ''double-sided poly lighting
 	
 	#rem
 	"if (texflag<1.0) {	finalcolor = vec4(vertcolor.xyz, vertcolor.w);	} else {"+
@@ -301,9 +303,9 @@ Class MultiShader Extends TShaderGLSL
 			"mat3 lightmat = mat3(lightMatrix[i][0].xyz, lightMatrix[i][1].xyz, lightMatrix[i][2].xyz);vec3 lightDir = normalize(lightmat * LIGHTUNIT ).xyz;"+
 			"vec3 lightV = lightPos.xyz - lightVec.xyz; spotlight = max(-dot(normalize(lightV), lightDir), 0.0);"+
 			"float spotlightFade = clamp((lightSpot[i].x - spotlight) / (lightSpot[i].x - lightSpot[i].y), 0.0, 1.0);spotlight = pow(spotlight * spotlightFade, lightSpot[i].z);};	"+	
-	"vec3 L = ( (texflag > 0.0) && (texfxNormal[0] > 0.0) ) ? nmLight : normalize(lightPos.xyz - lightVec.xyz); vec3 N = norm; float NdotL = dot(N,L);"+
+	"vec3 L = ( (texflag > 0.0) && (texfxNormal[0] > 0.0) ) ? nmLight : normalize(lightPos.xyz - lightVec.xyz); vec3 N = normalize(norm); float NdotL = clamp(dot(N,L),0.0,1.0);"+
 	"if (NdotL > 0.0) {	if (dist > 0.0 && dist < lightAtt[i].w*10.0) {"+
-	"if (lightType[i] >1.0) d = (spotlight ) / (  lightAtt[i].x + (lightAtt[i].y* dist)  ) ;"+	
+	"if (lightType[i] >1.0) {d = (spotlight ) / (  lightAtt[i].x + (lightAtt[i].y* dist)  ) ;}"+	
 	"lambertTerm = clamp(NdotL * d  , 0.0, 1.0) ;"+
 	"if (shininess > 0.0) {	specular = pow( max(dot(halfVec.xyz, N) , 0.0), 100.0  ) *  d * shine4;	}}}"+
 	"return (lightColor[i] * lambertTerm  );}"

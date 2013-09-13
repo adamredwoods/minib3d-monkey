@@ -1,4 +1,5 @@
 minib3d+monkey
+v0.41 - bug fixes: FreeEntity(), Flash11 updates
 v0.40 - android opts, collision opts 
 v0.39 - multi-shaders & bug fixes
 v0.38 - preloader changes

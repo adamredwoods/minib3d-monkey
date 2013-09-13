@@ -50,8 +50,8 @@ Class ShaderUniforms
 	Field texflag:Int
 	Field colorflag:Int
 	Field lightflag:Int
-	Field fogflag:Int
-	
+	Field miscflag:Int ''fog, etc... BOTH FRAG AND VERT
+	'Field fragflag:Int ''fragment only!
 	
 	Field lightpMatrix:Int
 	Field lightvMatrix:Int
@@ -451,26 +451,51 @@ Class OneLightOneTexShader Extends TShaderFlash
 
 	
 	Global VP:String =
-			'' copy attribs into varying
+			'' copy attribs into varying v0,v1, vert pos into vt1
 			"m44 vt1, va0, vc0~nmov v0, va1~nmov v1, va2~n"+
 			
 			
+			'' vert normal = vt3
+			"m44 vt3, va3.xyz, vc8~nnrm vt3.xyz, vt3.xyz~n"+ ''vt3 = vert normal
 			''pointlight1 into vt0
-			"m44 vt3, va3.xyz, vc8~nnrm vt3.xyz, vt3.xyz~n"+
-			"mov vt0.x, vc12.w~nmov vt0.y, vc13.w~nmov vt0.z, vc14.w~nm44 vt4, va0, vc4~nsub vt0, vt0.xyz, vt4.xyz~nnrm vt0.xyz, vt0.xyz~n"+
-			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nabs vt0.xyz, vt0.xyz~nsat vt0.xyz, vt0.xyz~n"+
+			"mov vt4.x, vc12.w~nmov vt4.y, vc13.w~nmov vt4.z, vc14.w~n"+ ''re-use vt4 for directional light
+			"m44 vt0, va0, vc4~nsub vt0, vt4.xyz, vt0.xyz~n"+
+			'"dp3 vt0.xyz, vt0.xyz, vt3.xyz~nabs vt0.xyz, vt0.xyz~nsat vt0.xyz, vt0.xyz~n"+ ''LdotN
+			
+			''directional light into vt7
+			"m44 vt7, vt4.xyz, vc12~n"+
+			
+			'' distance = vt5
+			"dp3 vt5, vt0.xyz, vt0.xyz~nsqt vt5,vt5~n"+
+			''light attenuation for LdotN = vt6
+			"mul vt6.x, vc27.y, vt5~nadd vt6.x, vc27.x, vt6.x~nrcp vt6.x,vt6.x~n"+ 'd = (spotlight ) / (  lightAtt[i].x + (lightAtt[i].y* dist)  )
+			''set vt6.x to one if lightflag=1 (reusing vt5)
+			"mov vt5.x, vc26.y~nadd vt5.x, vt5.x, vc26.z~nmul vt6.x, vt6.x, vt5.x~n"+
+			''ugh... this will set vt6.x to 1 if the above is 0, but will leave vt6 alone if not
+			"mov vt5.x, vc26.x~nsge vt5.x, vt5.x, vc26.y~nadd vt6.x, vt6.x, vt5.x~n"+
+			
+			''choose the lightflag
+			"mul vt7, vt7, vc26.xxxx~n"+
+			"mul vt0, vt0, vc26.yyyy~n"+
+			"add vt0, vt7, vt0~n"+ ''add in the remainder
+			"nrm vt0.xyz, vt0.xyz~n"+
+			
+			''LdotN
+			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~n"+
+			"mul vt0.xyz, vt0.xyz, vt6.xxx~n"+"sat vt0.xyz, vt0.xyz~n"+ 
 			
 			''ambient light
 			"max vt0.xyz, vt0.xyz, vc17.xyz~n"+
 			'"mov v2, vt0.xyz~n"+
 			'' base color
-			"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag = 1111 or rgba
-			"mul vt3, vc16, vt3~n"+
+			"max vt3, vc18.xxxx, va1~n"+ ''vc18=one-minus colorflag = 1111 for use vertcolors
+			"mul vt3, vc16, vt3~n"+ ''vc16=base color=1111 for use vertex color
 			''light color
-			"mul vt3, vt3, vc22~n"+ 			
+			"mul vt3, vt3.xyz, vc22.xyz~n"+ 			
 			
 			''final_light*final_color
-			"mul v0, vt3, vt0.xyz~n"+
+			"mul v0, vt3.xyz, vt0.xyz~n"+
+			"mov v0.w, vt3.w~n"+ ''make sure proper alpha gets through
 			
 			"mov op, vt1~n"+
 			"~n"
@@ -479,13 +504,16 @@ Class OneLightOneTexShader Extends TShaderFlash
 	
 	Global FP:String =
 			"tex ft1, v1, fs0 <2d,TEXTURE_WRAP,linear>~n"+ ''texture
+			"ALPHATEST"+
 			"mul ft2, ft1, v0~n"+ 'color+light
 			"mov oc, ft2~n"
 
 			'"mov oc, ft1~n"
 			'"mov ft2, ft1~n"
 	
+	Global alphaTest:String="sub ft3.x ft1.w fc25.x~nkil ft3.x~n"
 	
+	''this should be moved up to TShaderFlash, but keep here for now
 	Method LinkVariables:Int()
 		
 		active=1
@@ -511,6 +539,11 @@ Class OneLightOneTexShader Extends TShaderFlash
 		
 		'' flags
 		u.colorflag = 18 '' x=use basecolor; 18,19,20,21
+		u.miscflag = 25 '' used on BOTH frag and vertex
+		u.lightflag = 26
+		
+		u.light_att[0] = 27 
+		u.light_spot[0] = 28 
 		
 	end
 	
@@ -518,6 +551,7 @@ Class OneLightOneTexShader Extends TShaderFlash
 		
 		'' find, replace
 		fp = StringReplace("TEXTURE_WRAP",tex_clamp,fp)
+		fp = StringReplace("ALPHATEST",alphaTest,fp)
 		
 		driver = FlashMiniB3D.driver
 		If vp<>"" And fp<>""
@@ -581,12 +615,13 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 			
 			"mov ft2, v0~n"+ 'move color in for tinting
 			"mul ft2, ft1, ft2~n"+
-
+			"ALPHATEST"+
 			"mov oc, ft2~n"
 
 			'"mov oc, ft1~n"
 			'"mov ft2, ft1~n"
 
+	Global alphaTest:String="sub ft3.x ft2.a fc25.x~nkil ft3.x~n"
 	
 	Method LinkVariables:Int()
 		Super.LinkVariables()
@@ -598,6 +633,7 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 	
 		'' find, replace
 		fp = StringReplace("TEXTURE_WRAP",tex_clamp,fp)
+		fp = StringReplace("ALPHATEST",alphaTest,fp)
 				
 		driver = FlashMiniB3D.driver
 		If vp<>"" And fp<>""

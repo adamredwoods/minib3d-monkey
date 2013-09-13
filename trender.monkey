@@ -563,6 +563,8 @@ Class EffectState
 	Field alpha#
 	Field blend:Int
 	Field fx:Int
+	Field num_tex:Int
+	Field tex:TTexture[]
 	
 	Method Overwrite:Void(e:EffectState)
 		use_full_bright = e.use_full_bright
@@ -583,6 +585,8 @@ Class EffectState
 		red=e.red ; green=e.green ; blue=e.blue ; alpha=e.alpha
 		shine=e.shine ; blend=e.blend ; fx=e.fx
 		use_alpha_test = e.use_alpha_test
+		
+		num_tex = e.num_tex
 	End
 	
 	Method SetNull:Void()
@@ -604,6 +608,8 @@ Class EffectState
 		use_alpha_test=0
 		red=-1.0 ; green=-1.0 ; blue=-1.0 ; alpha=-1.0
 		shine=-1.0  ; blend=99999 ; fx=99999
+		
+		num_tex=-1
 	End
 	
 	Method UpdateEffect:Void(surf:TSurface, ent:TEntity, cam:TCamera = Null)
@@ -620,6 +626,8 @@ Class EffectState
 			shine=ent.brush.shine
 			blend =ent.brush.blend
 			fx    =ent.brush.fx
+			num_tex = ent.brush.no_texs
+			tex = ent.brush.tex
 			
 			' combine surface brush values with main brush values
 			If surf.brush
@@ -635,7 +643,10 @@ Class EffectState
 				If shine<>0.0 And shine2<>0.0 Then shine=shine*shine2
 				If blend=0 Then blend=surf.brush.blend ' overwrite master brush if master brush blend=0
 				fx=fx|surf.brush.fx
-			
+				If (num_tex < surf.brush.no_texs)
+					num_tex = surf.brush.no_texs
+					tex = surf.brush.tex
+				endif
 			Endif
 			
 			' take into account auto fade alpha
@@ -725,7 +736,15 @@ Class EffectState
 			Endif
 			
 			use_alpha_test = 0
-			If fx& FXFLAG_ALPHA_TESTING
+			'' also look for alphatest flag in textures
+			Local tex_alphatest:Int=0
+			If num_tex>0
+				For Local i:Int =0 To num_tex-1
+					If tex[i] Then tex_alphatest |= (tex[i].flags&4)
+				Next
+			Endif
+			
+			If (fx& FXFLAG_ALPHA_TESTING>0) Or (tex_alphatest>0)
 				use_alpha_test = 1
 				use_depth_test = 1
 				use_depth_write = 1

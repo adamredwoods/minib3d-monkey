@@ -376,6 +376,7 @@ Class TModelObj
 		Next
 		
 		If Not hasNorms
+			If DEBUG Then Dprint "UpdateNormals()"
 			mesh.UpdateNormals() ''create norms if none
 		Endif
 		

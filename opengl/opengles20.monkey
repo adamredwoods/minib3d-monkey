@@ -579,7 +579,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 
 			'If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
 			
-			'' -- we are always sending over a texture in opengl2.0 basic shader --not anymore
+			'' -- we are always sending over a texture in opengl2.0 basic shader --not anymore, multi-sahder
 			If tex_count<>0 And (last_tex_count=0 Or last_tex_count=-1)
 				'glEnable(GL_TEXTURE_2D)
 			Elseif tex_count=0 And (last_tex_count>0 Or last_tex_count=-1)
@@ -673,11 +673,9 @@ Class OpenglES20 Extends TRender Implements IShader2D
 						'
 					Endif
 					
-					''mask texture with color (0,0,0)
+					''this is the alpha-test flag, moved to surface effect
 					If tex_flags&4<>0
-									
-					Else
-						
+
 					Endif
 				
 					' mipmapping texture flag
@@ -1148,9 +1146,9 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		
 		TRender.render.ClearErrors()	
 		
-		' if mask flag is true, mask pixmap
+		' if mask flag is true, mask pixmap  *** WRONG! masking = alphatesting, UGH! ***
 		If flags&4
-			tex.pixmap.MaskPixmap(0,0,0)
+			'tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
 		

@@ -190,8 +190,6 @@ Public
 
 		Local mesh:TMesh = TMesh(ent)
 		If Not mesh Then Return
-		
-		'If _device.GraphicsDeviceStatus() Then Print "<<<<<<<"
 
 		'' draw surfaces with alpha last
 		Local temp_list:List<TSurface> = mesh.surf_list
@@ -346,9 +344,9 @@ Public
 	' Do not use SetData when writing data to vertex buffers, index buffers, and textures: http://msdn.microsoft.com/en-us/library/bb198834
 	Method BindTexture:TTexture(tex:TTexture,flags:Int)
 	
-		' if mask flag is true, mask pixmap
+		' if mask flag is true, mask pixmap ''**wrong, this is alpha-testing
 		If flags&4
-			tex.pixmap.MaskPixmap(0,0,0)
+			'tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
 		' pixmap -> tex
@@ -448,31 +446,27 @@ Public
 	Method UpdateCamera(cam:TCamera)
 		
 		'If Not cam Or _xna Then Return
-		
-		'If (_device)
-			' viewport
-			_device.Viewport(cam.vx,cam.vy,cam.vwidth,cam.vheight)
 
-			If cam.vheight
-				'' y is opposite corner from opengl
-				_device.ScissorRectangle(cam.viewport[0],TRender.height-cam.viewport[3]-cam.viewport[1],cam.viewport[2],cam.viewport[3])
-				'_device.RasterizerState = _xna._rasterizerScissor
-				'_xna._rasterizerScissor.ScissorTestEnable = True
-			endif
-			
-			' clear buffers
-			' per dx11 and xna 4.0, scissor has no effect on clearscreen
-		If cam.cls_color=True or cam.cls_zbuffer=True
-			_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, cam.cls_color, cam.cls_zbuffer, False )
+		' viewport does nothing in XNA
+		'_device.Viewport(cam.vx,-(cam.vy-render.height+cam.vheight),cam.vwidth,cam.vheight)
+		_device.Viewport(cam.viewport[0],TRender.height-cam.viewport[3]-cam.viewport[1],cam.viewport[2],cam.viewport[3])
+
+		'' y is opposite corner from opengl
+		_device.ScissorRectangle(cam.viewport[0],TRender.height-cam.viewport[3]-cam.viewport[1],cam.viewport[2],cam.viewport[3])
+		
+		' clear buffers
+		' per dx11 and xna 4.0, scissor has no effect on clearscreen
+		If cam.cls_color=True
+			'_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, cam.cls_color, cam.cls_zbuffer, False )
+			DrawClearQuad(cam,cam.cls_r,cam.cls_g,cam.cls_b)
 		Endif
 		
-		'Endif
-		
-		''dont set matrices here
-		
+		If cam.cls_zbuffer=True
+			_device.ClearScreen(cam.cls_r,cam.cls_g,cam.cls_b, false, cam.cls_zbuffer, False )
+		Endif
+			
 		_xna.proj_mat = cam.proj_mat.ToArray()
 		_xna.view_mat = cam.mod_mat.ToArray()
-		
 		
 	End
 	
@@ -486,6 +480,50 @@ Public
 	'################################################################################
 	
 Private 
+
+	Global fastQuad:TMesh
+
+	Method DrawClearQuad:Void(cam:TCamera,r:float,g:float,b:float)
+
+		If fastQuad = Null
+			fastQuad = CreateSprite()
+			fastQuad.RemoveFromRenderList
+			fastQuad.ScaleEntity(render.width,render.height,1.0)
+			fastQuad.PositionEntity(0,0,1.99999)
+			fastQuad.EntityFX(1+8+32+64)
+			'fastQuad.alpha_order=1.0
+			fastQuad.classname="fastQuad"
+			'camera2D.SetPixelCamera
+			IRenderUpdate(fastQuad).Update(camera2D)
+		Endif
+		
+		''set the xna array
+		_xna.proj_mat = camera2D.proj_mat.ToArray()
+		_xna.view_mat = camera2D.mod_mat.ToArray()
+		
+		'TRender.render.Reset()
+		_xna._device.DepthStencilState = _xna._depthStencilNoDepth
+		_xna._device.RasterizerState = _xna._rasterizerStates[2] ''culling
+		_xna._device.BlendState = _xna._blendStates[4]
+		_xna.Reset()
+		'SetShader2D()
+		
+		fastQuad.EntityColorFloat(r,g,b)
+		
+		alpha_pass=1
+		Local wireframeIsEnabled:Int = wireframe
+		wireframe = False
+	
+		'driver.SetColorMask(True,True,True,False)
+		self.Render(fastQuad,camera2D)
+		'driver.SetColorMask(True,True,True,True)
+		wireframe = wireframeIsEnabled
+		
+		TRender.render.Finish()
+		TRender.render.Reset()
+		'cam.Update(cam)
+	End
+	
 	
 	Method IsPowerOfTwo?(x)
 	    Return (x <> 0) And ((x & (x - 1)) = 0)

@@ -469,12 +469,10 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 					If Not skip_state
 					
 					
-					' masked texture flag, handled during pixmapload
-					If texdata.tex_flags[ix]&4<>0
-						
-					Else
-						
-					Endif
+					'' alpha-testing, moved to effect
+					'If texdata.tex_flags[ix]&4<>0
+					'
+					'Endif
 				
 					' mipmapping texture flag
 
@@ -601,14 +599,14 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.m_matrix, AGALMatrix(ent.mat) )
 				temp_mat.Overwrite(ent.mat)
-				'' INVERSE OR INVERSE4????
+				'' INVERSE quick ok, used for normals
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.n_matrix, AGALMatrix(temp_mat.Inverse().Transpose()) )
 			Else
 				temp_cam.Multiply4(TSprite(mesh).mat_sp)
 				
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.m_matrix, AGALMatrix(TSprite(mesh).mat_sp) )
 				temp_mat.Overwrite(TSprite(mesh).mat_sp)
-				'' INVERSE OR INVERSE4????
+				'' INVERSE quick ok, used for normals
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.n_matrix, AGALMatrix(temp_mat.Inverse().Transpose()) )
 			Endif
 			
@@ -621,10 +619,21 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			If shader.u.light_matrix[0] >-1 And TLight.light_list.IsEmpty()=False And effect.use_full_bright =0
 				Local ll:TLight = TLight.light_list.First()
 				temp_mat.Overwrite(ll.mat)
+				
+				If ll.light_type=1
+					temp_mat.grid[3][0] = 0; temp_mat.grid[3][1] = 0; temp_mat.grid[3][2] = 1
+					driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.lightflag, [1.0,0.0,0.0,0.0] )
+				Else					
+					If ll.light_type=2 Then driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.lightflag, [0.0,1.0,0.0,0.0] )
+					If ll.light_type=3 Then driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.lightflag, [0.0,0.0,1.0,0.0] )
+				Endif
+						
+				
 				''--no not yet-- to help normal calculations, we can take the inverse object matrix for the light to enter object space
 				
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_matrix[0], AGALMatrix(temp_mat) )
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_color[0], [ll.red,ll.green,ll.blue,1.0] )
+				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_att[0], [ll.const_att,ll.lin_att,ll.quad_att, ll.actual_range] )
 			Else
 				driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.light_color[0], [1.0,1.0,1.0,1.0] )
 			Endif
@@ -635,9 +644,10 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.colorflag, [1.0-effect.use_vertex_colors,0.0,0.0,0.0] )
 			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.base_color, effect.diffuse )
 			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.ambient_color, effect.ambient )
-
-
-			
+			''flags for alpha test & fog! used on both frag and vertex
+			driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, shader.u.miscflag, [0.5*effect.use_alpha_test,0.0,0.0,0.0] )
+			driver.UploadConstantsFromArray(DRIVER_FRAGMENT_PROGRAM, shader.u.miscflag, [0.5*effect.use_alpha_test,0.0,0.0,0.0] )
+		
 			'' ** draw tris **
 			
 			If shader<>last_shader
@@ -963,9 +973,9 @@ Print "..Context Success"
 		''retrieve bind flags from stack
 		'If tex.bind_flags <>-1 Then flags = tex.bind_flags Else flags = tex.flags
 		
-		' if mask flag is true, mask pixmap
+		' if mask flag is true, mask pixmap '** WONRG! this is texture alpha-test
 		If flags&4
-			tex.pixmap.MaskPixmap(0,0,0)
+			'tex.pixmap.MaskPixmap(0,0,0)
 		Endif
 
 		
@@ -1121,14 +1131,7 @@ Return 0
 		'TRender.height-h-y
 		driver.SetScissorRectangle(cam.vx,-(cam.vy-render.height+cam.vheight),cam.vwidth,cam.vheight)
 		'driver.SetScissorRectangle(cam.vx,cam.vy,cam.vwidth,cam.vheight)
-		
-		''load VP of MVP matrix
 
-		'cam.mod_mat.ToArray(t_array)	
-		'driver.UploadConstantsFromArray(driver.VERTEX_PROGRAM, 0, t_array)
-
-		'cam.projview_mat.ToArray(t_array)
-		'driver.UploadConstantsFromArray(DRIVER_VERTEX_PROGRAM, 0, t_array)
 		
 
 		' clear buffers
