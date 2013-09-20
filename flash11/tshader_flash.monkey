@@ -478,7 +478,7 @@ Class OneLightOneTexShader Extends TShaderFlash
 			"mul vt7, vt7, vc26.xxxx~n"+
 			"mul vt0, vt0, vc26.yyyy~n"+
 			"add vt0, vt7, vt0~n"+ ''add in the remainder
-			"nrm vt0.xyz, vt0.xyz~n"+
+			'"nrm vt0.xyz, vt0.xyz~n"+ ''this ruins the light, not sure why
 			
 			''LdotN
 			"dp3 vt0.xyz, vt0.xyz, vt3.xyz~n"+
@@ -488,12 +488,12 @@ Class OneLightOneTexShader Extends TShaderFlash
 			"max vt0.xyz, vt0.xyz, vc17.xyz~n"+
 			'"mov v2, vt0.xyz~n"+
 			'' base color
-			"max vt3, vc18.xxxx, va1~n"+ ''vc18=one-minus colorflag = 1111 for use vertcolors
-			"mul vt3, vc16, vt3~n"+ ''vc16=base color=1111 for use vertex color
+			"max vt3, vc18.xxxx, va1.xyzw~n"+ ''vc18=one-minus colorflag = 1111 for use basecolor
+			"mul vt3, vc16.xyzw, vt3.xyzw~n"+ ''vc16=base color=1111 for use vertex color
 			''light color
-			"mul vt3, vt3.xyz, vc22.xyz~n"+ 			
+			"mul vt3.xyz, vt3.xyz, vc22.xyz~n"+ 			
 			
-			''final_light*final_color
+			''final_light+final_color
 			"mul v0, vt3.xyz, vt0.xyz~n"+
 			"mov v0.w, vt3.w~n"+ ''make sure proper alpha gets through
 			
@@ -538,7 +538,7 @@ Class OneLightOneTexShader Extends TShaderFlash
 		u.tex_blend[0] = 1 'frag tex_blend
 		
 		'' flags
-		u.colorflag = 18 '' x=use basecolor; 18,19,20,21
+		u.colorflag = 18 '' x=use basecolor
 		u.miscflag = 25 '' used on BOTH frag and vertex
 		u.lightflag = 26
 		
@@ -586,11 +586,12 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 			
 			'' base color
 			'"mul vt3, vc18.xxxx, va1~n"+ ''colorflag
-			"max vt3, vc18.xxxx, va1~n"+ ''one-minus colorflag 
+			"max vt3, vc18.xxxx, va1.xyzw~n"+ ''vc18 = one-minus colorflag 
 			'"mov vt3, va1~n"+
-			"mul v0, vc16, vt3~n"+ 
+			"mul v0, vc16, vt3~n"+ ''vc16=base color=1111 for use vertex color
 			''preserve alpha
 			'"mov v0.w, vc16.w~n"+
+			"mov v0.w, vt3.w~n"+ ''make sure proper alpha gets through
 			
 			''texture sampler adjust
 			''(texcoord[0]).x = ((aTexcoords0.x + pos.x) * cosang - (aTexcoords0.y + pos.y) * sinang)*scale.x;
@@ -621,7 +622,7 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 			'"mov oc, ft1~n"
 			'"mov ft2, ft1~n"
 
-	Global alphaTest:String="sub ft3.x ft2.a fc25.x~nkil ft3.x~n"
+	Global alphaTest:String="sub ft3.x ft1.w fc25.x~nkil ft3.x~n"
 	
 	Method LinkVariables:Int()
 		Super.LinkVariables()

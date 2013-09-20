@@ -384,12 +384,9 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 				' blend modes
 				Select effect.blend
 						Case 0
-							'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
-							'driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
-							driver.SetBlendFactors(DRIVER_ONE, DRIVER_ONE_MINUS_SOURCE_ALPHA) ''premultiplied
-						Case 1
-							'glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA) ' alpha
 							driver.SetBlendFactors(DRIVER_SOURCE_ALPHA, DRIVER_ONE_MINUS_SOURCE_ALPHA)
+						Case 1
+							driver.SetBlendFactors(DRIVER_ONE, DRIVER_ONE_MINUS_SOURCE_ALPHA) ''premultiplied
 						Case 2
 							'glBlendFunc(GL_DST_COLOR,GL_ZERO) ' multiply
 							driver.SetBlendFactors(DRIVER_DESTINATION_COLOR, DRIVER_ZERO)
@@ -1226,7 +1223,7 @@ Private
 		wireframe = False
 		'camera2D.SetPixelCamera
 		'camera2D.Update(camera2D)
-		driver.SetColorMask(True,True,True,False)
+		driver.SetColorMask(True,True,True,true)
 		FlashMiniB3D.render.Render(fastQuad,camera2D)
 		driver.SetColorMask(True,True,True,True)
 		wireframe = wireframeIsEnabled
