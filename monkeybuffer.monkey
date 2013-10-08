@@ -16,7 +16,7 @@ Import minib3d.flash11.flash11_driver
 
 #Else If TARGET = "android"
 
-Import "opengl/minib3d_android.java"
+Import "native/minib3d_android.java"
 
 Extern
 
@@ -25,7 +25,11 @@ Extern
 	
 Public
 
-#endif
+
+#Endif
+
+
+
 
 
 Function CreateDataBuffer:DataBuffer(i:Int)
@@ -269,6 +273,14 @@ Class VertexDataBuffer
 		Return data
 	End
 	
+	
+	Method BufferSlice:DataBuffer(start:Int)
+
+		Return buf.Slice(start)
+
+	End
+	
+	
 End
 
 
@@ -299,9 +311,9 @@ Function CopyDataBuffer:VertexDataBuffer( src:VertexDataBuffer, dest:VertexDataB
 	If GetBufferLength(dest.buf) < size Then size = GetBufferLength(dest.buf)
 	
 	'' step 4 (2 times) is ok since VertexDataBuffer is always multiple of 4
-	For Local i:= 0 To size-1 Step 8
+	For Local i:= 0 To size-1 Step 4'8
 		dest.buf.PokeInt(i,src.buf.PeekInt(i))
-		dest.buf.PokeInt(i+4,src.buf.PeekInt(i+4))	
+		'dest.buf.PokeInt(i+4,src.buf.PeekInt(i+4))	
 	Next
 	
 	Return dest

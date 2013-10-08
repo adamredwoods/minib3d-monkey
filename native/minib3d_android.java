@@ -10,18 +10,29 @@ class BufferHelper {
 	
 	public static void pokeFloatArray (BBDataBuffer inBuffer, int start, float[] src, int len) {
 
-		if (inBuffer != oldbuf) { oldbuf = inBuffer; cachebuf = inBuffer.GetByteBuffer().asFloatBuffer(); }
+		if (inBuffer != oldbuf) { oldbuf = inBuffer; cachebuf = inBuffer.GetByteBuffer().asFloatBuffer();  }
 		cachebuf.position( start );cachebuf.put(src,0,len);
 		
 	}
 	
 	public static void pokeShortArray (BBDataBuffer inBuffer, int start, int[] src, int len) {
 
-		if (inBuffer != oldbuf2) { oldbuf2 = inBuffer; cachebuf2 = inBuffer.GetByteBuffer().asShortBuffer(); }
+		if (inBuffer != oldbuf2) { oldbuf2 = inBuffer; cachebuf2 = inBuffer.GetByteBuffer().asShortBuffer();  }
 		short ns[] = (len>64)? new short[len] : ns_cache;
 		for (int i=0; i<len; i++) ns[i]=(short)src[i];
 		cachebuf2.position( start );cachebuf2.put(ns,0,len);
 		
 	}
+	
+	/*
+	public static BBDataBuffer bufferSlice ( BBDataBuffer bf, int start ) {
+		
+		bf._data.position(start);
+		bf._data = bf._data.slice();
+		bf._length = bf._length - start;
+		return bf;
+		
+	}
+	*/
 
 }

@@ -27,7 +27,6 @@ Const VBO_MIN_TRIS=1	' if USE_VBO=True and vbos are supported by hardware, then 
 
 
 'flags
-Const DISABLE_MAX2D=1	' true to enable max2d/minib3d integration --not in use for now
 Const DISABLE_VBO=2	' true to use vbos if supported by hardware
 
 Extern
@@ -102,6 +101,12 @@ Class OpenglES11 Extends TRender
 	Field effect:EffectState = New EffectState
 	Field last_effect:EffectState = New EffectState
 	
+	Field slice_pos:DataBuffer
+	Field slice_norm:DataBuffer
+	Field slice_color:DataBuffer
+	
+	Global opengl_es:Bool = False ''special check
+	
 	public
 	
 	Method New()
@@ -117,6 +122,8 @@ Class OpenglES11 Extends TRender
 		Local st:String
 		
 		Local s:String = glGetString(GL_VERSION)
+		
+		opengl_es = s.Contains("ES")
 		
 		Local num:Int=0
 		
@@ -215,7 +222,7 @@ Class OpenglES11 Extends TRender
 			
 			Local vbo:Int=False
 			
-			If surf.no_tris>=VBO_MIN_TRIS or vbo_enabled
+			If vbo_enabled 'surf.no_tris>=VBO_MIN_TRIS Or vbo_enabled
 				vbo=True
 			Else
 				' if surf no longer has required no of tris then free vbo
@@ -241,7 +248,7 @@ Class OpenglES11 Extends TRender
 			If mesh.anim
 			
 				' get anim_surf
-				anim_surf2 = mesh.anim_surf[surf.surf_id] ''assign anim surface
+				anim_surf2 = mesh.GetAnimSurface(surf) ''assign anim surface
 				
 				If vbo And anim_surf2
 				
@@ -407,23 +414,24 @@ Class OpenglES11 Extends TRender
 
 			Else
 		
-				Print "*** Non-VBO disabled"
-		'' interleaved offset doesn't work with DataBuffers, possible TODO for legacy targets
-#rem		
+		
 				glBindBuffer(GL_ARRAY_BUFFER,0) ' reset - necessary for when non-vbo surf follows vbo surf
 				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
-			
-				If mesh.anim_render
-					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,anim_surf2.vert_data.buf) 'anim_surf2.vert_coords.buf)
+				glEnableClientState(GL_VERTEX_ARRAY)
+				
+				If mesh.anim_render And anim_surf2
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,anim_surf2.vert_data.buf)
 				Else
-					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf) 'surf.vert_coords.buf)
+					slice_pos = surf.vert_data.BufferSlice(VertexDataBuffer.POS_OFFSET)
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE, slice_pos )
 				Endif
 				
-				Local pp:Int = Int(DataBuffer(surf.vert_data.buf).ReadPointer())
-				
-				glNormalPointer(GL_FLOAT,VertexDataBuffer.SIZE,pp+VertexDataBuffer.NORMAL_OFFSET) 'surf.vert_norm.buf)
-				glColorPointer(4,GL_FLOAT,VertexDataBuffer.SIZE,pp+VertexDataBuffer.COLOR_OFFSET) 'surf.vert_col.buf)
-#end			
+				'Local pp:Int = Int(DataBuffer(surf.vert_data.buf).ReadPointer())
+				slice_norm = surf.vert_data.BufferSlice(VertexDataBuffer.NORMAL_OFFSET)
+				slice_color = surf.vert_data.BufferSlice(VertexDataBuffer.COLOR_OFFSET)
+				glNormalPointer(GL_FLOAT,VertexDataBuffer.SIZE,slice_norm)
+				glColorPointer(4,GL_FLOAT,VertexDataBuffer.SIZE,slice_color)
+			
 			Endif
 			
 			
@@ -432,7 +440,7 @@ Class OpenglES11 Extends TRender
 		
 			''mesh animation/batch animation
 			If vbo And (mesh.anim_render Or surf.vbo_dyn Or anim_surf2)
-			
+				
 				''vertex animation
 				If anim_surf2 And anim_surf2.vert_anim
 					glEnableClientState(GL_VERTEX_ARRAY)
@@ -450,6 +458,29 @@ Class OpenglES11 Extends TRender
 					glEnableClientState(GL_VERTEX_ARRAY)
 					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.POS_OFFSET)
+				
+				Endif
+				
+			Elseif (Not vbo) And (mesh.anim_render Or surf.vbo_dyn Or anim_surf2)
+			
+				glBindBuffer(GL_ARRAY_BUFFER,0) ' reset - necessary for when non-vbo surf follows vbo surf
+				glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
+				glEnableClientState(GL_VERTEX_ARRAY)
+				
+				''vertex animation
+				If anim_surf2 And anim_surf2.vert_anim
+					'glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[4])
+					glVertexPointer(3,GL_FLOAT,0,anim_surf2.vert_anim[anim_surf2.anim_frame].buf)
+
+				'' mesh animation, using animsurf2	
+				Elseif mesh.anim_render And anim_surf2
+					'glBindBuffer(GL_ARRAY_BUFFER,anim_surf2.vbo_id[0])
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,anim_surf2.vert_data.buf)
+				
+				'' dynamic mesh, usually batch sprites	
+				Elseif surf.vbo_dyn
+					'glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf)
 				
 				Endif
 			Endif
@@ -674,7 +705,7 @@ Class OpenglES11 Extends TRender
 
 					glEnableClientState(GL_TEXTURE_COORD_ARRAY)
 
-					'If vbo
+					If vbo
 						If tex_coords=0
 							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) '1
 							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET)
@@ -682,19 +713,18 @@ Class OpenglES11 Extends TRender
 							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0]) '2
 							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2)
 						Endif
-					'Else
+					Else
 					
-					''interleaved data does not work with databuffers (no adddress offset)
-#rem
+						''interleaved data does not work with databuffers (no adddress offset)
+
 						If tex_coords=0
 							'glBindBuffer(GL_ARRAY_BUFFER,0) 'already reset above
-							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf.PeekByte(VertexDataBuffer.TEXCOORDS_OFFSET))
+							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.BufferSlice(VertexDataBuffer.TEXCOORDS_OFFSET))
 						Else
 							'glBindBuffer(GL_ARRAY_BUFFER,0)
-							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf.PeekByte(VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2))
-						Endif
-#end
-					'Endif
+							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.BufferSlice(VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2))
+						endif
+					Endif
 
 			
 					Endif ''end preserve skip_sprite_state-------------------------------
@@ -845,8 +875,11 @@ Class OpenglES11 Extends TRender
 		
 		TRender.render = New OpenglES11
 		
+		Local s$=GetVersion()
+		If opengl_es Then s+=" ES"
+		
 #If CONFIG="debug"		
-		Print "**OPENGL VERSION:"+GetVersion()
+		Print "**OPENGL VERSION:"+s
 #Endif
 
 		TTexture.TextureFilter("",8+1) ''default texture settings: mipmap
@@ -862,10 +895,13 @@ Class OpenglES11 Extends TRender
 		TPixmapGL.Init()
 		
 		
+		
 		If Not (flags & DISABLE_VBO)
 			vbo_enabled=True 'THardwareInfo.VBOSupport
+		Else
+			vbo_enabled=False
+			If DEBUG Then Print "..VBO Disabled (forced)"
 		Endif
-
 		
 		EnableStates()
 		
@@ -895,6 +931,16 @@ Class OpenglES11 Extends TRender
 		glGetIntegerv(GL_MAX_TEXTURE_UNITS, data)
 		MAX_TEXTURES = data[0]-1
 		If DEBUG Then Print "..max textures:"+MAX_TEXTURES+1
+	
+#If HOST="winnt" Or HOST="linux" Or HOST="macos"	
+		''set VBO by GL extention, not valid for GL ES
+		Local ext$ = String(glGetString(GL_EXTENSIONS)).ToLower()
+		'Print ext
+		If (Not ext.Contains("vertex_buffer_object")) And Not opengl_es ''opengl es 1.1 requires buffers
+			vbo_enabled = False
+			If DEBUG Then Print "..VBO Disabled"
+		Endif
+#Endif
 		
 		Return 1
 	End

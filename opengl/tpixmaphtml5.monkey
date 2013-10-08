@@ -15,7 +15,7 @@ Import minib3d.math.arrayintmap
 	''hijack load texture and load pixmap functions to load async. halt on resize. ** OR add PreloadPixmap() function.
 	'' load texture + loadpixmap seems to be ok for async callback.
 	
-Import "tpixmap.html5.js"
+Import "../native/tpixmap.html5.js"
 
 Extern
 	
