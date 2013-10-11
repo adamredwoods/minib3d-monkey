@@ -561,14 +561,15 @@ Class TEntity
 		Local dvec:Vector = New Vector(vx,vy,-vz)
 		Local avec:Vector
 		Local cvec:Vector
-		'Local p1#, p2#, p3#
 		
-		Local dd# = dvec.Length()
-		If dd < 0.0001 Then Return
-		dd=1.0/dd
-		dvec.Update(dvec.x*dd, dvec.y*dd, dvec.z*dd )
+		rate=rate*rate''x^2, klugy but keeps things from getting too fast
+		
+		'Local dd# = dvec.Length()
+		'If dd < 0.0001 Then Return
+		'dd=1.0/dd
+		'dvec.Update(dvec.x*dd, dvec.y*dd, dvec.z*dd )
 		'dvec = dvec.Normalize()
-		
+	
 	
 		''slerp or lerp between the dvec and the current matrix forward, up, or left axis
 		If (axi=1) Then cvec = New Vector(mat.grid[0][0],mat.grid[0][1],mat.grid[0][2])
@@ -577,10 +578,47 @@ Class TEntity
 		
 		cvec = cvec.Normalize()
 		
-		''lerp is inaccurate, but only on large distances
-		If rate>=0.0
-			dvec.Update( (cvec.x+dvec.x)*rate+cvec.x, (cvec.y+dvec.y)*rate+cvec.y, (cvec.z+dvec.z)*rate+cvec.z )
-			dvec = dvec.Normalize()
+		''slerp+lerp
+		If rate<>0.0
+			local flip:Int=0
+			Local theta#
+			Local dot2:Float = cvec.Dot(dvec)
+			If dot2>1.0 Then dot2=0.9999
+			If dot2<-1.0 Then dot2=-0.9999
+			
+			If dot2>0.9999 Then return
+			
+			if dot2<-0.99
+				'' cut in half to get proper rotation
+				'dvec = dvec.Normalize() ''prevents 1.0,0,1.0 which disappears
+				
+				If (axi=1) Then dvec = New Vector(-dvec.z,0.0,dvec.x)
+				If (axi=2) Then dvec = New Vector(0.0,dvec.z,-dvec.y)
+				If (axi=3) Then dvec = New Vector(-dvec.z,0.0,dvec.x)
+
+				dot2 = 0.0 'dot2+1.0
+				rate = rate*2.0
+			endif
+			
+			If dot2>0.5
+				''Nlerp
+				dvec.Update( (dvec.x-cvec.x)*rate+cvec.x, (dvec.y-cvec.y)*rate+cvec.y, (dvec.z-cvec.z)*rate+cvec.z )
+				dvec = dvec.Normalize()
+			Else
+				''Slerp
+				theta = ACos(dot2)*rate
+
+				Local st#=Cos(theta)
+				Local dt#=Sin(theta)
+				dvec.Update( dvec.x - cvec.x*dot2, dvec.y - cvec.y*dot2, dvec.z - cvec.z*dot2)
+				'dvec = dvec.Normalize()
+				
+				dvec.Update( cvec.x*st + dvec.x*dt, cvec.y*st + dvec.y*dt, cvec.z*st + dvec.z*dt )
+
+				dvec = dvec.Normalize()
+				
+			Endif
+	
 		Endif
 		
 			
@@ -589,24 +627,24 @@ Class TEntity
 		If (axi=1) Then avec = New Vector(1.0,0.0,0.0)
 		If (axi=2) Then avec = New Vector(0.0,1.0,0.0)
 		If (axi=3) Then avec = New Vector(0.0,0.0,1.0)
-			
+
 		''use axis-angle quat for slerp and convert to matrix,euler
 		Local angle:Float = ACos( dvec.Dot(avec) )
 		Local axis:Vector = dvec.Cross(avec)
 
 
-		If angle < 0.00001
+		If angle < 0.001 
 			'mat.LoadIdentity()
 			mat.grid[0][0]=gsx; mat.grid[1][0]=0.0; mat.grid[2][0]=0.0
 			mat.grid[0][1]=0.0; mat.grid[1][1]=gsy; mat.grid[2][1]=0.0
 			mat.grid[0][2]=0.0; mat.grid[1][2]=0.0; mat.grid[2][2]=gsz
 			'mat.Scale(gsx,gsy,gsz)
 			Return
-		Elseif angle > 179.9999
+		Elseif angle > 180.0
 			''flip
 			'ent.mat.LoadIdentity()
 			axis.Update(0.0,-1.0,0.0)
-			angle=179.9
+			angle=angle-180.0
 		Endif
 
 		axis = axis.Normalize()
@@ -616,7 +654,7 @@ Class TEntity
 		Local s:Float = Sin(angle)
 		Local t:Float = 1.0 - c
 		''  axis is normalised, include scaling
-		
+	
 		'Local new_mat:Matrix = New Matrix
 		temp_mat.grid[0][0] = (c + axis.x*axis.x*t) *Self.sx
 		temp_mat.grid[1][1] = (c + axis.y*axis.y*t) *Self.sy
@@ -1633,13 +1671,14 @@ Class TEntity
 				''rx = (c*Max(Max(gsx,gsy),gsz)) ''NO! SCALE IS DONE AT COLLSION TIME
 				rx = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
 				rx = Sqrt(rx*rx+c*c) ''corner of cube
-'Print rx
+
 
 			Else
 				rx=1.0
 			Endif
 		Endif
-	
+'Print classname+" "+rx	
+
 		collision.radius_x=rx
 		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
 		

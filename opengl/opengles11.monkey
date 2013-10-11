@@ -141,7 +141,7 @@ Class OpenglES11 Extends TRender
 			Endif 
 		Next
 
-		Return Float( st )
+		Return Int(Float(st)*10)/10.0
 		
 	End
 
@@ -483,6 +483,7 @@ Class OpenglES11 Extends TRender
 					glVertexPointer(3,GL_FLOAT,VertexDataBuffer.SIZE,surf.vert_data.buf)
 				
 				Endif
+				
 			Endif
 							
 			
@@ -714,8 +715,6 @@ Class OpenglES11 Extends TRender
 							glTexCoordPointer(2,GL_FLOAT,VertexDataBuffer.SIZE,VertexDataBuffer.TEXCOORDS_OFFSET+VertexDataBuffer.ELEMENT2)
 						Endif
 					Else
-					
-						''interleaved data does not work with databuffers (no adddress offset)
 
 						If tex_coords=0
 							'glBindBuffer(GL_ARRAY_BUFFER,0) 'already reset above
@@ -804,13 +803,7 @@ Class OpenglES11 Extends TRender
 				TSprite(mesh).mat_sp.ToArray(t_array)
 				glMultMatrixf(t_array )
 			Endif
-	#rem		
-			If cam.draw2D
-				'glDisable(GL_DEPTH_TEST) ''use entityfx 64
-				glDisable(GL_FOG)
-				glDisable(GL_LIGHTING)
-			Endif
-#end
+
 			If TRender.render.wireframe
 				
 				If Not vbo Then glDrawElements(GL_LINE_LOOP,surf.no_tris*3,GL_UNSIGNED_SHORT,surf.tris.buf)
@@ -830,33 +823,19 @@ Class OpenglES11 Extends TRender
 
 			glPopMatrix()
 			
-			
-#rem	
-			' enable fog again if fog was enabled at start of func
-			If fog=True
-				glEnable(GL_FOG)
-			Endif
-#end			
+			''maintain prior effects state		
 			last_effect.Overwrite(effect)
 
 		Next ''end non-alpha loop
 		
-#REM	
-		If cam.draw2D
-			'glEnable(GL_DEPTH_TEST)
-			glEnable(GL_LIGHTING)
-		Endif
-#end
+
 		If Not alpha_list Then Exit ''get out of loop, no alpha
 		temp_list = alpha_list
 		
 		Next	''end alpha loop
 		
 		temp_list = Null
-		
 	
-		'glBindBuffer( GL_ARRAY_BUFFER, 0 ) '' releases buffer for return to mojo buffer??? may not need
-		'glBindBuffer(GL_ELEMENT_ARRAY_BUFFER,0)
 	
 	
 	End
@@ -865,8 +844,6 @@ Class OpenglES11 Extends TRender
 	
 	Method Finish:Void()
 		
-		''
-		glFlush()
 		
 	End
 	
@@ -879,7 +856,7 @@ Class OpenglES11 Extends TRender
 		If opengl_es Then s+=" ES"
 		
 #If CONFIG="debug"		
-		Print "**OPENGL VERSION:"+s
+		Print "..OPENGL VERSION: "+s
 #Endif
 
 		TTexture.TextureFilter("",8+1) ''default texture settings: mipmap
@@ -966,7 +943,7 @@ Class OpenglES11 Extends TRender
 	End 
 	
 	Function GetGLError:Int()
-		If Not DEBUG
+		If DEBUG
 			Local gle:Int = glGetError()
 			If gle<>GL_NO_ERROR Then Print "**glerror: "+gle; Return 1
 		Endif
@@ -974,7 +951,7 @@ Class OpenglES11 Extends TRender
 	End
 	
 	Method ClearErrors()
-		If Not DEBUG
+		If DEBUG
 			While glGetError()<>GL_NO_ERROR
 			 '
 			Wend
@@ -1322,7 +1299,7 @@ Class OpenglES11 Extends TRender
 			glDisable(GL_FOG)
 		Endif
 	
-		If DEBUG And glGetError() Then Print "**error: glCamera"
+		If DEBUG And GetGLError() Then Print "**error: glCamera"
 	End
 	
 	
