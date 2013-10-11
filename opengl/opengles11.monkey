@@ -942,9 +942,18 @@ Class OpenglES11 Extends TRender
 	
 	End 
 	
+	global count1280error:Int =0 ''fix for opengl1.3
+	
 	Function GetGLError:Int()
 		If DEBUG
 			Local gle:Int = glGetError()
+			
+			''silence opengl1.3 errors
+			If gle=1280
+				If count1280error > 3 Then Return 0
+				count1280error +=1
+			Endif
+			
 			If gle<>GL_NO_ERROR Then Print "**glerror: "+gle; Return 1
 		Endif
 		Return 0
