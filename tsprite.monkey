@@ -116,18 +116,24 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 		''auto-resize resized images (from poweroftwo)
 		If tex.orig_width<>0
 			
-			Local x:Float = 1.0, y:Float = 1.0
-			If tex.orig_height > tex.orig_width Then y = (Float(tex.orig_height)/tex.orig_width)
-			If tex.orig_height < tex.orig_width Then x = (Float(tex.orig_width)/tex.orig_height)
-			sprite.GetSurface(1).VertexCoords(0, -x,-y,0)
-			sprite.GetSurface(1).VertexCoords(1, -x,y,0)
-			sprite.GetSurface(1).VertexCoords(2, x,y,0)
-			sprite.GetSurface(1).VertexCoords(3, x,-y,0)
-						
+			sprite.AutoResizeTexture(tex)
+
 		Endif
 		
 		Return sprite
 
+	End
+	
+	Method AutoResizeTexture:Void(tex:TTexture)
+		
+		Local x:Float = 1.0, y:Float = 1.0
+		If tex.orig_height > tex.orig_width Then y = (Float(tex.orig_height)/tex.orig_width)
+		If tex.orig_height < tex.orig_width Then x = (Float(tex.orig_width)/tex.orig_height)
+		self.GetSurface(1).VertexCoords(0, -x,-y,0)
+		self.GetSurface(1).VertexCoords(1, -x,y,0)
+		self.GetSurface(1).VertexCoords(2, x,y,0)
+		self.GetSurface(1).VertexCoords(3, x,-y,0)
+		
 	End
 	
 	

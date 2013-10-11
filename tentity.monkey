@@ -67,6 +67,7 @@ Class TEntity
 	
 	Field cull_radius#
 
+
 	Field brush:TBrush=New TBrush
 	Field shader_brush:TShader ''don't forget to fill in copy, etc.
 
@@ -959,6 +960,7 @@ Class TEntity
 			brush.tex[index].u_pos = x*texture.frame_ustep
 			brush.tex[index].v_pos = y*texture.frame_vstep
 		Endif
+		
 		Return Self
 		
 	End 
@@ -2314,7 +2316,22 @@ Class TEntity
 		Local pos:Float[] = mesh.mat.TransformPoint(vec.x,vec.y,vec.z)
 		px = pos[0]; py = pos[1]; pz = pos[2]
 	End
-
+	
+	Method EntityXAxis:Vector()
+		Local v:Vector = New Vector( mat.grid[0][0], mat.grid[1][0], mat.grid[2][0] )
+		Return v.Normalize()
+	End
+	
+	Method EntityYAxis:Vector()
+		Local v:Vector = New Vector( mat.grid[0][1], mat.grid[1][1], mat.grid[2][1] )
+		Return v.Normalize()
+	End
+	
+	Method EntityZAxis:Vector()
+		Local v:Vector = New Vector( mat.grid[0][2], mat.grid[1][2], mat.grid[2][2] )
+		Return v.Normalize()
+	End
+	
 End
 
 
