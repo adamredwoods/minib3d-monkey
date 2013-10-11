@@ -34,6 +34,7 @@ Class TMesh Extends TEntity
 	'Field reset_col_tree=True
 		
 	Field is_sprite:Bool = False '' used for sprites
+	Field culled:Bool = true
 	
 	Field wireframe:Bool
 
@@ -1711,9 +1712,12 @@ Class TMesh Extends TEntity
 			max_y=-999999999.0
 			min_z=999999999.0
 			max_z=-999999999.0
+			Local cc:Int=0
 			
 			For Local surf:TSurface=Eachin surf_list
-		
+				
+				cc+=1
+				
 				For Local v:Int=0 Until surf.no_verts
 					
 					surf.vert_data.GetVertCoords(vec_temp,v)
@@ -1730,11 +1734,13 @@ Class TMesh Extends TEntity
 				Next
 			
 			Next
-		
+			
+			
 			' get mesh width, height, depth
 			Local width#=max_x-min_x
 			Local height#=max_y-min_y
 			Local depth#=max_z-min_z
+			If cc=0 Then width=0.0; height=0.0; depth=0.0
 'Print classname+" "+width+" "+height+" "+depth
 
 			' get bounding sphere (cull_radius#) from AABB
@@ -2097,6 +2103,9 @@ Class TMesh Extends TEntity
 		col_tree.DebugSphereTree(Self,alpha)
 	End
 	
+	Method GetCulled:Bool()
+		Return culled
+	end
 	
 End
 

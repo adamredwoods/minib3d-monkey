@@ -381,7 +381,9 @@ Class TRender
 			'' reject non-mesh
 			mesh = TMesh( ent )
 			
-			If mesh				
+			If mesh
+				
+				mesh.culled = true
 				
 				'If mesh.parent_hidden=True Or mesh.hidden=True Or mesh.brush.alpha=0.0 Then Continue
 				If mesh.Hidden()=True Or mesh.brush.alpha=0.0 Then Continue
@@ -401,6 +403,8 @@ Class TRender
 'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
 
 				If inview > 0.00001
+				
+					mesh.culled = false
 				
 					wireframe = wireframe | mesh.wireframe
 					
