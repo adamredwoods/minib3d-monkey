@@ -1655,12 +1655,12 @@ Class TEntity
 	
 	End 
 	
-	Method EntityRadius:Int(rx#=0.0,ry#=0.0)
+	Method EntityRadius:Int(x#=0.0,y#=0.0)
 	
 		'' do not do scale here
 		'' guarantee that sphere covers all polys! so, use max of extents
 		
-		If rx=0.0
+		If x=0.0
 			''don't pull from cull radius, that makes a sphere inside cube, instead sphere around the whole cube
 			Local m:TMesh = TMesh(Self)
 			If m
@@ -1671,18 +1671,18 @@ Class TEntity
 				c = Max(Max(Max(c,Abs(m.min_x)),Abs(m.min_y)),Abs(m.min_z))
 
 				''rx = (c*Max(Max(gsx,gsy),gsz)) ''NO! SCALE IS DONE AT COLLSION TIME
-				rx = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
-				rx = Sqrt(rx*rx+c*c) ''corner of cube
+				x = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
+				x = Sqrt(x*x+c*c) ''corner of cube
 
 
 			Else
-				rx=1.0
+				x=1.0
 			Endif
 		Endif
-'Print classname+" "+rx	
+'Print classname+" "+x	
 
-		collision.radius_x=rx
-		If ry=0.0 Then collision.radius_y=rx Else collision.radius_y=ry
+		collision.radius_x=x
+		If y=0.0 Then collision.radius_y=x Else collision.radius_y=y
 		
 		
 		If collision.box_w=0.0
@@ -1736,8 +1736,8 @@ Class TEntity
 			c = Max(Max(Max(c,Abs(x+w)),Abs(y+h)),Abs(z+d))
 
 			''rx = (c*Max(Max(gsx,gsy),gsz)) ''NO! SCALE IS DONE AT COLLSION TIME
-			rx = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
-			collision.radius_x = Sqrt(rx*rx+c*c)
+			Local xx# = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
+			collision.radius_x = Sqrt(xx*xx+c*c)
 		Endif
 
 	End 
