@@ -912,7 +912,7 @@ Class OpenglES11 Extends TRender
 #If TARGET="glfw"	
 		''set VBO by GL extention, not valid for GL ES
 		Local ext$ = String(glGetString(GL_EXTENSIONS)).ToLower()
-		Print ext
+		'Print ext
 		If (Not ext.Contains("vertex_buffer_object")) And Not opengl_es ''opengl es 1.1 requires buffers
 			vbo_enabled = False
 			If DEBUG Then Print "..VBO Disabled"
