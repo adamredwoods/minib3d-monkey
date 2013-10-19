@@ -1129,6 +1129,9 @@ Class TEntity
 	Method ShowEntity:TEntity()
 	
 		hide=False
+		For Local ent:TEntity= Eachin child_list
+			ent.ShowEntity()
+		next
 		Return Self
 		
 	End 
@@ -1136,21 +1139,17 @@ Class TEntity
 	Method HideEntity:TEntity()
 
 		hide=True
+		For Local ent:TEntity= Eachin child_list
+			ent.HideEntity()
+		next
+		
 		Return Self
 		
 	End 
 
 	Method Hidden:Bool()
 	
-		If hide=True Return True
-		
-		Local ent:TEntity=parent
-		While ent<>Null
-			If ent.hide=True Return True
-			ent=ent.parent
-		Wend
-		
-		Return False
+		Return hide
 	
 	End 
 
