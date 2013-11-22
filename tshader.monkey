@@ -39,7 +39,12 @@ Class TShader Extends TBrush
 	Method CompileShader:Int(source:String, type:Int) Abstract
 
 	Method Copy:TBrush() Abstract
-
+	
+	'' needed to handle context loss on mobile
+	Method ResetShader:Int() Abstract
+	
+	''needed to handle context loss on mobile
+	Method FreeShader:Int() Abstract
 
 	Function LoadDefaultShader:TShader(vp_file:String, fp_file:String) 'Abstract
 		''load default shader on init
@@ -104,6 +109,10 @@ Class TShader Extends TBrush
 					
 	End
 	
+	Function GetCurrentShader:TShader()
+		Return g_shader
+	End
+	
 	Function DefaultShader:TShader()
 		
 		If Not (g_shader) Then Return Null
@@ -116,12 +125,27 @@ Class TShader Extends TBrush
 		
 	End
 	
+	Function ResetDefaultShader:Int()
+		
+		If (default_shader)
+			default_shader.FreeShader()
+			default_shader.ResetShader()
+		Endif
+		
+		If (TShader(TRender.shader2D))
+			TShader(TRender.shader2D).FreeShader()
+			TShader(TRender.shader2D).ResetShader()
+		Endif
+		
+	End
+	
 	Method Override(i:Int)
 	
 		If i Then override = True Else override = False
 		
 	End
 	
+
 	Method Update()
 		
 		''runs per each surface (if implemented in hardware render). ideal for setting uniforms

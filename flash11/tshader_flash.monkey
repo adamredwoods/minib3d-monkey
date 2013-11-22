@@ -161,6 +161,7 @@ Class TShaderFlash Extends TShader
 	
 	Public
 	
+
 	
 	Method New(vp$="", fp$="")
 		
@@ -216,6 +217,15 @@ Class TShaderFlash Extends TShader
 
 	End 
 	
+	
+	Method FreeShader:Int()
+		vertex_id=0; fragment_id=0; shader_id=0
+	End
+	
+	
+	Method ResetShader:Int()
+		
+	end
 	
 	Function LoadShader:TShaderFlash(vp_file:String, fp_file:String, sh:TShader=Null)
 		
@@ -427,11 +437,24 @@ Class MultiShader Extends TShaderFlash
 		If init Then Return
 		init = True
 		
+		ResetShader()
+		
+	End
+	
+	Method FreeShader()
+		Super.FreeShader
+		init=false
+	End
+	
+	Method ResetShader()
+		
 		shader[0] = New FullBrightOneTexShader("clamp")
 		shader[1] = New FullBrightOneTexShader("repeat")
 		shader[2] = New OneLightOneTexShader("clamp")
 		shader[3] = New OneLightOneTexShader("repeat")
+		
 	End
+	
 	
 	Method GetShader:TShaderFlash(i:int)
 		
@@ -647,6 +670,8 @@ Class FullBrightOneTexShader Extends OneLightOneTexShader
 			Endif
 		Endif
 	End
+	
+	
 End
 
 Function StringReplace:String(r$, n$, st$)

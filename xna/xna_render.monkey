@@ -246,7 +246,7 @@ Public
 					' draw tris
 					If mesh.anim
 						
-						Local meshx:= _meshes.Get(mesh.anim_surf[surf.surf_id].vbo_id[0])
+						Local meshx:= _meshes.Get(mesh.GetAnimSurface(surf).vbo_id[0])
 						If Not meshx Then surf.vbo_id[0]=0; Continue
 						meshx.Bind()
 						meshx.Render()
@@ -558,7 +558,8 @@ Private
 		If mesh.anim
 		
 			' get anim_surf
-			Local anim_surf2:= mesh.anim_surf[surf.surf_id] 
+			Local anim_surf2:= mesh.GetAnimSurface(surf) 
+			mesh.UpdateVertexAnimFrame(anim_surf2, surf)
 			
 			If vbo And anim_surf2
 			

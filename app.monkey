@@ -1,10 +1,12 @@
 
-Import minib3d
+#BINARY_FILES = "*.bin|*.dat|*.obj|*.b3d|*.mtl"
 
 '' allows opengles20 on GLFW
-#OPENGL_GLES20_ENABLED=0
+'#OPENGL_GLES20_ENABLED=0 ''pre v75d
 #If OPENGL_GLES20_ENABLED=1
 	Import minib3d.opengl.opengles20
+#Else
+	Import minib3d
 #Endif
 
 Class MiniB3DApp Extends App
@@ -35,7 +37,7 @@ Class MiniB3DApp Extends App
 	Method OnCreate()
 		SetUpdateRate 30
 		SetRender()
-		PreLoad(["mojo_font.png"])
+		PreLoad("mojo_font.png")
 		Create()
 		Minib3dInit()	
 	End
@@ -62,13 +64,6 @@ Class MiniB3DApp Extends App
 			Return
 		Endif
 		
-		If _resumed
-			Graphics3DInit ()
-			ReloadAllSurfaces ()
-			'ReloadAllTextures ()
-			_resumed = False
-		Endif
-		
 		Update()
 		
 		' calculate fps
@@ -88,6 +83,14 @@ Class MiniB3DApp Extends App
 		If Not init
 			PreLoadRender()
 			Return
+		Endif
+		
+		If _resumed
+			Graphics3DInit ()
+			ReloadAllSurfaces ()
+			ReloadAllTextures ()
+			TShader.ResetDefaultShader()
+			_resumed = False
 		Endif
 		
 		Render()
@@ -116,7 +119,7 @@ Class MiniB3DApp Extends App
 		_resumed = True
 		If _suspend
 			_suspend = False
-			TTexture.ReloadAllTextures()
+			'TTexture.ReloadAllTextures()
 		Endif
 		Resume()
 	End

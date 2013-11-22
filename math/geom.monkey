@@ -202,6 +202,10 @@ Class Box
 		Update(l.o.Add(l.d))
 	End
 
+	Method Copy:Box()
+		Return New Box(Self.a, Self.b)
+	End
+
 	Method Clear()
 		a.x=INFINITY
 		a.y=INFINITY
@@ -280,6 +284,12 @@ Class Box
 		Return (((b.x<q.b.x) And (b.x>=a.x) And (b.x>=q.a.x)) Or ((b.x>q.b.x) And(q.b.x>=a.x) And (q.b.x>=q.a.x))) And 
 			(((b.y<q.b.y) And(b.y>=a.y) And (b.y>=q.a.y)) Or ((b.y>q.b.y) And(q.b.y>=a.y) And (q.b.y>=q.a.y))) And 
 			(((b.z<q.b.z) And(b.z>=a.z) And (b.z>=q.a.z)) Or ((b.z>q.b.z) And(q.b.z>=a.z) And (q.b.z>=q.a.z)))
+		
+	End
+	
+	Method Overlaps:Bool(q:Vector)
+		
+		Return ( q.x<b.x And q.x>=a.x ) And ( q.y<b.y And q.y>=a.y ) And ( q.z<b.z And q.z>=a.z )
 		
 	End
 	

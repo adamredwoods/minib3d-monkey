@@ -15,7 +15,7 @@ Import minib3d.math.matrix
 '' - collider_tree.tri_verts[] could be a floatbuffer for speed/better cache hits
 
 
-Const MAX_COLL_TRIS:Int =16 '24 '8'16
+Const MAX_COLL_TRIS:Int =8 '24 '8'16
 
 
 Class VecStack Extends Stack<Vector>
@@ -346,15 +346,24 @@ Class TColTree
 		Next
 	End
 	
+	Field _sphereTreeDebugMesh:TMesh
 	
 	Method DebugSphereTree:Void(mesh:TMesh, alpha:Float=0.1)
 		''show the spheres for visual debugging
 		
+		If Not _sphereTreeDebugMesh
+			_sphereTreeDebugMesh = CreateSphere(4)
+			_sphereTreeDebugMesh.EntityAlpha(alpha)
+			_sphereTreeDebugMesh.PaintEntity(255,0,0)
+			_sphereTreeDebugMesh.HideEntity()
+		Endif
+		
 		For Local i:Int=0 To divSphere_r.Length()-1
 		'If debug_sphere		
-			Local sp:TMesh = CreateSphere(6,mesh)
-			sp.EntityAlpha(alpha)
-			sp.PaintEntity(255,0,0)
+			Local sp:TMesh = TMesh(_sphereTreeDebugMesh.CopyEntity(mesh)) 'CreateMesh(mesh) 'CreateSphere(3,mesh)
+			'sp.EntityAlpha(alpha)
+			'sp.PaintEntity(255,0,0)
+			sp.ShowEntity()
 			
 			Local pos:Vector = divSphere_p[i]
 			If Not pos Then Continue
@@ -364,13 +373,13 @@ Class TColTree
 			Local rad:Float = divSphere_r[i]*sc
 			sp.Scale(rad,rad,rad, true)
 			
-			Local tt:TText = CreateText3D(""+i)
-			tt.NoSmooth()
-			tt.EntityAlpha(0.9)
-			tt.EntityParent(sp, false)
-			tt.PaintEntity(255,50,50)
-			tt.EntityFX 1+32+64
-			tt.Scale(rad*0.5,rad*0.5,rad*0.5)
+			'Local tt:TText = CreateText3D(""+i)
+			'tt.NoSmooth()
+			'tt.EntityAlpha(0.9)
+			'tt.EntityParent(sp, false)
+			'tt.PaintEntity(255,50,50)
+			'tt.EntityFX 1+32+64
+			'tt.Scale(rad*0.5,rad*0.5,rad*0.5)
 			'Print pos
 		'Endif
 		Next
@@ -784,7 +793,7 @@ Class MeshCollider
 	End
 	
 	
-	Method TriNodeCollide:Int( line_box:Box, line:Line, s_radius:Vector, coll_obj:CollisionObject, scalef:Vector=Null )
+	Method TriNodeCollide:Int( line_box:Box, line:Line, s_radius:Vector, coll_obj:CollisionObject, scalef:Vector=Null, bypass_test:Bool = false )
 				
 		Local hit:Int=0
 		Local tritest:Int=0
@@ -797,7 +806,8 @@ Class MeshCollider
 'str+= "NODEBOX "+node.level+"  "
 'Print (line.o.Add(line.d).Length())+" ...  "+(scalef.x+radius.x)
 			For Local k:Int = 0 To node.triangles.Length()-1
-			
+				
+				Local miss:Int=0
 				Local tri:Int = node.triangles[k]*3
 
 				v0 = tri_verts[tri_vix[tri+0]]
@@ -813,10 +823,39 @@ Class MeshCollider
 				tri_box.Update(v1)
 				tri_box.Update(v2)
 				
-				Local miss:Int=0
-				
 				If (tri_box.Overlaps(line_box)) ''check boxes
 				
+				If (bypass_test)
+					Local norm:Vector
+					Local cen:Vector = tri_box.Center()
+					Local nx# = Abs(line.d.x)
+					Local ny# = Abs(line.d.y)
+					Local nz# = Abs(line.d.z)
+					
+					If nx>ny And nx>nz
+						norm = New Vector(-Sgn(line.d.x),0,0)
+						'coll_obj.col_coords = New Vector((cen.x+tri_box.Width())*norm.x*scalef.x,line.o.y,line.o.z)
+					Elseif ny>nx And ny>nz
+						norm = New Vector(0,-Sgn(line.d.y),0)
+						'coll_obj.col_coords = New Vector(line.o.x, (cen.y+tri_box.Height())*norm.y*scalef.y,line.o.z)
+					Elseif nz>nx And nz>ny
+						norm = New Vector(0,0,-Sgn(line.d.z))
+						'coll_obj.col_coords = New Vector(line.o.x, line.o.y, (cen.z+tri_box.Depth())*norm.z*scalef.z)
+					Else
+						norm = New Vector(-Sgn(line.d.x),-Sgn(line.d.y),-Sgn(line.d.z))
+						'coll_obj.col_coords = line.o
+					Endif
+					
+					coll_obj.surface=tri_surface[ node.triangles[k] ] 
+					coll_obj.index= tri_number[ node.triangles[k] ]
+					coll_obj.normal = norm
+					coll_obj.col_coords = line.o.Add(line.d)
+					coll_obj.time = 0.5
+					
+					Return 1
+				Endif
+				
+			
 'str+= "TRIBOX "+k+"  "	
 				If s_radius.x > 0.0001
 					
@@ -826,27 +865,8 @@ Class MeshCollider
 						'If Not coll_obj.SphereCollide( line, 0.0, tri_centres[node.triangles[k]], tri_size*0.5, nullVec ) Then hh=1
 					'Else
 						If Not coll_obj.SphereTriangle( line, s_radius, v0.Multiply(scalef),v1.Multiply(scalef),v2.Multiply(scalef) ) Then miss=1
-'Print "tri hit  "					
-						''** experimental speedup ** reduce line_box size to current intersect??
-						'If miss=0
-							'line_box.Clear()
-							'line_box.Update(line.o)
-							'line_box.Update(s_radius)
-							'line_box.Update(tri_box.a)
-							'line_box.Update(tri_box.b)
-						'Endif					
-						
-					
-#rem
-					If src_coll
+'If miss=0 Then Print "tri hit  "					
 
-						tri_box.Expand(scalef)
-						tri_box.a = coll_obj.dst_matrix.Multiply(tri_box.a).Add(coll_obj.dst_matrix.grid[3][0],coll_obj.dst_matrix.grid[3][1],coll_obj.dst_matrix.grid[3][2])
-						tri_box.b = coll_obj.dst_matrix.Multiply(tri_box.b).Add(coll_obj.dst_matrix.grid[3][0],coll_obj.dst_matrix.grid[3][1],coll_obj.dst_matrix.grid[3][2])
-						''check only, dont mess with stack
-						If Not CollideNodeAABB( tri_box, New Vector(1.0,1.0,1.0), coll_obj, src_coll.tree, true) Then Continue
-					Endif
-#end
 					'Endif
 					
 				Else
@@ -859,8 +879,8 @@ Class MeshCollider
 'CollisionInfo.test_vec = line.Multiply(curr_coll.time)
 	
 				If Not miss
-					coll_obj.surface=tri_surface[ node.triangles[k] ] ''warning: byte packed
-					coll_obj.index= tri_number[ node.triangles[k] ] 'node.triangles[k] ''real tri is in hi-bytes of tri_surface
+					coll_obj.surface=tri_surface[ node.triangles[k] ] 
+					coll_obj.index= tri_number[ node.triangles[k] ] 
 					'coll_obj.box.Update(tri_box)
 					'coll_obj.box.Scale( scalef )
 												

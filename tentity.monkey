@@ -29,6 +29,7 @@ Const FXFLAG_DISABLE_CULLING% = 16
 Const FXFLAG_FORCE_ALPHA% = 32
 Const FXFLAG_DISABLE_DEPTH% = 64 
 Const FXFLAG_ALPHA_TESTING% = 128 ''enables alpha testing+depth enable for sprites
+Const FXFLAG_PERPIXEL_LIGHTING% = 256 ''only opengl20, dx11
 
 
 Const ANIMATE_NONE%=0
@@ -89,9 +90,8 @@ Class TEntity
 	Field collision:TCollision = New TCollision
 	Field collision_pair:TCollisionPair = New TCollisionPair
 	Field pick_mode%,obscurer%
-	
 	' used by TCollisions
-	Field old_x#, old_y#, old_z#
+	'Field old_x#, old_y#, old_z# ''DEPRECATED, use collision.old_x
 	
 	
 	'' used by TCamera for camera layer
@@ -829,6 +829,7 @@ Class TEntity
 		
 	End 
 	
+	''-- this will update animation, no need for updateworld (?)
 	Method SetAnimTime(time#, seq%=0)
 	
 		anim_mode=-1 ' use a mode of -1 for setanimtime
@@ -1023,10 +1024,10 @@ Class TEntity
 	''64: disable depth testing
 	''128: alpha testing + depth testing enabled
 
-	Method EntityFX(fx_no%) Property
+	Method EntityFX:TEntity(fx_no%) Property
 	
 		brush.fx=fx_no
-		
+		Return self
 	End
 	
 	Method EntityFX:Int() Property
@@ -1034,6 +1035,7 @@ Class TEntity
 		Return brush.fx
 		
 	End
+	
 	
 	Method EntityAutoFade(near#,far#)
 	
@@ -1158,6 +1160,10 @@ Class TEntity
 		name=e_name
 	
 	End 
+	
+	Method Parent:TEntity(parent_ent:TEntity,glob:Bool=True)
+		Return EntityParent(parent_ent,glob)
+	End
 	
 	Method EntityParent:TEntity(parent_ent:TEntity,glob:Bool=True)
 
@@ -1484,6 +1490,17 @@ Class TEntity
 		Return Sqrt(Self.EntityDistanceSquared(ent2))
 
 	End 
+
+	Method EntityDistanceSquared#(ent2:TEntity)
+
+		Local xd# = ent2.mat.grid[3][0]-mat.grid[3][0]
+		Local yd# = ent2.mat.grid[3][1]-mat.grid[3][1]
+		Local zd# = -ent2.mat.grid[3][2]+mat.grid[3][2]
+				
+		Return xd*xd + yd*yd + zd*zd
+		
+	End
+	
 	
 	' Function by Vertex
 	Method DeltaYaw#(ent2:TEntity)
@@ -1654,7 +1671,7 @@ Class TEntity
 	
 	End 
 	
-	Method EntityRadius:Int(x#=0.0,y#=0.0)
+	Method EntityRadius:float(x#=0.0,y#=0.0)
 	
 		'' do not do scale here
 		'' guarantee that sphere covers all polys! so, use max of extents
@@ -1673,6 +1690,7 @@ Class TEntity
 				x = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
 				x = Sqrt(x*x+c*c) ''corner of cube
 
+				x = m.GetSphereBounds() ''this creates a tight sphere, may not need above calcs
 
 			Else
 				x=1.0
@@ -1693,7 +1711,8 @@ Class TEntity
 			collision.box_d=collision.radius_x
 		endif
 		
-		
+		collision.updated_shape = false
+
 		Return collision.radius_x
 		
 	End 
@@ -1738,6 +1757,8 @@ Class TEntity
 			Local xx# = c*SQRT2 'Sqrt(c*c+c*c) ''corner of square
 			collision.radius_x = Sqrt(xx*xx+c*c)
 		Endif
+		
+		collision.updated_shape = false
 
 	End 
 
@@ -1805,7 +1826,7 @@ Class TEntity
 		EntityType(type_no)
 		EntityPickMode(pick_mode)
 			
-		If pick_mode = COLLISION_METHOD_SPHERE Or pick_mode = COLLISION_METHOD_POLYGON
+		If pick_mode <> COLLISION_METHOD_BOX ' = COLLISION_METHOD_SPHERE Or pick_mode = COLLISION_METHOD_POLYGON
 		
 			EntityRadius(Abs(x),Abs(y))
 			
@@ -2139,6 +2160,8 @@ Class TEntity
 				gsx=sx; gsy=sy; gsz=sz
 			Endif
 			
+			collision.updated_shape=False '' SNEAK THIS IN HERE?
+			
 	End 
 	
 	Method UpdateMatTrans(load_identity:Bool =False)
@@ -2221,17 +2244,7 @@ Class TEntity
 		Next
 
 	End 
-
-
-	Method EntityDistanceSquared#(ent2:TEntity)
-
-		Local xd# = ent2.mat.grid[3][0]-mat.grid[3][0]
-		Local yd# = ent2.mat.grid[3][1]-mat.grid[3][1]
-		Local zd# = -ent2.mat.grid[3][2]+mat.grid[3][2]
-				
-		Return xd*xd + yd*yd + zd*zd
-		
-	End 
+ 
 	
 	
 	''

@@ -133,7 +133,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		
 		Local s:String = glGetString(GL_VERSION)
 		If DEBUG Then Print s	
-	
+		
 		webgl = s.Split(" ")[0]
 		
 		Local num:Int=0
@@ -155,7 +155,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		Local sn:Float=1.0
 
 		If webgl.ToLower().Trim() = "webgl" Then sn=-1.0
-		Return Float( st )*sn
+		Return (Int(Float(st)*10)/10.0)*sn
 		
 	End
 	
@@ -195,7 +195,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	
 	Method Finish:Void()
 		
-		glFlush()
+		'glFlush()
 		
 	End
 	
@@ -228,7 +228,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				''call entity render routine
 				IShaderEntity(shader).RenderEntity(cam, ent)
 				
-				If shader.shader_id<>last_shader Then last_shader = shader.shader_id ''make sure to catch this
+				If shader.shader_id<>last_shader Then last_shader = shader.shader_id ''make sure to catch this before return
 				
 				Return
 				
@@ -295,10 +295,10 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				' update vbo
 				If surf.reset_vbo<>0
 					UpdateVBO(surf)
+
 				Else If surf.vbo_id[0]=0 ' no vbo - unknown reason
 					surf.reset_vbo=-1
 					UpdateVBO(surf)
-
 				Endif
 				
 			Endif
@@ -309,7 +309,9 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				anim_surf2 = mesh.anim_surf[surf.surf_id]
 				
 				If vbo And anim_surf2
-				
+					
+					mesh.UpdateVertexAnimFrame(anim_surf2, surf)
+
 					' update vbo
 					If anim_surf2.reset_vbo<>False
 						UpdateVBO(anim_surf2)
@@ -322,6 +324,38 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				
 			Endif
 			
+
+
+			''enable shader and check for last_state
+			
+			effect.UpdateEffect( surf, ent, cam )
+			
+			'' need to get tex count to set shader
+			Local tex_count:Int =ent.brush.no_texs
+			If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
+			If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
+		
+			''SHADER ACTIVATION---------------------------------
+			If FullShader(shader) <> Null
+				shader = FullShader.GetShader((_usePerPixelLighting | effect.use_perpixellighting), 1, tex_count)
+				If effect.use_full_bright>0 Then shader = FullShader.fastbrightshader
+			Endif
+			
+			If Not shader.u Then Continue
+			
+			If shader.shader_id<>last_shader
+			
+				glUseProgram(shader.shader_id)
+			
+				'Print shader.name+" maxlights:"+(shader.MAX_LIGHTS)
+						
+			Endif
+		
+			'' Update additional uniforms for current shader
+			'' needs to be after UseProgram()
+			shader.Update()
+			'Print " shader:"+shader.name
+
 
 
 			''batch optimizations (sprites/meshes)
@@ -338,39 +372,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 'Print "   mesh.anim:"+mesh.anim
 'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
 		
-'Print " shader:"+shader.name
-			''enable shader and check for last_state
-			
-			effect.UpdateEffect( surf, ent, cam )
-			
-			'' need to get tex count to set shader
-			Local tex_count:Int =ent.brush.no_texs
-			If surf.brush.no_texs>tex_count Then tex_count=surf.brush.no_texs
-			If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
-		
-			''SHADER ACTIVATION---------------------------------
-			If FullShader(shader) <> Null
-				shader = FullShader.GetShader(_usePerPixelLighting, 1, tex_count)
-				If effect.use_full_bright>0 Then shader = FullShader.fastbrightshader
-			Endif
-			
-			If Not shader.u Then Continue
-			
-			If shader.shader_id<>last_shader
-			
-				glUseProgram(shader.shader_id)
-			
-				'Print shader.name+" "+(shader.MAX_LIGHTS)
-						
-			Endif
-		
-			'' Update additional uniforms for current shader
-			'' needs to be after UseProgram()
-			shader.Update()
-			
-			
-			
-			
+
 		
 			'' *** update buffers ***
 			'' --------------------------------------
@@ -543,7 +545,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 
 				Endif
 				If effect.use_alpha_test>0
-					If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )		
+					If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.5 )
 				Else
 					If shader.u.alphaflag<>-1 Then glUniform1f( shader.u.alphaflag, 0.0 )
 				Endif
@@ -579,26 +581,20 @@ Class OpenglES20 Extends TRender Implements IShader2D
 
 			'If tex_count > shader.MAX_TEXTURES-1 Then tex_count = shader.MAX_TEXTURES-1
 			
-			'' -- we are always sending over a texture in opengl2.0 basic shader --not anymore, multi-sahder
-			If tex_count<>0 And (last_tex_count=0 Or last_tex_count=-1)
-				'glEnable(GL_TEXTURE_2D)
-			Elseif tex_count=0 And (last_tex_count>0 Or last_tex_count=-1)
-				'glDisable(GL_TEXTURE_2D)
-			Endif
-			
 
 			
 			''disable any extra textures from last pass
-			If tex_count < last_tex_count 
+			If (tex_count < last_tex_count)
 				For Local i:Int = tex_count To shader.MAX_TEXTURES-1
 					glActiveTexture(GL_TEXTURE0+i)
 					glBindTexture(GL_TEXTURE_2D, 0)
 				Next
 			Endif
 	
-	
+			Local bindTexCoords0:Bool=False, bindTexCoords1:Bool = false
 
-			For Local ix=0 To tex_count-1			
+			'For Local ix=0 To tex_count-1
+			For Local ix= tex_count-1 To 0 Step -1	''** fixes an ugly INTEL HD compiler texture bug
 				
 				Local texture:TTexture,tex_flags,tex_blend,tex_coords,tex_u_scale#=1.0,tex_v_scale#=1.0
 				Local tex_u_pos#,tex_v_pos#,tex_ang#,tex_cube_mode,frame, tex_smooth
@@ -655,65 +651,73 @@ Class OpenglES20 Extends TRender Implements IShader2D
 						glActiveTexture(GL_TEXTURE0+ix)
 						'glClientActiveTexture(GL_TEXTURE0+ix)				
 						glBindTexture(GL_TEXTURE_2D,texture.gltex[0]) ' call before glTexParameteri
-				
+			
 						If shader.u.texture[ix] <>-1 Then glUniform1i(shader.u.texture[ix], ix)
 
-					Endif ''end preserve texture states---------------------------------
-
+						' mipmapping texture flag
+						If tex_flags&8<>0
+							If tex_smooth
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST)
+							Else
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST_MIPMAP_NEAREST)
+							Endif
+						Else
+							If tex_smooth
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
+							Else
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
+								glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
+							Endif
+	
+	
+						Endif
+						
+						' clamp u flag
+						If tex_flags&16<>0
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE)
+						Else						
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT)
+						Endif
+						
+						' clamp v flag
+						If tex_flags&32<>0
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE)
+						Else
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT)
+						Endif
+						
+						
+						
+				
+	     
+						
+						
 					
+					Endif ''end preserve texture states---------------------------------
+					
+					If (tex_coords=0) Then bindTexCoords0=True
+					If (tex_coords=1) Then bindTexCoords1=True
+				
 					
 					''assuming sprites with same surfaces are identical, preserve states---------
-					If (Not skip_sprite_state) And texture.width <>0
-					
+					'If (Not skip_sprite_state) And (texture.width <>0)
 					
 					' 
-					If tex_flags&2<>0
+					'If tex_flags&2<>0
 						'If shader.u.base_color<>-1 Then glUniform4fv( shader.u.base_color, 1, [1.0,1.0,1.0,1.0] )			
-					Else
+					'Else
 						'
-					Endif
+					'Endif
 					
 					''this is the alpha-test flag, moved to surface effect
-					If tex_flags&4<>0
-
-					Endif
-				
-					' mipmapping texture flag
-					If tex_flags&8<>0
-						If tex_smooth
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
-						Else
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
-						Endif
-					Else
-						If tex_smooth
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR)
-						Else
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
-						Endif
-
-
-					Endif
-					
-					' clamp u flag
-					If tex_flags&16<>0
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE)
-					Else						
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_REPEAT)
-					Endif
-					
-					' clamp v flag
-					If tex_flags&32<>0
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE)
-					Else
-						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT)
-					Endif
-					
-					
+					'If tex_flags&4<>0
+					'Endif
+	
+					'Endif ''end preserve skip_sprite_state-------------------------------
+			
 					''fx&1024 = normal mapping
 			
 					''send tex blend info to shader
@@ -729,43 +733,6 @@ Class OpenglES20 Extends TRender Implements IShader2D
 								Default modulate
 							End Select
 					#end
-			
-
-					
-					'If shader.u.texcoords0<>-1 Then glEnableVertexAttribArray(shader.u.texcoords0)
-					'If shader.u.texcoords1<>-1 Then glEnableVertexAttribArray(shader.u.texcoords1)
-					
-					If vbo
-						If tex_coords=0 And shader.u.texcoords0<>-1
-							glEnableVertexAttribArray(shader.u.texcoords0)
-							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-							'glTexCoordPointer(2,GL_FLOAT,0,0)
-							glVertexAttribPointer( shader.u.texcoords0, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET )
-						Elseif shader.u.texcoords1<>-1
-							glEnableVertexAttribArray(shader.u.texcoords1)
-							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-							'glTexCoordPointer(2,GL_FLOAT,0,0)
-							glVertexAttribPointer( shader.u.texcoords1, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET +VertexDataBuffer.ELEMENT2 )
-						Endif
-					Else
-						''for android api 8
-#rem
-						If tex_coords=0 And shader.texcoords0<>-1
-							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-							'glTexCoordPointer(2,GL_FLOAT,0,0)
-							glVertexAttribPointer( shader.texcoords0, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, surf.vert_data.buf )
-						Elseif shader.texcoords1<>-1
-							glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
-							'glTexCoordPointer(2,GL_FLOAT,0,0)
-							glVertexAttribPointer( shader.texcoords1, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, surf.vert_data.buf )
-						Endif
-#end
-					Endif
-
-			
-					Endif ''end preserve skip_sprite_state-------------------------------
-			
-					
 					
 					'' reset texture matrix
 					'' always bring in values, for animation
@@ -783,25 +750,56 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			
 			Next 'end texture loop
 			
-			
+		
 			
 			'' turn off textures if no textures
 			If tex_count = 0
-				
+			
 				last_texture = Null
-				
-				'glDisable(GL_TEXTURE_2D)
 				
 				glActiveTexture(GL_TEXTURE0)
 				'glBindTexture(GL_TEXTURE_2D, 0)			
-				If shader.u.texcoords0 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords0)
-				If shader.u.texcoords1 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords1)
+				bindTexCoords0=False 'If shader.u.texcoords0 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords0)
+				bindTexCoords1=False 'If shader.u.texcoords1 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords1)
 				
 				'fx = fx|2 ''turn on vertex colors if no texture ''--no, users need to select this
 				
 			Endif
 
+
+			If (vbo) And (Not skip_sprite_state)
+				If (shader.u.texcoords0<>-1) And (bindTexCoords0=true)
+					glEnableVertexAttribArray(shader.u.texcoords0)
+					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					'glTexCoordPointer(2,GL_FLOAT,0,0)
+					glVertexAttribPointer( shader.u.texcoords0, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET )
+				Endif
+				if (shader.u.texcoords1<>-1) And (bindTexCoords1=true)
+					glEnableVertexAttribArray(shader.u.texcoords1)
+					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					'glTexCoordPointer(2,GL_FLOAT,0,0)
+					glVertexAttribPointer( shader.u.texcoords1, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, VertexDataBuffer.TEXCOORDS_OFFSET +VertexDataBuffer.ELEMENT2 )
+				Endif
+				
+				If (bindTexCoords0=False) And shader.u.texcoords0 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords0)
+				If (bindTexCoords1=False) And shader.u.texcoords1 <>-1 Then glDisableVertexAttribArray(shader.u.texcoords1)
 			
+			Elseif (Not skip_sprite_state)
+				''for android api 8
+#rem
+				If tex_coords=0 And shader.texcoords0<>-1
+					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					'glTexCoordPointer(2,GL_FLOAT,0,0)
+					glVertexAttribPointer( shader.texcoords0, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, surf.vert_data.buf )
+				Elseif shader.texcoords1<>-1
+					glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
+					'glTexCoordPointer(2,GL_FLOAT,0,0)
+					glVertexAttribPointer( shader.texcoords1, 2, GL_FLOAT, False, VertexDataBuffer.SIZE, surf.vert_data.buf )
+				Endif
+#end
+			Endif
+					
+					
 			
 			'' turn on textures
 			If shader.u.texflag<>-1 Then glUniform1f( shader.u.texflag, Float(tex_count)  )
@@ -809,11 +807,13 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			If DEBUG And GetGLError() Then Print "*tex2"			
 			
 			
+			
 			''light
 			If last_shader <> shader.shader_id
 				''shader light info, for all lights
 				For Local li:Int = 0 To shader.MAX_LIGHTS-1
 					If light[li]
+	
 						If shader.u.light_type[li]<>-1 Then glUniform1f( shader.u.light_type[li], light[li].light_type )
 						light[li].mat.ToArray(t_array)
 						If shader.u.light_matrix[li]<>-1 Then glUniformMatrix4fv( shader.u.light_matrix[li], 1, False, t_array  )
@@ -913,7 +913,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		
 		Local version:Int = GetVersion()
 		
-		If version >0.0 Then Print "**OPENGL "+version Else Print "**WEBGL "+(-version)
+		If version >0.0 Then Print "..OPENGL "+version Else Print "..WEBGL "+(-version)
 		
 		''negative values are webgl 1.0, which are == opengles2.0
 		If version <1.999 And version >0.0 Then Error("Requires OpenGL 2.0 or higher")
@@ -936,9 +936,9 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		width = DeviceWidth()
 		height = DeviceHeight()
 		
-		If Not (flags & RENDERFLAG_DISABLEVBO)
-			vbo_enabled=True 'THardwareInfo.VBOSupport
-		Endif
+		'If Not (flags & RENDERFLAG_DISABLEVBO)
+			vbo_enabled=True 'opengles2.0 and above MUST use VBO
+		'Endif
 		
 		_usePerPixelLighting = ((flags & RENDERFLAG_PERPIXELLIGHTING) > 0)
 		
@@ -1035,7 +1035,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			surf.vbo_id[5]=glCreateBuffer()
 		Endif
 		
-
+		If surf.vbo_id[0] = 0 Then return
 
 		If surf.reset_vbo=-1 Then surf.reset_vbo=255
 	
@@ -1044,7 +1044,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			
 			
 			If surf.vbo_dyn And (Not surf.vert_anim)
-			
+		
 				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 				If surf.reset_vbo <> 255
 					glBufferSubData(GL_ARRAY_BUFFER,0,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf)
@@ -1053,7 +1053,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 				Endif
 				
 			Elseif surf.vbo_dyn And surf.vert_anim And surf.reset_vbo&1
-				
+			
 				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[4])
 				If surf.reset_vbo <> 255
 					''update just anim data
@@ -1068,6 +1068,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			Else
 				glBindBuffer(GL_ARRAY_BUFFER,surf.vbo_id[0])
 				glBufferData(GL_ARRAY_BUFFER,surf.no_verts*VertexDataBuffer.SIZE ,surf.vert_data.buf,GL_STATIC_DRAW)
+
 			Endif
 			
 		Endif
@@ -1084,7 +1085,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		
 		If GetGLError() Then Print "vbo error"
 		
-		surf.reset_vbo=False
+		surf.reset_vbo=0
 		
 	End
 	
@@ -1098,16 +1099,24 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			glDeleteBuffer(surf.vbo_id[3])
 			glDeleteBuffer(surf.vbo_id[4])
 			glDeleteBuffer(surf.vbo_id[5])
+			surf.vbo_id[0]=0
+			surf.vbo_id[1]=0
+			surf.vbo_id[2]=0
+			surf.vbo_id[3]=0
+			surf.vbo_id[4]=0
+			surf.vbo_id[5]=0
 		Endif
 	
 	End 
 	
 	''ReloadAllSurfaces()
 	''-- used for resetting mobile opengl context
-	''-- note: do i need to update animation surfs too??
 	Method ReloadSurfaces:Int()
 	
 		Local mesh:TMesh
+		
+		EnableStates()
+		TShader.GetCurrentShader().ResetShader()
 		
 		For Local ent:TEntity = Eachin TMesh.entity_list
 		
@@ -1116,10 +1125,23 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			
 				For Local surf:TSurface=Eachin mesh.surf_list
 					
-					surf.vbo_id[0]=0
-					surf.reset_vbo = -1
-					UpdateVBO(surf)
-				
+					'' ************
+					'' if we release our buffers here, android will crash, presumedly on lack of graphic card memory
+					
+					If surf.vbo_id[0]
+						'surf.vbo_id[0]=0
+						surf.reset_vbo = -1
+						'UpdateVBO(surf)
+					Endif
+					
+					Local anim_surf2:TSurface = mesh.GetAnimSurface(surf)
+					If anim_surf2 And anim_surf2.vbo_id[0]
+						'FreeVBO(anim_surf2)
+						anim_surf2.reset_vbo = -1
+						'UpdateVBO(surf)
+						
+					Endif
+					
 				Next
 				
 			Endif
@@ -1171,7 +1193,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 		' set flags for empty textures
 		If flags&8<>0
 			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_LINEAR)
-			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR) ''GL_LINEAR_MIPMAP_NEAREST
+			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_LINEAR_MIPMAP_NEAREST) ''GL_LINEAR_MIPMAP_NEAREST
 		Else
 			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST) 
 			glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
@@ -1333,14 +1355,14 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	End
 	
 	
-	Method BackBufferToTex(mipmap_no=0,frame=0)
+	Method BackBufferToTex(tex:TTexture, mipmap_no=0,frame=0)
 		
 		''***TODO*** switch to fbo
 		If flags&128=0 ' normal texture
 	
 			Local x=0,y=0
 	
-			glBindtexture GL_TEXTURE_2D,gltex[frame]
+			glBindtexture GL_TEXTURE_2D,tex.gltex[frame]
 			glCopyTexImage2D(GL_TEXTURE_2D,mipmap_no,GL_RGBA,x,TRender.height-y-height,width,height,0)
 			
 		Else 
@@ -1365,7 +1387,7 @@ Class OpenglES20 Extends TRender Implements IShader2D
 	''Interface
 	Method SetShader2D:Void()
 
-		TShader.SetShader(New FastBrightShader)
+		TShader.SetShader(FullShader.fastbrightshader)
 		
 	End
 

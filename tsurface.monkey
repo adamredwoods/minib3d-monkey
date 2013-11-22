@@ -185,26 +185,28 @@ Public
 		
 	End
 	
-	Method ClearSurface(clear_verts:Bool=True,clear_tris:Bool=True)
+	Method ClearSurface(clear_verts:Bool=True,clear_tris:Bool=True,keep_array:Bool = false)
 	
 		If clear_verts
 		
 			no_verts=0
 			
-			vert_data=VertexDataBuffer.Create(0)
+			If Not keep_array
+				vert_data=VertexDataBuffer.Create(0)
+				vert_array_size=1
+			Endif
 			
-			vert_array_size=1
-		
 		Endif
 		
 		If clear_tris
 		
 			no_tris=0
 			
-			tris=ShortBuffer.Create(0)
-
-			tri_array_size=1
-		
+			If Not keep_array
+				tris=ShortBuffer.Create(0)
+				tri_array_size=1
+			Endif
+			
 		Endif
 		
 		' mesh shape has changed - update reset flag

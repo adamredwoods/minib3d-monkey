@@ -208,17 +208,17 @@ Class TPick
 				
 			'If ent.collision.radius_x=0.0 Then col_info.UpdateSourceSphere(ent)
 			col_info.UpdateDestShape(ent)
-		
+			col_info.coll_method = ent.pick_mode
 
-			'' rad * largest entity global scale
-			Local rad:Float = ent.collision.radius_x + s_radius ''**** has dst_radius already been scaled???
-			rad = rad*Max(Max(Abs(ent.gsx),Abs(ent.gsy)),Abs(ent.gsz))
-			'If rad<0 Then rad=-rad
-
+			
+			''sphere center must be relative to ray
 			cen.Update(ent.mat.grid[3][0] - ax, ent.mat.grid[3][1] - ay,-ent.mat.grid[3][2] - az)
 
-			If col_obj.RaySphereTest(col_info.dir, cen, rad) > 0
-'Print ent.classname+" hit"
+			If col_obj.RaySphereTest(col_info.ray_dir, cen, col_info.dst_radius) > 0
+
+				col_info.UpdateDestShape(ent)
+				
+				col_info.ray_length = col_info.dst_radius*3.0
 				
 				col_info.CollisionSetup(ent, ent.pick_mode, col_obj, nullVec)
 				pick = col_info.CollisionDetect(col_obj)
@@ -232,7 +232,7 @@ Class TPick
 					
 					col_info.RegisterHitPlane ( col_obj.col_coords, col_obj.normal)
 					
-					'Exit ''do we need to run through the list? yes for multiple objects, but we don't have that capability yet
+					''do we need to run through the whole list? yes
 				Endif
 				
 			endif

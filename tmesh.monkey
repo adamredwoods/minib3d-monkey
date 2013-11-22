@@ -19,7 +19,8 @@ Class TMesh Extends TEntity
 	Field surf_list:List<TSurface>= New List<TSurface>
 	Field total_tris:Int=0
 	
-	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id 
+	Field anim_surf:TSurface[] ' contains animated vertex coords set; connected to surf by surf_id
+	Field anim_surf_frame:Int[] 'vertex animation frame for specific surf_id
 	
 	Field no_bones=0
 	Field bones:TBone[]
@@ -32,9 +33,11 @@ Class TMesh Extends TEntity
 	Field center_x:Float,center_y:Float,center_z:Float
 	Field bounds_radius:Float '' is this used?
 	'Field reset_col_tree=True
+	Field vecbounds:Vector[] = New Vector[6]
 		
 	Field is_sprite:Bool = False '' used for sprites
-	Field culled:Bool = true
+	Field culled:Bool = False ''is mesh seen by camera
+	Field distance_nearplane# ''distance from camera frustum near plane (0 if culled)
 	
 	Field wireframe:Bool
 
@@ -85,13 +88,18 @@ Class TMesh Extends TEntity
 		' pointer to surf list
 		mesh.surf_list=surf_list
 		
-		' copy anim surf list
-		mesh.anim_surf = Self.CopyAnimSurfs()
+		' copy anim surf list, except vertex animation
+		If anim=2
+			mesh.anim_surf = anim_surf
+		Else
+			mesh.anim_surf = Self.CopyAnimSurfs()
+		Endif
 		
 		mesh.col_tree=col_tree
 	
 		mesh.reset_bounds=reset_bounds
-
+		
+		mesh.anim_surf_frame = anim_surf_frame[0..] ''copy
 		
 		mesh.bones = CopyBonesList(mesh, New List<TBone>, 0).ToArray()
 		''set bones
@@ -109,7 +117,7 @@ Class TMesh Extends TEntity
 		For Local surf:TSurface=Eachin surf_list
 			
 			Local id:Int = surf.surf_id
-			Local anim_surf2:TSurface = anim_surf[surf.surf_id] ''original anim_surf shortcut
+			Local anim_surf2:TSurface = GetAnimSurface(surf) ''original anim_surf shortcut
 			If Not anim_surf2 Then Continue
 			
 					
@@ -277,6 +285,7 @@ Class TMesh Extends TEntity
 		'' anim surf
 		surf.surf_id = CreateSurfaceID()
 		anim_surf = anim_surf.Resize(no_surfs)
+		anim_surf_frame = anim_surf_frame.Resize(no_surfs)
 		
 		' new mesh surface - update reset flags
 		reset_bounds=True
@@ -295,6 +304,7 @@ Class TMesh Extends TEntity
 		'' anim surf
 		surf.surf_id = CreateSurfaceID()
 		anim_surf = anim_surf.Resize(no_surfs)
+		anim_surf_frame = anim_surf_frame.Resize(no_surfs)
 		
 		' new mesh surface - update reset flags
 		reset_bounds=True
@@ -332,8 +342,8 @@ Class TMesh Extends TEntity
 		
 			For Local y:Float = -yhalf To yhalf-1.0 Step 1.0
 			
-				v0= surf.AddVertex( -xhalf-0.5, 0, y-0.5)
-				v1= surf.AddVertex( -xhalf-0.5, 0, y+0.5)	
+				v0= surf.AddVertex( -xhalf-0.5, 0.0, y-0.5)
+				v1= surf.AddVertex( -xhalf-0.5, 0.0, y+0.5)	
 				
 				For Local x:Float = -xhalf To xhalf-1.0 Step 1.0
 	
@@ -341,14 +351,14 @@ Class TMesh Extends TEntity
 					If x<>-xhalf Then v1 = v2; v0 = v3
 					If y= -yhalf
 						
-						v3= surf.AddVertex( x+0.5, 0, y-0.5)
+						v3= surf.AddVertex( x+0.5, 0.0, y-0.5)
 	
 					Else
 						v3 = pv2[xhalf + x]
 										
 					Endif
 					
-					v2= surf.AddVertex( x+0.5, 0, y+0.5)
+					v2= surf.AddVertex( x+0.5, 0.0, y+0.5)
 					qv2[xhalf + x] = v2
 					
 				
@@ -389,10 +399,10 @@ Class TMesh Extends TEntity
 			For Local y:Float = -yhalf To yhalf-1.0 Step 1.0				
 				For Local x:Float = -xhalf To xhalf-1.0 Step 1.0
 								
-					v0= surf.AddVertex( x-0.5, 0, y-0.5)
-					v1= surf.AddVertex( x-0.5, 0, y+0.5)
-					v2= surf.AddVertex( x+0.5, 0, y+0.5)
-					v3= surf.AddVertex( x+0.5, 0, y-0.5)
+					v0= surf.AddVertex( x-0.5, 0.0, y-0.5)
+					v1= surf.AddVertex( x-0.5, 0.0, y+0.5)
+					v2= surf.AddVertex( x+0.5, 0.0, y+0.5)
+					v3= surf.AddVertex( x+0.5, 0.0, y-0.5)
 					surf.VertexNormal(v0,0.0,1.0,0.0)
 					surf.VertexNormal(v1,0.0,1.0,0.0)
 					surf.VertexNormal(v2,0.0,1.0,0.0)
@@ -980,17 +990,16 @@ Class TMesh Extends TEntity
 		mesh.classname = Self.classname
 		If parent_ent Then mesh.EntityParent(parent_ent)
 		
-		Self.AddMesh(mesh) ''add self TO mesh
+		Self.AddMesh(mesh) ''add self TO mesh ''**note: cannot place after CopyBaseMeshTo, otherwise infinite loop
+		Local new_list:List<TSurface> = mesh.surf_list
+		
+		Self.CopyBaseMeshTo(mesh,parent_ent) ''this overwrites surf_list pointer with original pointer
+		mesh.surf_list = new_list  ''set pointer back to proper list
+		
 		''remove from entity_list since it will re-add in CopyBaseMeshTo()
 		'mesh.entity_link.Remove()
 		'mesh.entity_link=Null
 		
-		''copy children
-		'For Local ent:TEntity=Eachin child_list
-			'ent.CopyEntity(mesh)
-		'Next
-		
-		Self.CopyBaseMeshTo(mesh,parent_ent)
 		
 		''need a full copy of bones list, not just pointers
 		If bones
@@ -1545,10 +1554,10 @@ Class TMesh Extends TEntity
 	End 
 	
 	'' starts at 0 to be consistent with Brush.GetTexture()
-	Method GetTexture:TTexture(i:Int=0)
+	Method GetTexture:TTexture(i:Int=0, s:Int=1)
 		
 		If brush And brush.tex[0] Then Return brush.tex[0]
-		If GetSurface(1).brush And GetSurface(1).brush.tex[i] Then Return GetSurface(1).brush.tex[i]
+		If GetSurface(s).brush And GetSurface(s).brush.tex[i] Then Return GetSurface(s).brush.tex[i]
 		Return Null
 		
 	End
@@ -1593,6 +1602,8 @@ Class TMesh Extends TEntity
 	Function CopyBonesList:List<TBone>(ent:TEntity, bone_list:List<TBone>, no_bones:Int=0)
 		
 		Local bone:TBone
+		If no_bones=0 Then Return bone_list
+		
 		For Local e:TEntity=Eachin ent.child_list
 			bone = TBone(e)
 			If bone<>Null
@@ -1699,6 +1710,7 @@ Class TMesh Extends TEntity
 		' mesh.reset_bounds=True for all new meshes, plus set to True by various Mesh commands
 		' scaling is not done here (since it can change per frame)
 		' more accurately a CullBox than CullRadius
+		' -- use vecbound[] to create tighter sphere
 		If reset_bounds=True Or reset=true
 		
 			''can i sneak this in here?
@@ -1722,14 +1734,14 @@ Class TMesh Extends TEntity
 					
 					surf.vert_data.GetVertCoords(vec_temp,v)
 
-					If vec_temp.x<min_x Then min_x=vec_temp.x
-					If vec_temp.x>max_x Then max_x=vec_temp.x
+					If vec_temp.x<min_x Then min_x=vec_temp.x; vecbounds[0] = vec_temp.Copy()
+					If vec_temp.x>max_x Then max_x=vec_temp.x; vecbounds[1] = vec_temp.Copy()
 					
-					If vec_temp.y<min_y Then min_y=vec_temp.y
-					If vec_temp.y>max_y Then max_y=vec_temp.y
+					If vec_temp.y<min_y Then min_y=vec_temp.y; vecbounds[2] = vec_temp.Copy()
+					If vec_temp.y>max_y Then max_y=vec_temp.y; vecbounds[3] = vec_temp.Copy()
 
-					If vec_temp.z<min_z Then min_z=vec_temp.z
-					If vec_temp.z>max_z Then max_z=vec_temp.z
+					If vec_temp.z<min_z Then min_z=vec_temp.z; vecbounds[4] = vec_temp.Copy()
+					If vec_temp.z>max_z Then max_z=vec_temp.z; vecbounds[5] = vec_temp.Copy()
 				
 				Next
 			
@@ -1772,6 +1784,30 @@ Class TMesh Extends TEntity
 		Endif
 
 	End 
+	
+	''helper for entityradius
+	Method GetSphereBounds:Float()
+		''our bounds for a tight sphere is between xmin and xmax
+		If (cull_radius=0.0) Or (reset_bounds=True)
+			GetBounds()
+		Endif
+		
+		Local center:Vector = New Vector(0,0,0)
+		Local ss:Float = vecbounds[0].Distance(center)
+
+			For Local i:Int=1 To 5
+				Local j# = vecbounds[i].Distance(center)
+				If j > ss
+					''too small	if just one is over
+					ss=j
+				endif
+			Next
+
+			'Print "ss "+ss+" "+av
+
+		
+		Return ss
+	End
 
 	Method GetTotalTris:Int()
 		
@@ -2021,7 +2057,7 @@ Class TMesh Extends TEntity
 		
 	End
 	
-	
+	'' Adds mesh to TRender 2D DrawList, drawn after all meshes
 	Method Draw(x:Float, y:Float, no_scaling:Bool = False)
 		
 		''immediate mode draw to screen
@@ -2103,9 +2139,23 @@ Class TMesh Extends TEntity
 		col_tree.DebugSphereTree(Self,alpha)
 	End
 	
+	''Needs to render at least ONCE
 	Method GetCulled:Bool()
 		Return culled
-	end
+	End
+
+	
+	''update the vertex anim surface to correct frame
+	Method UpdateVertexAnimFrame:Void(surf:TSurface, orig_surf:TSurface)
+		
+		If Not surf Then return
+		''since mesh should hold the anim frames, we need this to unify the update to the surface. used only in rendering
+		surf.anim_frame = Self.anim_surf_frame[orig_surf.surf_id]
+		
+		'' update the buffer every frame
+		surf.reset_vbo = surf.reset_vbo|1
+
+	End
 	
 End
 

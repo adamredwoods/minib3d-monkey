@@ -169,7 +169,9 @@ Return
 
 	End
 	
-
+	Method FreePixmap:Void()
+		pixels = Null
+	End
 	
 End
 

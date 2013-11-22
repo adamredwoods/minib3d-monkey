@@ -169,6 +169,7 @@ Class OpenglES11 Extends TRender
 		Local mesh:TMesh = TMesh(ent)
 		
 		If Not mesh Then Return
+		If mesh.no_surfs =0 Then Return
 		
 		Local name$=ent.EntityName()
 	
@@ -251,7 +252,9 @@ Class OpenglES11 Extends TRender
 				anim_surf2 = mesh.GetAnimSurface(surf) ''assign anim surface
 				
 				If vbo And anim_surf2
-				
+					
+					mesh.UpdateVertexAnimFrame(anim_surf2, surf)
+					
 					' update vbo
 					If anim_surf2.reset_vbo<>False
 						UpdateVBO(anim_surf2)
@@ -608,7 +611,7 @@ Class OpenglES11 Extends TRender
 							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST_MIPMAP_LINEAR)
 						Else
 							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MAG_FILTER,GL_NEAREST)
-							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST)
+							glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_MIN_FILTER,GL_NEAREST_MIPMAP_NEAREST)
 						Endif
 					Else
 						If tex_smooth
@@ -633,8 +636,9 @@ Class OpenglES11 Extends TRender
 					Else
 						glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_REPEAT)
 					Endif
-			
-
+					
+					
+					
 			#rem	
 					' cubic environment map texture flag
 					If tex_flags&128<>0
@@ -704,6 +708,8 @@ Class OpenglES11 Extends TRender
 							glTexEnvf(GL_TEXTURE_ENV,GL_TEXTURE_ENV_MODE,GL_MODULATE)
 					End Select
 
+					
+
 					glEnableClientState(GL_TEXTURE_COORD_ARRAY)
 
 					If vbo
@@ -725,6 +731,31 @@ Class OpenglES11 Extends TRender
 						endif
 					Endif
 
+#rem		
+					'normal map
+					If ix=0 And (tex_flags&TEXFLAG_NORMALMAP<>0)
+						
+						Local li:TLight = TLight.light_list.First()
+
+						Local liVec:Vector = New Vector(0,0,1.0)
+						liVec = li.mat.Multiply( liVec )
+						liVec = ent.mat.Multiply( liVec )
+						'liVec = liVec.Normalize()
+						liVec.Update( (liVec.x+1.0)*0.5,(liVec.y+1.0)*0.5,(liVec.z+1.0)*0.5)
+
+						glColor4f( liVec.x, liVec.y, liVec.z, 1.0)
+						
+						glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_COMBINE)
+						glTexEnvi(GL_TEXTURE_ENV, GL_COMBINE_RGB, GL_DOT3_RGB)
+						glTexEnvi(GL_TEXTURE_ENV, GL_SRC0_RGB, GL_PRIMARY_COLOR)
+						glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND0_RGB, GL_SRC_COLOR)
+						glTexEnvi(GL_TEXTURE_ENV, GL_SRC1_RGB, GL_TEXTURE)
+						glTexEnvi(GL_TEXTURE_ENV, GL_OPERAND1_RGB, GL_SRC_COLOR)
+
+						'glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE)
+						
+					Endif
+#end
 			
 					Endif ''end preserve skip_sprite_state-------------------------------
 					
@@ -873,7 +904,7 @@ Class OpenglES11 Extends TRender
 		
 		
 		
-		If Not (flags & DISABLE_VBO)
+		If Not (flags & DISABLE_VBO = 1)
 			vbo_enabled=True 'THardwareInfo.VBOSupport
 		Else
 			vbo_enabled=False
@@ -976,7 +1007,7 @@ Class OpenglES11 Extends TRender
 
 		If surf.reset_vbo=-1 Then surf.reset_vbo=255
 
-
+		If surf.vbo_id[0] = 0 Then return
 		
 		''surf.vert_anim array should be null until it is set by BoneToVertexAnimation
 		
@@ -1024,7 +1055,7 @@ Class OpenglES11 Extends TRender
 		If DEBUG And GetGLError() Then Print "**glerror: vbo update"
 
 		
-		surf.reset_vbo=False
+		surf.reset_vbo=0
 		
 	End
 	
@@ -1034,15 +1065,21 @@ Class OpenglES11 Extends TRender
 		If surf.vbo_id[0]<>0 
 			glDeleteBuffers(6,surf.vbo_id)
 			surf.vbo_id[0]=0
+			surf.vbo_id[1]=0
+			surf.vbo_id[2]=0
+			surf.vbo_id[3]=0
+			surf.vbo_id[4]=0
+			surf.vbo_id[5]=0
 		Endif
 	
 	End 
 	
 	''ReloadAllSurfaces()
 	''-- used for resetting mobile opengl context
-	''-- note: do i need to update animation surfs too??
 	Method ReloadSurfaces:Int()
-	
+		
+		EnableStates()
+		
 		Local mesh:TMesh
 		
 		For Local ent:TEntity = Eachin TMesh.entity_list
@@ -1052,11 +1089,27 @@ Class OpenglES11 Extends TRender
 			
 				For Local surf:TSurface=Eachin mesh.surf_list
 					
-					surf.vbo_id[0]=0
-					surf.reset_vbo = -1
-					UpdateVBO(surf)
-				
+					'' ************
+					'' if we release our buffers here, android will crash, presumedly on lack of graphic card memory
+					
+					If surf.vbo_id[0]
+						'FreeVBO(surf)
+						surf.reset_vbo = -1
+						'UpdateVBO(surf)
+					Endif
+					
+					Local anim_surf2:TSurface = mesh.GetAnimSurface(surf)
+					If anim_surf2 And anim_surf2.vbo_id[0]
+						'FreeVBO(anim_surf2)
+						anim_surf2.reset_vbo = -1
+						'UpdateVBO(surf)
+						
+					Endif
+					glFinish()
+					
 				Next
+				
+				
 				
 			Endif
 		
@@ -1118,15 +1171,15 @@ Class OpenglES11 Extends TRender
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT) 'GL_CLAMP_TO_EDGE)
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT) 'GL_CLAMP_TO_EDGE)
 		If flags&8
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR)
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR)
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_NEAREST)
 		Else
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST)
 			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST)
 		Endif
 		
 		Local mipmap:Int= 0, mip_level:Int=0
-		Local pix:TPixmapGL = TPixmapGL(tex.pixmap)
+		Local pix:TPixmapGL = TPixmapGL(tex.pixmap )
 		
 		'If Not pix.pixels Then Return tex
 		
@@ -1143,12 +1196,17 @@ Class OpenglES11 Extends TRender
 				If Not mipmap Or (width=1 And height =1) Then Exit
 				If width>1 width *= 0.5
 				If height>1 height *= 0.5
-
+				
+				
+				'If tex.mipmap_blur Then pix=TPixmapGL(tex.pixmap.Blur(mip_level)) ''0= no blur ''**took out, need to preserve colors
+				
+				''note to self: pix is local, so the original tex.pixmap is kept intact
 				If tex.resize_smooth
-					pix=TPixmapGL(pix.ResizePixmap(width,height))
+					pix=TPixmapGL(pix.ResizePixmap(width,height)) 
 				Else
 					pix=TPixmapGL(pix.ResizePixmapNoSmooth(width,height))
 				Endif
+				
 				
 				mip_level+=1
 				
@@ -1312,13 +1370,13 @@ Class OpenglES11 Extends TRender
 	End
 	
 	
-	Method BackBufferToTex(mipmap_no=0,frame=0)
+	Method BackBufferToTex(tex:TTexture, mipmap_no=0,frame=0)
 
 		If flags&128=0 ' normal texture
 	
 			Local x=0,y=0
 	
-			glBindtexture GL_TEXTURE_2D,gltex[frame]
+			glBindtexture GL_TEXTURE_2D,tex.gltex[frame]
 			glCopyTexImage2D(GL_TEXTURE_2D,mipmap_no,GL_RGBA,x,TRender.height-y-height,width,height,0)
 			
 		Else ' no cubemap texture (2012 gles 1.x)

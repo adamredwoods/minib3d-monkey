@@ -415,6 +415,10 @@ Function CountVertices(surf:TSurface)
 	Return surf.CountVertices()
 End 
 
+Function CreateBatchSprite:TBatchSprite(id:Int=0)
+	Return TBatchSprite.CreateSprite(id)
+End 
+
 #rem
 bbdoc: <a href="http://www.blitzbasic.com/b3ddocs/command.php?name=CreateBrush">Online Help</a>
 #end 

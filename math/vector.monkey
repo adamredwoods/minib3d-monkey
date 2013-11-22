@@ -1,4 +1,4 @@
-
+Import minib3d.math.vec3
 
 Class Vector
 
@@ -26,74 +26,74 @@ Class Vector
 	
 	End 
 	
-	Method Add:Vector(vec:Vector)
+	Method Add:Vector(vec:Vector) 
 		
 		Return New Vector(x+vec.x, y+vec.y, z+vec.z)
 	
 	End
 	
-	Method Add:Vector(vx:Float, vy:Float, vz:Float)
+	Method Add:Vector(vx:Float, vy:Float, vz:Float) 
 
 		Return New Vector(x+vx, y+vy, z+vz)
 	
 	End
 	
-	Method Subtract:Vector(vec:Vector)
+	Method Subtract:Vector(vec:Vector) 
 
 		Return New Vector(x-vec.x, y-vec.y, z-vec.z)
 	
 	End 
 	
-	Method Subtract:Vector(vx:Float, vy:Float, vz:Float)
+	Method Subtract:Vector(vx:Float, vy:Float, vz:Float) 
 
 		Return New Vector(x-vx, y-vy, z-vz)
 	
 	End
 	
-	Method Multiply:Vector(v:Vector)
+	Method Multiply:Vector(v:Vector) 
 		
 		Return New Vector(x*v.x,y*v.y,z*v.z)
 	
 	End 
 	
-	Method Multiply:Vector(val#)
+	Method Multiply:Vector(val#) 
 		
 		Return New Vector(x*val,y*val,z*val)
 	
 	End 
 	
-	Method Multiply:Vector(a#,b#,c#)
+	Method Multiply:Vector(a#,b#,c#) 
 		
 		Return New Vector(x*a,y*b,z*c)
 	
 	End
 	
-	Method Divide:Vector(val#)
+	Method Divide:Vector(val#) 
 	
 		Local inv:Float = 1.0/val
 		Return New Vector(x*inv,y*inv,z*inv)
 	
 	End
 	
-	Method Divide:Vector(v:Vector)
+	Method Divide:Vector(v:Vector) 
 		
 		Return New Vector(x/v.x,y/v.y,z/v.z)
 	
 	End
 	
-	Method Dot:Float(vec:Vector)
+	Method Dot:Float(vec:Vector) 
 	
 		Return (x*vec.x)+(y*vec.y)+(z*vec.z)
 	
 	End 
 	
-	Method Cross:Vector(vec:Vector)
+	Method Cross:Vector(vec:Vector) 
 		
 		Return New Vector( (y*vec.z)-(z*vec.y), (z*vec.x)-(x*vec.z), (x*vec.y)-(y*vec.x) )
 	
 	End 
 	
-	Method Normalize:Vector()
+	Method Normalize:Vector() 
 	
 		If x=0 And y=0 And z=0 Then Return New Vector(0,0,0)
 		
@@ -101,7 +101,7 @@ Class Vector
 		Return New Vector(x*d,y*d,z*d)
 	End 
 	
-	Method Normalise:Vector()
+	Method Normalise:Vector() 
 	
 		If x=0 And y=0 And z=0 Then Return New Vector(0,0,0)
 		
@@ -109,39 +109,39 @@ Class Vector
 		Return New Vector(x*d,y*d,z*d)
 	End 
 	
-	Method Length#()
+	Method Length#() 
 			
 		Return Sqrt(x*x+y*y+z*z)
 
 	End 
 	
-	Method SquaredLength#()
+	Method SquaredLength#() 
 	
 		Return x*x+y*y+z*z
 
 	End
 	
-	Method DistanceSquared:Float ()
+	Method DistanceSquared:Float () 
 	
 		Return x*x+y*y+z*z
 
 	End
 	
-	Method DistanceSquared:Float ( q:Vector)
+	Method DistanceSquared:Float ( q:Vector) 
 		Local xx:Float = x-q.x
 		Local yy:Float = y-q.y
 		Local zz:Float = z-q.z
 		Return (xx*xx + yy*yy + zz*zz)
 	End 
 	
-	Method Distance:Float ( q:Vector)
+	Method Distance:Float ( q:Vector) 
 		Local xx:Float = x-q.x
 		Local yy:Float = y-q.y
 		Local zz:Float = z-q.z
 		Return Sqrt(xx*xx + yy*yy + zz*zz)
 	End
 	
-	Method SetLength(val#)
+	Method SetLength(val#) 
 	
 		Local vec:Vector = Normalize()
 		x=vec.x*val
@@ -150,7 +150,7 @@ Class Vector
 
 	End 
 	
-	Method Compare:Int ( with:Object )
+	Method Compare:Int ( with:Object ) 
 		Local q:Vector=Vector(with)
 		If x-q.x>EPSILON Return 1
 		If q.x-x>EPSILON Return -1
@@ -179,7 +179,7 @@ Class Vector
 	
 	End 
 	
-	Method PointOnSegment:Vector(o:Vector, d:Vector)
+	Method PointOnSegment:Vector(o:Vector, d:Vector) 
 		Local d2:Vector = d.Subtract(o)
 		
 		Local dx# = x-o.x
@@ -193,19 +193,19 @@ Class Vector
 	End
 	
 	
-	Method Negate:Vector()
+	Method Negate:Vector() 
 		Return New Vector(-x, -y, -z)
 	End
 	
-	Method Update( xx:Float, yy:Float, zz:Float)
+	Method Update( xx:Float, yy:Float, zz:Float) 
 		x=xx; y=yy; z=zz
 	End
 	
-	Method Overwrite( xx:Float, yy:Float, zz:Float)
+	Method Overwrite( xx:Float, yy:Float, zz:Float) 
 		x=xx; y=yy; z=zz
 	End
 	
-	Method Overwrite( v:Vector)
+	Method Overwrite( v:Vector) 
 		x=v.x; y=v.y; z=v.z
 	End
 	

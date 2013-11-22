@@ -124,6 +124,7 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 
 	End
 	
+	''use when applying textures to sprites to get correct ratio
 	Method AutoResizeTexture:Void(tex:TTexture)
 		
 		Local x:Float = 1.0, y:Float = 1.0
@@ -618,7 +619,16 @@ Class TBatchSprite Extends TSprite
 		End 
 		
 		
-		Function LoadBatchTexture(tex_file$,tex_flag:Int=1,id:Int=0)
+		Function LoadBatchTexture:TTexture(tex_file$,tex_flag:Int=1,id:Int=0)
+	
+			Local tex:TTexture=TTexture.LoadTexture(tex_file,tex_flag)
+			LoadBatchTexture(tex, tex_flag, id)
+			
+			Return tex
+	
+		End
+		
+		Function LoadBatchTexture:Int(tex:TTexture, tex_flag:Int=1, id:Int=0)
 			''
 			''does not create sprite, just loads texture
 			''
@@ -628,7 +638,6 @@ Class TBatchSprite Extends TSprite
 			
 			CreateBatchMesh(id)
 	
-			Local tex:TTexture=TTexture.LoadTexture(tex_file,tex_flag)
 			mainsprite[id].EntityTexture(tex)
 
 			' additive blend if sprite doesn't have alpha or masking flags set
@@ -637,7 +646,6 @@ Class TBatchSprite Extends TSprite
 				mainsprite[id].EntityBlend 3
 				
 			Endif
-
 	
 		End
 		

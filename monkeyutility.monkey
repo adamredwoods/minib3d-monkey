@@ -11,9 +11,6 @@ Import os
 
 Alias LoadString = app.LoadString
 
-Const PF_RGBA8888:Int = 1
-Const PF_RGB888:Int = 2
-Const PF_A8:Int = 3
 
 
 

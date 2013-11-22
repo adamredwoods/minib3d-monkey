@@ -9,6 +9,13 @@ Import mojo.data
 'Import minib3d.monkeybuffer
 
 
+Const PF_RGBA8888:Int = 4
+Const PF_RGB888:Int = 3
+Const PF_A8:Int = 1
+Const RGBA8888:Int = 4
+Const RGB888:Int = 3
+Const A8:Int = 1
+
 
 Interface IPixmapManager
 
@@ -93,12 +100,81 @@ Class TPixmap
 
 	''bind for hardware binding, to avoid duplicating binds for same image
 	Method SetBind:Void()
-		bind=1
+		bind+=1
+	End
+	
+	Method DecBind:Void()
+		bind-=1
+		If bind<0 Then bind=0
+	End
+	
+	Method GetBindCount:int()
+		Return bind
 	End
 	
 	Method ClearBind:Void()
 		bind=0
 	End
+	
+	
+	''gets rid of memory, but may still be in graphics memory
+	Method FreePixmap:Void() Abstract
+	
+	''CPU blur, not GPU
+	''does not blur alpha
+	Method Blur:TPixmap(val:Int=2)
+		
+		If val<=0 Then Return Self
+		
+		Local x:Int, y:Int, pix:TPixmap = CreatePixmap(width, height)
+		
+		''x-axis
+		For y=0 To height-1
+			For x=0 To width-1
+			
+				Local p:Int =0, div=0, pa:Int=0, pr:Int=0, pg:Int=0, pb:Int=0
+				For Local j:Int=-val To val
+					If (x+j)>=0 And (x+j)<width
+						p=GetPixel(x+j,y); div+=1
+						''pa=pa+((p & $ff000000) Shr 24)
+						pr=pr+((p & $00ff0000) Shr 16)
+						pg=pg+((p & $0000ff00) Shr 8)
+						pb=pb+((p & $000000ff) )
+					endif
+				Next
+				
+				If div<>0 Then pix.SetPixel(x,y,pr/div, pg/div,pb/div, ((p & $ff000000) Shr 24))
+				
+			Next
+		Next
+		
+		'Local pix2:TPixmap = CreatePixmap(width, height)
+		
+		''y-axis
+		For x=0 To width-1
+			For y=0 To height-1
+				Local p:Int =0, div=0, pa:Int=0, pr:Int=0, pg:Int=0, pb:Int=0, p2:Int=0
+				For Local j:Int=-val To val
+					If (y+j)>=0 And (y+j)<height
+						p=GetPixel(x,y+j); div+=1
+						''pa=pa+((p & $ff000000) Shr 24)
+						pr=pr+((p & $00ff0000) Shr 16)
+						pg=pg+((p & $0000ff00) Shr 8)
+						pb=pb+((p & $000000ff) )
+					endif
+				Next
+				p2=pix.GetPixel(x,y)
+				If div<>0 Then pix.SetPixel(x,y,(pr/div+((p2 & $00ff0000) Shr 16))/2, 
+						(pg/div+((p2 & $0000ff00) Shr 8))/2,
+						(pb/div+((p2 & $000000ff) ))/2, (p & $ff000000) Shr 24 )'((p & $ff000000) Shr 24))
+				''If div<>0 Then pix.SetPixel(x,y,pr/div, pg/div, pb/div, ((p & $ff000000) Shr 24))				
+				
+			Next
+		Next
+		
+		Return pix
+	End
+	
 End
 
 
@@ -242,6 +318,24 @@ Class TPixmapPreloader
 		
 	End
 
+	Method RemoveFromStack:Void(file$)
+	
+		If Not finish_stack.IsEmpty
+			
+			Local j:Int=0
+			For Local i:PixmapStack = Eachin finish_stack
+			
+				j=j+1
+				If i.file = file Or i.new_file = file
+					finish_stack.Remove(j)
+					Exit
+				Endif
+
+			Next
+			
+		Endif
+		
+	end
 	
 End
 

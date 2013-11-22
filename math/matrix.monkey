@@ -211,7 +211,6 @@ Public
 
 	Method Multiply:Void(mat:Matrix)
 		'' 3x4 multiply
-		''consider Strassen's algorithm?
 	
 		Local m00# = grid[0][0]*mat.grid[0][0] + grid[1][0]*mat.grid[0][1] + grid[2][0]*mat.grid[0][2] + grid[3][0]*mat.grid[0][3]
 		Local m01# = grid[0][1]*mat.grid[0][0] + grid[1][1]*mat.grid[0][1] + grid[2][1]*mat.grid[0][2] + grid[3][1]*mat.grid[0][3]
@@ -251,7 +250,6 @@ Public
 
 	Method Multiply4:Void(mat:Matrix)
 		'' 4x4 multiply
-		''consider Strassen's algorithm?
 	
 		Local m00# = grid[0][0]*mat.grid[0][0] + grid[1][0]*mat.grid[0][1] + grid[2][0]*mat.grid[0][2] + grid[3][0]*mat.grid[0][3]
 		Local m01# = grid[0][1]*mat.grid[0][0] + grid[1][1]*mat.grid[0][1] + grid[2][1]*mat.grid[0][2] + grid[3][1]*mat.grid[0][3]

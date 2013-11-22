@@ -17,7 +17,7 @@ Import minib3d.monkeyutility
 
 Const TEXFLAG_COLOR% = 1
 Const TEXFLAG_ALPHA% = 2
-Const TEXFLAG_MASKED% = 4
+Const TEXFLAG_MASKED% = 4 ''deprecated, use ALPHA_TESTING
 Const TEXFLAG_ALPHA_TESTING% = 4
 Const TEXFLAG_MIPMAP% = 8
 Const TEXFLAG_CLAMPU% = 16
@@ -27,6 +27,7 @@ Const TEXFLAG_CUBEMAP% = 128
 Const TEXFLAG_PRESERVE_SIZE% = 256
 Const TEXFLAG_512% = 512  ' force high colors?
 Const TEXFLAG_NORMALMAP% = 1024
+
 
 
 'Interface TextureObjectBase
@@ -57,6 +58,7 @@ Class TTexture
 	Field blend:Int=2
 	Field u_scale#=1.0,v_scale#=1.0,u_pos#,v_pos#,angle#
 	Field flags:Int, bind_flags:Int = -1
+	Field freeMemoryAfterBind:Bool = false
 	Global default_texflags:Int=9
 	
 	Field tex_smooth:Bool =True ''smooths texture via graphics driver
@@ -97,9 +99,22 @@ Class TTexture
 	Method FreeTexture_()
 		'TRender.render.DeleteTexture(gltex)
 		tex_link.Remove()
-		pixmap=Null
+		If pixmap
+		
+			''remove all bindings
+			pixmap.DecBind()
+			If pixmap.GetBindCount()=0
+				TPixmap.preloader.RemoveFromStack(file) ''remove from preloader
+				pixmap.FreePixmap()
+			Endif
+			
+		Endif
 		'cube_pixmap=New TPixmap[7]
 		gltex[0]=0
+	End
+	
+	Method FreeTextureMemory:Void()
+		freeMemoryAfterBind = true
 	End
 	
 	'' Copy:TTexture()
@@ -214,6 +229,8 @@ Class TTexture
 		tex.FilterFlags()
 		If flags>-1 Then tex.flags = flags ''overwrites filterflags
 		
+		''check for no pixmap, but file exists, reload file
+		If (pixmap = Null) Return tex
 		tex.pixmap = pixmap
 		If tex.pixmap.height = 0 Then Return tex
 
@@ -621,7 +638,7 @@ Class TTexture
 	
 	Method BackBufferToTex(mipmap_no=0,frame=0)
 	
-		TRender.render.BackBufferToTex(mipmap,frame)
+		TRender.render.BackBufferToTex(Self, mipmap,frame)
 
 	End 
 		
@@ -743,23 +760,21 @@ Class TTexture
 		For Local i:=0 To arr.Length()-1
 			Local tex:TTexture = arr[i] 
 			
-			If tex.pixmap.height = 0 Then Continue
+			If Not tex.pixmap Then Continue
 			
 			''** only doing first frame for now until anim_frames get sorted out
 			'For local i:=0 To tex.no_frames-1
 
-				TRender.render.DeleteTexture(tex)				
-				
-				If tex.is_font
-					'TTexture.ResizeNoSmooth()
-					TTexture.ClearTextureFilters() ''no mip map
-				Endif
-				
-				LoadTexture(tex.pixmap, tex.flags, tex) ''forcenew
-				
-				If tex.is_font
-					TTexture.RestoreTextureFilters()
-					'TTexture.ResizeSmooth()
+				TRender.render.DeleteTexture(tex) ''unbind, keep textures
+
+				If (tex.pixmap<>Null) 
+					LoadTexture(tex.pixmap, tex.flags, tex) ''rebind
+				Elseif (tex.file<>"")
+					''reload pixmap if it exists
+#If CONFIG="debug"
+					Print "..Reload texture "+tex.file
+#endif
+					LoadTexture(tex.file, tex.flags, tex)
 				Endif
 			'Next
 			

@@ -78,7 +78,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		'p.FromDataBuffer( preloader.GetDataBuffer(f) , info )
 		preloader.GetPixmapPreLoad(p, f)
 		
-		p.format = PF_RGBA8888
+		p.format = RGBA8888
 		
 		If p.height Then p.pitch = GetBufferLength(p.pixels)/4.0 / p.height
 		
@@ -89,7 +89,7 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 	End
 	
 
-	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=PF_RGBA8888)
+	Method CreatePixmap:TPixmap(w:Int, h:Int, format:Int=RGBA8888)
 		
 		Local p:TPixmapGL = New TPixmapGL
 		
@@ -311,6 +311,12 @@ Class TPixmapGL Extends TPixmap Implements IPixmapManager
 		'Return buf.PeekString(0,4) ''png
 		
 	'End
+	
+	
+	Method FreePixmap:Void()
+		pixels.Discard()
+	End
+	
 End
 
 
@@ -387,6 +393,7 @@ Class PreloadGL Implements IPreloadManager
 #If TARGET<>"ios"
 				f = FixDataPath(f)
 #Endif
+
 				p.pixels = LoadImageData(f, info)
 				p.width = info[0]
 				p.height = info[1]

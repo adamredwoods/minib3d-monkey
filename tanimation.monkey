@@ -23,15 +23,7 @@ End
 
 Class TAnimation
 	
-	
 
-	'#If TARGET="xna"
-	
-		'Const DONT_USE_VERT_POINTER:Int = True
-	'#Else
-		'Const DONT_USE_VERT_POINTER:Int = False
-	
-	'#Endif
 	
 	Private
 	
@@ -275,7 +267,7 @@ Class TAnimation
 		Local anim_surf:TSurface
 		For Local surf:TSurface=Eachin mesh.surf_list
 
-			anim_surf = mesh.anim_surf[surf.surf_id]		
+			anim_surf = mesh.GetAnimSurface(surf)		
 			If Not anim_surf Then Continue
 			
 			has_animation = True
@@ -289,7 +281,8 @@ Class TAnimation
 			
 				'If DONT_USE_VERT_POINTER = False
 				
-					anim_surf.anim_frame = frame
+					'anim_surf.anim_frame = frame
+					mesh.anim_surf_frame[surf.surf_id] = frame '' move frame tracking to mesh, to reuse vertex surfaces
 					anim_surf.reset_vbo = anim_surf.reset_vbo|1
 					
 				'Else
@@ -606,6 +599,8 @@ Class TAnimation
 				
 				If Not org_surf Then Continue
 				
+				org_surf.reset_vbo=-1
+				
 				'org_surf.vert_anim[i] = New TVertexAnim ''new set of anim keys per surface			
 				org_surf.vert_anim[i] = TVertexAnim.Create(surf.no_verts*3)
 				
@@ -615,14 +610,9 @@ Class TAnimation
 					
 					Local j3:Int = j*3
 											
-					'surf.vert_anim[i].vert_buffer.Poke(j3+0, mesh.anim_surf[sid].vert_coords.Peek(j3+0))
-					'surf.vert_anim[i].vert_buffer.Poke(j3+1, mesh.anim_surf[sid].vert_coords.Peek(j3+1))
-					'surf.vert_anim[i].vert_buffer.Poke(j3+2, mesh.anim_surf[sid].vert_coords.Peek(j3+2))
 					org_surf.vert_data.GetVertCoords(ov, j)
 					org_surf.vert_anim[i].PokeVertCoords(j,ov.x, ov.y, ov.z)
-					'surf.vert_anim[i].vert_buffer[j3+0]= mesh.anim_surf[sid].vert_data.VertexX(j)
-					'surf.vert_anim[i].vert_buffer[j3+1]= mesh.anim_surf[sid].vert_data.VertexY(j)
-					'surf.vert_anim[i].vert_buffer[j3+2]= mesh.anim_surf[sid].vert_data.VertexZ(j)
+					
 					
 				Next ''all verts
 
@@ -637,7 +627,7 @@ Class TAnimation
 		For Local e:TEntity = Eachin TBone.GetBaseBones(mesh) 'mesh.child_list
 			If e Then e.FreeEntity()
 		Next
-		
+		mesh.bones=mesh.bones.Resize(0)
 		
 		''set new anim=2 number for vert animation
 		mesh.ActivateVertexAnim()

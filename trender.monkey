@@ -398,6 +398,7 @@ Class TRender
 				' Perform frustum cull
 				
 				Local inview:Float =cam.EntityInFrustum(mesh)
+				mesh.distance_nearplane = inview
 				
 'Print "// mesh "+mesh.classname+" "+inview	
 'Print "// center "+mesh.center_x+" "+mesh.center_y+" "+mesh.center_z
@@ -420,7 +421,7 @@ Class TRender
 					
 						''alpha entities are drawn last, sorted, without depth test
 						
-						mesh.alpha_order=cam.EntityDistanceSquared(mesh)
+						mesh.alpha_order = mesh.distance_nearplane
 						render_alpha_list.AddLast(mesh)
 
 					Else
@@ -480,26 +481,7 @@ Class TRender
 	
 	Method ReloadSurfaces:Int()
 		
-		Local mesh:TMesh
-		
-		For Local ent:TEntity = Eachin TMesh.entity_list
-		
-			mesh = TMesh(ent)
-			If mesh
-			
-				For Local surf:TSurface=Eachin mesh.surf_list
-					
-					surf.vbo_id[0]=0
-					surf.reset_vbo = -1
-					UpdateVBO(surf)
-				
-				Next
-				
-			Endif
-		
-		Next
-		
-		Return 1
+		Error "**Reload not implemented"
 	End
 	
 	''
@@ -515,9 +497,18 @@ Class TRender
 			Else
 				TRender.render.BindTexture(tex,tex.bind_flags)
 			Endif
-			
+	
 			tex.bind_flags = -1
 		Next
+		
+		'' allow all the textures to bind, then free memory
+		For Local tex:TTexture = Eachin TTexture.tex_bind_stack
+			If tex.freeMemoryAfterBind
+				tex.pixmap.FreePixmap()
+				If DEBUG Then Print "..freeTextureMemory:"+tex.file
+			Endif
+		Next
+		
 		TTexture.tex_bind_stack.Clear()
 		
 	End
@@ -553,7 +544,8 @@ Class EffectState
 	Field use_depth_test:int
 	Field use_depth_write:int
 	Field use_backface_culling:Int
-	Field use_alpha_test:int
+	Field use_alpha_test:Int
+	Field use_perpixellighting:int
 	
 	Field ambient#[]=[1.0,1.0,1.0,1.0]
 	Field no_mat#[]=[0.0,0.0,0.0,0.0]
@@ -589,6 +581,7 @@ Class EffectState
 		red=e.red ; green=e.green ; blue=e.blue ; alpha=e.alpha
 		shine=e.shine ; blend=e.blend ; fx=e.fx
 		use_alpha_test = e.use_alpha_test
+		use_perpixellighting = e.use_perpixellighting
 		
 		num_tex = e.num_tex
 	End
@@ -610,6 +603,7 @@ Class EffectState
 		use_depth_write = -1
 		use_backface_culling= -1
 		use_alpha_test=0
+		use_perpixellighting = 0
 		red=-1.0 ; green=-1.0 ; blue=-1.0 ; alpha=-1.0
 		shine=-1.0  ; blend=99999 ; fx=99999
 		
@@ -693,7 +687,7 @@ Class EffectState
 			use_fog=Int(cam.fog_mode >0)
 			
 			' fx flag 1 - full bright
-			If fx&1
+			If fx& FXFLAG_FULLBRIGHT
 				ambient_red  =0.0; ambient_green=0.0; ambient_blue =0.0
 				use_full_bright=1
 			Else
@@ -705,23 +699,23 @@ Class EffectState
 
 
 			' fx flag 2 - vertex colors ***todo*** disable all lights?
-			If fx&2
+			If fx& FXFLAG_VERTEXCOLORS
 				use_vertex_colors = 1	
 				red=1.0; green=1.0; blue=1.0; alpha=1.0
 			Endif
 			
 			' fx flag 4 - flatshaded
-			If fx&4
+			If fx& FXFLAG_FLATSHADE
 				use_flatshade=1
 			Endif
 
 			' fx flag 8 - disable fog
-			If fx&8
+			If fx& FXFLAG_DISABLE_FOG
 				use_fog=0
 			Endif
 			
 			' fx flag 16 - disable backface culling
-			If fx&16
+			If fx& FXFLAG_DISABLE_CULLING
 				use_backface_culling = 0
 				'driver.SetCulling(DRIVER_NONE)
 			Else
@@ -752,6 +746,10 @@ Class EffectState
 				use_alpha_test = 1
 				use_depth_test = 1
 				use_depth_write = 1
+			Endif
+		
+			If (fx& FXFLAG_PERPIXEL_LIGHTING )
+				use_perpixellighting = 1
 			Endif
 		
 			' material color + specular

@@ -266,6 +266,10 @@ Class TPixmapXNA Extends TPixmap Implements IPixmapManager
 
 	End
 	
+	Method FreePixmap:Void()
+		pixels = Null
+	End
+	
 		
 End
 

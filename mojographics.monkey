@@ -488,8 +488,15 @@ Public
 	
 End
 
+
 Function Transform2D:Float[](mat:Matrix, x#, y#, z#)
-	Return [ mat.grid[0][0]*x + mat.grid[1][0]*y + mat.grid[3][0], mat.grid[0][1]*x + mat.grid[1][1]*y + mat.grid[3][1], z ]
+	
+	Local t2d:Float[3]
+	t2d[0] = mat.grid[0][0]*x + mat.grid[1][0]*y + mat.grid[3][0]
+	t2d[1] = mat.grid[0][1]*x + mat.grid[1][1]*y + mat.grid[3][1]
+	t2d[2] = z
+	Return t2d
+	
 End
 
 

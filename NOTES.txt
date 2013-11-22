@@ -1,9 +1,28 @@
 ****************************************
+minib3d v0.42
+
+- context loss recovery for mobile: TShader.ResetShader(), TShader.FreeShader()
+- bug fix with AlignToVector()
+- TTexture.FreeTextureMemory() -- frees pixmap memory after binding
+- TTexture pixmap reference counting for TTexture.FreeTexture()
+- TPixmap.Free() -- mostly internal use
+- Mipmapping on textures: now turned on (doh!)
+- Added Sammy's TBatchSprite(texture,flags,batch_id) for existing textures
+- EntityFX FXFLAG_PERPIXEL_LIGHTING. Only used in OpenGLES20 (so far). needed for Normal mapped textures.
+- fixed a strange shader bug with Intel HD
+- fixed sphere-sphere collision normal error
+- vbo/shader last_state update errors
+- Added Sammy's lightweight vertex animation handler. now consumes less memory. had to move anim_surf_frames to mesh instead of the anim_surface.
+- collision setup defaults create tight EntityRadius sphere, based on mesh
+- even more collision optimizations
+
+
+****************************************
 minib3d v0.41
 
 - bug fixes:
 - FreeEntity() now works
-- proper ALPHA_TESTING for textures (kept retro blitz3d "masked textures" although teminology isn't correct)
+- proper ALPHA_TESTING for textures (kept retro blitz3d "masked textures" although terminology isn't correct)
 - Flash target: alpha testing, better point and directional lights, texture bug fix
 - XNA: multiple cameras fix
 

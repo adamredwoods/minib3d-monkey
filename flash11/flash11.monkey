@@ -289,20 +289,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 				
 			Endif
 			
-			''batch optimizations (sprites/meshes)
-			Local skip_state:Bool = False
-			If last_sprite = surf
-				skip_state = True
-			Else
-				last_sprite = surf
-			Endif
 			
-					
-'Print "***classname: "+ent.classname+" : "+name+" cam:"+cam.name		
-'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
-'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_state)
-'Print "   mesh.anim:"+mesh.anim
-'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
 		
 
 			'If vbo_enabled
@@ -324,6 +311,7 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 				
 				' get anim_surf
 				anim_surf2 = mesh.GetAnimSurface(surf) ''assign anim surface
+				mesh.UpdateVertexAnimFrame(anim_surf2, surf)
 				
 				If anim_surf2
 				
@@ -362,6 +350,22 @@ Class FlashMiniB3D Extends TRender Implements IShader2D
 			shader.Update()
 		
 'Print ent.classname+" "+Int(effect.depth_test)+" "+Int(effect.depth_write)+" "+effect.blend	
+
+
+			''batch optimizations (sprites/meshes)
+			Local skip_state:Bool = False
+			If last_sprite = surf
+				skip_state = True
+			Else
+				last_sprite = surf
+			Endif
+			
+					
+'Print "***classname: "+ent.classname+" : "+name+" cam:"+cam.name		
+'Print "   alphaloop "+alphaloop+" "+" tribuffersize:"+surf.tris.Length()+", tris:"+surf.no_tris+", verts:"+surf.no_verts
+'Print "   surfpass "+ccc+":"+alpha_pass+" vbo:"+surf.vbo_id[0]+" dynvbo:"+Int(surf.vbo_dyn)+" skip:"+Int(skip_state)
+'Print "   mesh.anim:"+mesh.anim
+'Print "   vboids:"+surf.vbo_id[0]+" "+surf.vbo_id[1]+" "+surf.vbo_id[2]+" "+surf.vbo_id[3]+" "+surf.vbo_id[4]+" "+surf.vbo_id[5]+" "
 
 					
 			If skip_state=false

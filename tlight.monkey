@@ -157,6 +157,23 @@ Class TLight Extends TEntity
 	End
 
 	
+	#rem
+	Method LightLock( ent:TEntity=Null )
+		
+		If ent
+			If light_link Then light_list.Remove()
+			light_link = Null
+			
+		Else
+			
+			light_link = light_list.AddLast(Self)
+			
+		Endif
+		
+	End
+	#end
+	
+	
 	Method Update(cam:TCamera)
 
 		''deprecated to trender.UpdateLight(cam,light)

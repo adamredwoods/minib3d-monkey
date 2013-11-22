@@ -160,12 +160,34 @@ Class TShaderGLSL Extends TShader
 	
 	Public
 	
-	
+
 	Method New()
 		
 		
 	End
+
+	Method ResetShader:int()
+		
+		Error "** Must extend ResetShader for context loss:"+name
+		Return 0
+		
+	End
 	
+	Method FreeShader:Int()
+	
+		glDeleteShader(vertex_id)
+		glDeleteShader(fragment_id)
+		glDeleteProgram(shader_id)
+		
+		vertex_id=0
+		fragment_id=0
+		shader_id=0
+		
+		If TRender.DEBUG Then Print "..free shader:"+name
+		
+		Return 1
+		
+	ENd	
 	
 	Method Copy:TBrush()
 		
@@ -261,9 +283,6 @@ Class TShaderGLSL Extends TShader
 		
 		If result[0] <> GL_TRUE
 			Print "**Shader Linking Error "
-			
-			log = glGetProgramInfoLog(shader_id)
-			If TRender.DEBUG Then Print log
 			
 			glDeleteShader(vertex_id)
 			glDeleteShader(fragment_id)

@@ -309,8 +309,6 @@ Public
 		
 	Method ExtractFrustum()
 
-		'Local proj#[] = proj_mat.ToArray()
-		'Local modl#[] = mod_mat.ToArray()
 		Local clip#[] = projview_mat.ToArray() '[16]"
 		Local t#
 
@@ -458,10 +456,10 @@ Public
 
 		'mod_mat = LoadIndentity()
 		mod_mat = mat.Inverse()
-		If eyedx Or eyedy Then mod_mat.Translate(-eyedx,-eyedy,0.0)
+		If eyedx Or eyedy Then mod_mat.Translate(-eyedx,-eyedy,0.0) ''may not work if the matrix is already inversed
 		
 		view_mat = mod_mat
-		projview_mat.Overwrite(proj_mat ) 'Copy()
+		projview_mat.Overwrite(proj_mat )
 		projview_mat.Multiply4(mod_mat)	
 
 		If cam Then ExtractFrustum() ''allows for skipping of frustum (used in camera projection)
