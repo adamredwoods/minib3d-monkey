@@ -15,7 +15,7 @@ minib3d v0.42
 - Added Sammy's lightweight vertex animation handler. now consumes less memory. had to move anim_surf_frames to mesh instead of the anim_surface.
 - collision setup defaults create tight EntityRadius sphere, based on mesh
 - even more collision optimizations
-
+- Added GetCulled:Bool() for testing if the mesh is seen by the camera (true).
 
 ****************************************
 minib3d v0.41
