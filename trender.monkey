@@ -134,10 +134,14 @@ Class TRender
 		Local first:Int
 		Local last:Int
 
-
-		For Local mesh:TEntity=Eachin TEntity.entity_list
+		''-- this touches every entity, using for cull tests
 		
+		For Local mesh:TEntity=Eachin TEntity.entity_list
+			
 			If mesh.anim And mesh.anim_update=True
+			
+				Local culltest:Bool =TMesh(mesh).GetCulled()
+
 			
 				first=mesh.anim_seqs_first[mesh.anim_seq]
 				last=mesh.anim_seqs_last[mesh.anim_seq]
@@ -157,11 +161,11 @@ Class TRender
 					r=r/mesh.anim_trans
 					mesh.anim_time=mesh.anim_time+r
 									
-					If mesh.anim = 1
+					If mesh.anim = 1 And culltest = false
 					
 						TAnimation.AnimateMesh2(mesh,mesh.anim_time,first,last)
 						
-					Elseif mesh.anim = 2
+					Elseif mesh.anim = 2 And culltest= false
 					
 						TAnimation.AnimateVertex(mesh,mesh.anim_time,first,last)
 						
@@ -171,11 +175,11 @@ Class TRender
 			
 				Else
 				
-					If mesh.anim = 1
+					If mesh.anim = 1 And culltest= false
 					
 						TAnimation.AnimateMesh(mesh,mesh.anim_time,first,last)
 						
-					Elseif mesh.anim = 2
+					Elseif mesh.anim = 2 And culltest= false
 					
 						TAnimation.AnimateVertex(mesh,mesh.anim_time,first,last)
 						
@@ -183,7 +187,7 @@ Class TRender
 						
 						TBone.UpdateBoneChildren( mesh)
 						
-						TAnimation.VertexDeform(TMesh(mesh))
+						If culltest= false Then TAnimation.VertexDeform(TMesh(mesh))
 						
 					Endif
 					
@@ -230,7 +234,10 @@ Class TRender
 				Endif
 							
 			Endif
-		
+			
+			'' Update mesh culled status
+			If TMesh(mesh) Then TMesh(mesh).culled = True
+			
 		Next
 
 	End 
@@ -383,8 +390,6 @@ Class TRender
 			
 			If mesh
 				
-				mesh.culled = true
-				
 				'If mesh.parent_hidden=True Or mesh.hidden=True Or mesh.brush.alpha=0.0 Then Continue
 				If mesh.Hidden()=True Or mesh.brush.alpha=0.0 Then Continue
 				
@@ -434,7 +439,7 @@ Class TRender
 					Endif
 					
 					wireframe = wireFrameIsEnabled
-
+					
 				Endif
 			Endif
 					

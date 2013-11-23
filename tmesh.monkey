@@ -1950,7 +1950,8 @@ Class TMesh Extends TEntity
 		
 	End
 	
-	
+	''
+	''- internal use to get the animating surface data
 	Method GetAnimSurface:TSurface(surf:TSurface)
 	
 		Return anim_surf[surf.surf_id]
@@ -2139,13 +2140,18 @@ Class TMesh Extends TEntity
 		col_tree.DebugSphereTree(Self,alpha)
 	End
 	
+	''-- is mesh offscreen?
 	''Needs to render at least ONCE
 	Method GetCulled:Bool()
 		Return culled
 	End
-
 	
-	''update the vertex anim surface to correct frame
+	''manually set cull status, if UpdateWorld is not used
+	Method SetCulled:void(n:Bool=False)
+		culled=n
+	End
+	
+	''-- update the vertex anim surface to correct frame. used to update vertex animation
 	Method UpdateVertexAnimFrame:Void(surf:TSurface, orig_surf:TSurface)
 		
 		If Not surf Then return
