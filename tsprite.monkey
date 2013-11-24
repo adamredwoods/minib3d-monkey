@@ -147,24 +147,25 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 	End 
 	
 	
-	Method RotateSprite(ang#)
+	Method RotateSprite:TEntity(ang#)
 	
 		angle=ang
-	
+		Return self
 	End 
 	
-	Method ScaleSprite(s_x#,s_y#)
+	Method ScaleSprite:TEntity(s_x#,s_y#)
 	
 		scale_x=s_x
 		scale_y=s_y
-	
+		Return self
 	End
 	
 	'' PositionSprite:void(float,float)
 	'' use 0.0 to 1.0, its the uv controls
-	Method PositionSprite:Void(x#, y#)
+	Method PositionSprite:TEntity(x#, y#)
 		brush.tex[0].u_pos=x
 		brush.tex[0].v_pos=y
+		Return self
 	End
 	
 	Method ScaleEntity:TEntity(x#, y#, z#, glob:Int=0)
@@ -172,11 +173,11 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 		Return self
 	End
 	
-	Method HandleSprite(h_x#,h_y#)
+	Method HandleSprite:TEntity(h_x#,h_y#)
 	
 		handle_x=h_x
 		handle_y=h_y
-	
+		Return self
 	End 
 	
 	Method SpriteViewMode(mode)
@@ -508,8 +509,9 @@ Class TBatchSprite Extends TSprite
 			Return self
 		End
 		
-		Method EntityFX(fx%)
+		Method EntityFX:TEntity(fx%) Property
 			mainsprite[batch_id].EntityFX(fx)
+			Return self
 		End
 		
 		Function CreateBatchMesh:TBatchSpriteMesh( batchid:Int )
