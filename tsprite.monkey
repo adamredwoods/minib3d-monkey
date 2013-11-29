@@ -148,16 +148,22 @@ Class TSprite Extends TMesh Implements IRenderUpdate
 	
 	
 	Method RotateSprite:TEntity(ang#)
-	
 		angle=ang
 		Return self
 	End 
 	
 	Method ScaleSprite:TEntity(s_x#,s_y#)
-	
 		scale_x=s_x
 		scale_y=s_y
-		Return self
+		
+		''handle frustum culling sphere
+		If parent
+			gsx=s_x*parent.gsx; gsy=s_y*parent.gsy; gsz=gsx
+		Else
+			gsx=s_x; gsy=s_y; gsz=gsx
+		Endif
+		
+		Return Self
 	End
 	
 	'' PositionSprite:void(float,float)
