@@ -317,6 +317,7 @@ Class TMesh Extends TEntity
 	Method RemoveFromRenderList:Void()
 		
 		entity_link.Remove()
+		entity_link=null
 		
 	End
 
@@ -1103,7 +1104,7 @@ Class TMesh Extends TEntity
 				
 					surf2.brush=surf1.brush.Copy()
 					
-				Elseif brush<>null
+				Elseif brush<>Null
 					
 					surf2.brush = brush.Copy()
 					
