@@ -39,6 +39,16 @@ Const ANIMATE_ONCE%=3
 Const ANIMATE_BONES%=4
 
 
+Const PHYSICS_NONE%=0
+Const PHYSICS_DEFAULT%=1 ''set to global_gravity, physics_slide, global_friction
+Const PHYSICS_GRAVITY%=2
+Const PHYSICS_BOUNCE%=4
+Const PHYSICS_STOP%=8
+Const PHYSICS_SLIDE%=16
+Const PHYSICS_SLIDEXZ%=32
+Const PHYSICS_AIR_FRICTION%=64
+
+
 Class TEntity
 	
 	Const inverse_255:Float = 1.0/255.0
@@ -292,39 +302,23 @@ Class TEntity
 		
 		''negate z for opengl
 		z=-z
-		
-		
 
-		' conv glob to local. x/y/z always local to parent or global if no parent
+		' conv movements to local. x/y/z always local to parent or global if no parent
 
 		If glob=True And parent<>Null
 			
-			'px = x; py= y; pz= z
-			'UpdateMatTrans(True)
-			'If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
-			'Return
-			
-			
 			temp_mat=parent.mat.Copy().Inverse()
-			'
-			'z=-z
-			
-			'x=(x+parent.mat.grid[3][0])
-			'y=(y+parent.mat.grid[3][1])
-			'z=(z+parent.mat.grid[3][2])
 			
 			Local psx#=parent.gsx
 			Local psy#=parent.gsy
 			Local psz#=parent.gsz
-			temp_mat.InverseScale(psx,psy,psz)
-			
-			'temp_mat.Inverse() ''only 3x3 inverse
+			'temp_mat.InverseScale(psx,psy,psz) ''remove scaling
 			
 			Local pos:Float[] = temp_mat.TransformPoint(x,y,z) '-z
 			
-			x= pos[0]
-			y= pos[1]
-			z= pos[2]
+			x= pos[0]/(psx*psx)
+			y= pos[1]/(psy*psy)
+			z= pos[2]/(psz*psz)
 		Endif
 
 		'' treat bones differently
@@ -352,57 +346,36 @@ Class TEntity
 		
 	Method MoveEntity:TEntity(mx#,my#,mz#)
 		
-		'temp_mat.Overwrite(mat)
-		'temp_mat.grid[3][0]=0.0; temp_mat.grid[3][1]=0.0;temp_mat.grid[3][2]=0.0
-		Local n:Float[] = mat.TransformPoint(mx,my,-mz)
-		PositionEntity(n[0], n[1], -n[2], True) ''-pz because we change it before storing it
+		mz=-mz
+		
+		Local n:Float[] '= mat.TransformPoint(mx/gsx,my/gsy,-mz/gsz) ''transform adds back in current global position
+		
+		n = mat.TransformPoint(mx/gsx,my/gsy,mz/gsz) ''transform adds back in current global position
+		PositionEntity(n[0], n[1], -n[2], True) ''-pz because we change it again before storing it
+
 		Return Self
 		
 	End 
 
 	Method TranslateEntity:TEntity(tx#,ty#,tz#,glob=False)
-		
-		'Local tx#=x
-		'Local ty#=y
+
 		tz=-tz
 		
-		' conv glob to local. x/y/z always local to parent or global if no parent
+		' conv movements to local. x/y/z always local to parent or global if no parent
 		If glob=True And parent<>Null
-						
-			'Local temp_mat:Matrix=New Matrix
-			temp_mat = parent.mat.Copy().Inverse()
-			'temp_mat.LoadIdentity()
-			'temp_mat.Rotate(-ax,-ay,-az)
-			'temp_mat.Translate(tx,ty,tz)
 
-			tx=temp_mat.grid[3][0]
-			ty=temp_mat.grid[3][1]
-			tz=temp_mat.grid[3][2]
+			temp_mat = parent.mat.Copy().Inverse()
+			temp_mat.grid[3][0]=0.0; temp_mat.grid[3][1]=0.0; temp_mat.grid[3][2]=0.0;
+
+			Local n:Float[]=temp_mat.TransformPoint(tx,ty,tz)
+
+			tx=n[0]/(parent.gsx*parent.gsx)
+			ty=n[1]/(parent.gsy*parent.gsy)
+			tz=n[2]/(parent.gsz*parent.gsz)
 			
 		Endif
 		
-		px=px+tx
-		py=py+ty
-		pz=pz+tz
-		
-		
-		'' treat bones differently
-		If TBone(Self) <> Null Then TBone(Self).PositionBone(px,py,pz, glob); Return self
-		
-
-		If parent<>Null
-			''global
-			'mat.Overwrite(parent.mat)
-			'UpdateMat()
-
-			UpdateMatTrans()
-		Else
-			''local
-			'UpdateMat(True)
-			UpdateMatTrans(True)
-		Endif
-		
-		If child_list.IsEmpty()<>True Then UpdateChildren(Self,1)
+		PositionEntity( px+tx,py+ty,-(pz+tz), False) ''glob=false, already handled global
 		
 		Return self
 	End 
@@ -2384,7 +2357,22 @@ Class EntityList<T> Extends List<T>
 		
 	End
 	
-
+	Method EntityPhysics:TEntity( physics_type:Int=PHYSICS_DEFAULT, value:Float )
+		
+		
+		Return self
+	End
+	
+	Method EntityImpulse:TEntity( x#, y#, z#)
+		
+		Return self
+	End
+	
+	Method EntityFriction:TEntity( fc:Float )
+	
+		Return Self
+	End
+	
 	
 End
 
