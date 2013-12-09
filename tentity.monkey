@@ -2317,6 +2317,23 @@ Class TEntity
 		Return v.Normalize()
 	End
 	
+	
+	Method EntityPhysics:TEntity( physics_type:Int=PHYSICS_DEFAULT, value:Float )
+		
+		
+		Return self
+	End
+	
+	Method EntityImpulse:TEntity( x#, y#, z#)
+		
+		Return self
+	End
+	
+	Method EntityFriction:TEntity( fc:Float )
+	
+		Return Self
+	End
+	
 End
 
 
@@ -2355,22 +2372,6 @@ Class EntityList<T> Extends List<T>
 		If lh.order > rh.order Then Return -1
 		Return lh.order < rh.order
 		
-	End
-	
-	Method EntityPhysics:TEntity( physics_type:Int=PHYSICS_DEFAULT, value:Float )
-		
-		
-		Return self
-	End
-	
-	Method EntityImpulse:TEntity( x#, y#, z#)
-		
-		Return self
-	End
-	
-	Method EntityFriction:TEntity( fc:Float )
-	
-		Return Self
 	End
 	
 	
