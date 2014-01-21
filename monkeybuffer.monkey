@@ -535,7 +535,7 @@ Class BufferReader
 	
 		Local br:BufferReader = New BufferReader
 		br.data = d
-		br.size = GetBufferLength(d)-1
+		br.size = GetBufferLength(d)
 		br.pos = 0
 		Return br
 		

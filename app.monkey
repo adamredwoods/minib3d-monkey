@@ -1,5 +1,5 @@
 
-#BINARY_FILES = "*.bin|*.dat|*.obj|*.b3d|*.mtl"
+#BINARY_FILES += "|*.obj|*.b3d|*.mtl"
 
 '' allows opengles20 on GLFW
 '#OPENGL_GLES20_ENABLED=0 ''pre v75d
@@ -86,10 +86,15 @@ Class MiniB3DApp Extends App
 		Endif
 		
 		If _resumed
+		
+'' only reset shaders, textures on mobile
+'' currently no way to detect lost context		
+#If TARGET="android" Or TARGET="ios" Or TARGET="winrt"
 			Graphics3DInit ()
 			ReloadAllSurfaces ()
 			ReloadAllTextures ()
 			TShader.ResetDefaultShader()
+#endif
 			_resumed = False
 		Endif
 		
