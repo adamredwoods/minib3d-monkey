@@ -26,7 +26,7 @@ Extern
 	Function _CreateImageData:FlashPixmap(w:Int, h:Int) = "TPixmap.CreatePixmap"
 	
 	Function _ReadPixel:Int(p:FlashPixmap, x:Int, y:Int) = "TPixmap.ReadPixel"
-	Function _WritePixel:FlashPixmap(p:FlashPixmap, x:Int, y:Int, r:Int, g:Int, b:Int, a:Int) = "TPixmap.WritePixel"
+	Function _WritePixel:FlashPixmap(p:FlashPixmap, x:Int, y:Int, rgb:int) = "TPixmap.WritePixel"
 	
 	Function _ResizePixmap:FlashPixmap(p:FlashPixmap, w:Int, h:Int, smooth:Bool=True)= "TPixmap.ResizePixmap"
 	
