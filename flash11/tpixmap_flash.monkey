@@ -26,7 +26,7 @@ Extern
 	Function _CreateImageData:FlashPixmap(w:Int, h:Int) = "TPixmap.CreatePixmap"
 	
 	Function _ReadPixel:Int(p:FlashPixmap, x:Int, y:Int) = "TPixmap.ReadPixel"
-	Function _WritePixel:FlashPixmap(p:FlashPixmap, x:Int, y:Int, rgb:int) = "TPixmap.WritePixel"
+	Function _WritePixel:void(p:FlashPixmap, x:Int, y:Int, rgb:int) = "TPixmap.WritePixel"
 	
 	Function _ResizePixmap:FlashPixmap(p:FlashPixmap, w:Int, h:Int, smooth:Bool=True)= "TPixmap.ResizePixmap"
 	
@@ -136,7 +136,7 @@ Class TPixmapFlash Extends TPixmap Implements IPixmapManager
 	
 	Method SetPixel:Void(x:Int,y:Int,r:Int,g:Int,b:Int,a:Int=255)
 
-		pixels = _WritePixel(pixels,x,y, (a Shl 24)|(r Shl 16)|(b Shl 8)|g )
+		_WritePixel(pixels,x,y, (a Shl 24)|(r Shl 16)|(b Shl 8)|g )
 
 	End
 	
