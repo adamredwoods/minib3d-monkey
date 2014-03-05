@@ -2,10 +2,15 @@ Import minib3d
 
 Alias LoadString = app.LoadString
 
+''--NOTES:
 '' - obj does not need to be triangles, can handle polys
 '' large polys (>4) may be triangulated poorly though...
 '' - combines reused surfaces
 '' - if vertexcache has different tex or norm index, then create a new vertex (ie. vertex with multiple tex or normal coords)
+
+'' could try to use a flag materials to vertex colors
+
+
 Class TModelObj
 
 #If MINIB3D_DEBUG_MODEL=1
@@ -22,6 +27,7 @@ Class TModelObj
 	Field stack:StringStack = New StringStack	
 	
 	Global override_texflags:Int = -1
+	Global url_path$
 	
 	Private
 		
@@ -55,6 +61,21 @@ Class TModelObj
 	End
 	
 	
+	Function GetPath$(url$)
+		
+		Local i:Int = url.Length()-1
+		
+		If i<1 Then Return ""
+		
+		While (i>-1 And (url[i] <> 47 And url[i]<>92) )
+			i=i-1
+		Wend
+
+		Return url[..i+1]
+		
+	End
+	
+	
 	Public
 	
 	
@@ -64,7 +85,9 @@ Class TModelObj
 		
 		override_texflags = flags
 		
-		Local mesh:TMesh = ParseObj(LoadString(url),flags)
+		url_path = GetPath ( url )
+		
+		Local mesh:TMesh = ParseObj(LoadString(url), flags)
 		
 		If mesh = Null Then Print "**File not found "+url Elseif DEBUG Then Print"TModelObj: "+url
 		If mesh Then mesh.name = url
@@ -188,7 +211,7 @@ Class TModelObj
 				
 					If DEBUG Then Print "mtllib"
 					
-					Local lib:TObjMtl[] = ParseMTLLib(Line[7..], mtllib_string) 
+					Local lib:TObjMtl[] = ParseMTLLib(url_path + Line[7..], mtllib_string) 
 					
 					For Local obj:TObjMtl = Eachin lib
 						If obj Then matlibs.Set(obj.name , obj) 
@@ -470,7 +493,7 @@ Class TModelObj
 
 			If Not stream.data
 
-				Print "**TModelObj: Material obj file not found"
+				Print "**TModelObj: Material obj file not found: "+url
 				Return MatLib
 			Endif
 		Endif
@@ -542,7 +565,8 @@ Class TModelObj
 				Local flags:Int = TTexture.default_texflags
 				If override_texflags > -1 Then flags = override_texflags
 				
-				MatLib[CMI].texture = LoadTexture(texfile[0], flags ) 
+				MatLib[CMI].texture = LoadTexture(url_path+texfile[0], flags )
+				
 				If MatLib[CMI].texture.TextureHeight() > 1
 				
 					MatLib[CMI].brush.BrushTexture( MatLib[CMI].texture) 
