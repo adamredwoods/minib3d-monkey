@@ -991,7 +991,7 @@ Class TMesh Extends TEntity
 		mesh.classname = Self.classname
 		If parent_ent Then mesh.EntityParent(parent_ent)
 		
-		Self.AddMesh(mesh) ''add self TO mesh ''**note: cannot place after CopyBaseMeshTo, otherwise infinite loop
+		Self.AddMesh(mesh, false) ''add self TO mesh ''**note: cannot place after CopyBaseMeshTo, otherwise infinite loop
 		Local new_list:List<TSurface> = mesh.surf_list
 		
 		Self.CopyBaseMeshTo(mesh,parent_ent) ''this overwrites surf_list pointer with original pointer
