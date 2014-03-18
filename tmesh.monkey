@@ -101,7 +101,8 @@ Class TMesh Extends TEntity
 		
 		mesh.anim_surf_frame = anim_surf_frame[0..] ''copy
 		
-		mesh.bones = CopyBonesList(mesh, New List<TBone>, 0).ToArray()
+		mesh.no_bones = no_bones
+		mesh.bones = Self.CopyBonesList(mesh, New List<TBone>, no_bones).ToArray()
 		''set bones
 		ResetBones()
 
