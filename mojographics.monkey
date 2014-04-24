@@ -447,11 +447,11 @@ Public
 	End
 	
 	'INTERNAL - subject to change etc.
-	Method LoadSurface__UNSAFE__:Surface( surface:Surface,path$ )
+	'Method LoadSurface__UNSAFE__:Surface( surface:Surface,path$ )
 		'Local sprite:MojoSurface = New MojoSurface
 		'Local ms:MojoSurface= MojoSurface(surface)
 		'If ms Then ms.sprite = LoadSprite(path)
-	End
+	'End
 
 	
 
