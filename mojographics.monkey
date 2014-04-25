@@ -589,9 +589,9 @@ Class MojoSurface Extends Surface_
 	End
 
 	'INTERNAL - subject to change etc.
-	Method OnUnsafeLoadComplete:Bool()
-		Return true
-	End
+	'Method OnUnsafeLoadComplete:Bool()
+		'Return true
+	'End
 
 End
 
