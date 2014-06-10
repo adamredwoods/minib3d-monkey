@@ -2100,10 +2100,9 @@ Class TEntity
 
 	End 
 #end	
- 
 	
-	' Internal - not recommended for general use
-	Private
+	
+
 	
 	Method UpdateMat:Void(load_identity:Bool =False)
 
@@ -2136,6 +2135,10 @@ Class TEntity
 			collision.updated_shape=False '' SNEAK THIS IN HERE?
 			
 	End 
+	
+
+	' Internal - not recommended for general use
+	Private
 	
 	Method UpdateMatTrans(load_identity:Bool =False)
 		
