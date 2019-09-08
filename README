@@ -1,6 +1,6 @@
 minib3d + cerberus (ex-monkey)
 
-TO USE: Download and unzip full directory. Rename resulting folder as "minib3d". Copy to the Cerebus/modules/ directory.
+TO USE: Download and unzip full directory. Rename resulting directory as "minib3d". Copy to the Cerberus/modules/ directory.
 
 v0.42.1 - updated for Cerberus, removed Flash, XNA targets
 v0.42 - bug fixes: texture fixes, collision fixes, mobile glcontext fixes
