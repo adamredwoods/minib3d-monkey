@@ -1,6 +1,5 @@
 Import minib3d
 Import minib3d.math.matrix
-Import monkey.math
 Import minib3d.tbone
 
 #rem
