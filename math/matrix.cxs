@@ -1,4 +1,4 @@
-Import monkey.math
+Import cerberus.math
 Import minib3d.monkeyutility
 Import minib3d.math.vector
 Import minib3d.math.geom

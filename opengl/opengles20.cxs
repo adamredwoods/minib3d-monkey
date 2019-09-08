@@ -859,19 +859,18 @@ Class OpenglES20 Extends TRender Implements IShader2D
 			'' draw tris
 
 			If TRender.render.wireframe
-				
-				If Not vbo Then glDrawElements(GL_LINE_LOOP,surf.no_tris*3,GL_UNSIGNED_SHORT,surf.tris.buf)
-				If vbo Then glDrawElements(GL_LINE_LOOP,surf.no_tris*3,GL_UNSIGNED_SHORT, 0)
-				
-			Else
-				If vbo	
-																																																																																																																																																																																																																																																																															
-					glDrawElements(GL_TRIANGLES,surf.no_tris*3,GL_UNSIGNED_SHORT, 0)
-				
-				Else
 
-					glDrawElements(GL_TRIANGLES,surf.no_tris*3,GL_UNSIGNED_SHORT,surf.tris.buf)
-					
+#If TARGET <> "html5"
+                If Not vbo Then glDrawElements(GL_LINE_LOOP,surf.no_tris*3,GL_UNSIGNED_SHORT,surf.tris.buf)
+#Endif
+				If vbo Then glDrawElements(GL_LINE_LOOP,surf.no_tris*3,GL_UNSIGNED_SHORT, 0)
+			Else
+				If vbo																																																																																																																																																																																																																																																											
+					glDrawElements(GL_TRIANGLES,surf.no_tris*3,GL_UNSIGNED_SHORT, 0)		
+				Else
+#If TARGET <> "html5"
+                    glDrawElements(GL_TRIANGLES,surf.no_tris*3,GL_UNSIGNED_SHORT,surf.tris.buf)
+#Endif				
 				Endif
 			Endif
 

@@ -1,12 +1,11 @@
 ''
-'' helper classes and functions for monkey conversion
+'' helper classes and functions for monkey/cerberus conversion
 ''
 
-Import monkey
+Import cerberus
 Import tutility
 Import minib3d
 Import minib3d.monkeybuffer
-Import os
 
 
 Alias LoadString = app.LoadString

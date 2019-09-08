@@ -25,7 +25,11 @@ Class VecStack Extends Stack<Vector>
 End
 
 Class TColTree
+    
+    Private
 	
+    Global searchNode:Node[128]
+    
 	Public
 	
 	Const ONETHIRD:Float = 1.0/3.0
@@ -37,16 +41,9 @@ Class TColTree
 	'Field divSphere_total:Int=0
 	Field divSphere_r:Float[1]
 	Field divSphere_p:Vector[1] ''offset from center
-	
-	
-	Private
-	
-	Global searchNode:Node[128]
-	
-	
-	Method New()
-	
-	
+    
+    
+	Method New()	
 	End Method
 	
 

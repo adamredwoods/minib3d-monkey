@@ -6,21 +6,13 @@ Import minib3d
 
 Extern
 
-#If TARGET="html5" Or TARGET="flash" Or TARGET = "win8"
+#If TARGET="html5"
 	'' YIKES! is this a hack or what? this empty class is tucked in TPixmaphtml5 native code
 	Class Surface_ Extends Surface = "EmptyNullClass"
 	End
 #Else
 	Class Surface_ Extends Surface = "gxtkSurface"
 	End
-#Endif
-
-	'Function FlashFix:MojoSurface(s:Surface) = "gxtkSurface"
-#If TARGET="flash"
-	Class FlashFix Extends MojoSurface = "gxtkSurface"
-	End
-#Else
-	Function FlashFix:MojoSurface(s:Surface_) = ""
 #Endif
 
 Public
@@ -36,7 +28,8 @@ End
 
 Class MojoEmulationDevice Extends GraphicsDevice
 
-	Const MAXLAYERS:Int=512
+    Const MAXLAYERS:Int=512
+    Const DEFAULT_FONT_FILE:String = "mojo_font.png"
 	
 	Global _device:MojoEmulationDevice
 	Global _olddevice:GraphicsDevice
@@ -64,7 +57,7 @@ Private
 	Field lastSurface:MojoSurface
 	Field lastBlend:Int=-1
 	Field fontImage:Image
-	Field fontFile:String = "mojo_font.png"
+	Field fontFile:String = DEFAULT_FONT_FILE
 	
 	Global firstTimeRun:Bool = false
 
@@ -75,11 +68,6 @@ Private
 			_olddevice = GetGraphicsDevice() ''trick to get flash to work
 			_device = New MojoEmulationDevice
 			_quadCache = New QuadCache()
-			
-#If TARGET="flash"
-			FlashMiniB3D(TRender.render).ForceFlashTransparency(_olddevice)
-			FlashMiniB3D(TRender.render).ForceFlashTransparency(_device)
-#Endif
 
 		endif
 		
@@ -99,15 +87,7 @@ Private
 	
 	Method InitFont:Void()
 
-		If fontImage And fontImage.Width()>0 Then Return
-		
-		'' consider embedding font as base64?
-		
-		fontImage = LoadImage( fontFile,96,Image.XPadding )
-		
-		If fontImage And fontImage.Width()>0
-			SetFont(fontImage)
-		endif
+		'SetFont()
 
 	End
 	
@@ -199,13 +179,13 @@ Public
 	
 		Local msurf:MojoSurface = MojoSurface.PreLoad(path, mesh, _device)
 
-		Return FlashFix(msurf)
+		Return msurf
 	End
 	
 	Method CreateSurface:Surface( width,height )
 		Local msurf:MojoSurface = MojoSurface.Create()
 		
-		Return FlashFix(msurf)
+		Return msurf
 	End
 	
 	Method WritePixels2( surface:Surface,pixels[],x,y,width,height,offset,pitch )
@@ -272,7 +252,7 @@ Public
 		Else
 			solid[layer].brush.blend = 1 ''dont premultiply
 #If TARGET="html5"
-			solid[layer].brush.blend = 0 ''ugh....html5 is all premultiplied
+			solid[layer].brush.blend = 0 ''html5 is all premultiplied
 #Endif
 		Endif
 		
