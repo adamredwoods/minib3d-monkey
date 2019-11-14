@@ -37,8 +37,6 @@ Class MyGame Extends MiniB3DApp
 	End
 	
 	Method Init:Int()
-		''must add this to use mojo fonts
-		SetFont(LoadImage("mojo_font.png",96,Image.XPadding))
 		
 		mesh = CreateMiniB3DMonkey()
 		'mesh.EntityFX 1
@@ -123,7 +121,6 @@ Class MyGame Extends MiniB3DApp
 			DrawImage(b.image, b.posX, b.posY)
 			'DrawRect(b.posX, b.posY, 10,10)
 		Next
-		DrawImage(GetFont(), 100,200)
 		FPSCounter.Draw(0,0)
 		SetColor(255,255,255)
 		DrawText("FPS Rate: "+fpsRate,100, 100)

@@ -1284,7 +1284,7 @@ Class TEntity
 		Else
 		
 			Local ang#= ATan2( mat.grid[2][1],Sqrt( mat.grid[2][0]*mat.grid[2][0]+mat.grid[2][2]*mat.grid[2][2] ) )
-			If ang<=0.0001 And ang>=-0.0001 Then ang=0
+			If ang<=0.00001 And ang>=-0.00001 Then ang=0
 		
 			Return ang
 			
@@ -1300,10 +1300,8 @@ Class TEntity
 			
 		Else
 		
-			Local a#=mat.grid[2][0]
-			Local b#=mat.grid[2][2]
-			If a<=0.0001 And a>=-0.0001 Then a=0
-			If b<=0.0001 And b>=-0.0001 Then b=0
+			Local a:Float=mat.grid[2][0]
+			Local b:Float=mat.grid[2][2]
 			Return ATan2(a,b)
 			
 		Endif
@@ -1320,8 +1318,6 @@ Class TEntity
 		
 			Local a#=mat.grid[0][1]
 			Local b#=mat.grid[1][1]
-			If a<=0.0001 And a>=-0.0001 Then a=0
-			If b<=0.0001 And b>=-0.0001 Then b=0
 			Return ATan2(a,b)
 			
 		Endif
